@@ -153,7 +153,7 @@
     {#if settings.error}<Notice kind="error">{settings.error}</Notice>{/if}
     {#if systemError}<Notice kind="error">{systemError}<button class="btn" onclick={()=>{systemError='';}}>Dismiss</button></Notice>{/if}
     {#if showSettings}
-      <Settings onback={() => {showSettings=false;}} onshortcut={value => {launcherHotkey=value.replace('CommandOrControl',os==='macos'?'⌘':'Ctrl').replaceAll('+',' + ');shortcutError='';}} />
+      <Settings platform={os} onback={() => {showSettings=false;}} onshortcut={value => {launcherHotkey=value.replace('CommandOrControl',os==='macos'?'⌘':'Ctrl').replaceAll('+',' + ');shortcutError='';}} />
     {:else if active}
       <ToolView tool={active} {os} onback={closeTool} />
     {:else}

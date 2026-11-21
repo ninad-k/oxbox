@@ -5,7 +5,7 @@
   import { settings } from '#lib/settings.svelte.ts';
   import type { Theme } from '#lib/settings.ts';
   import Notice from './Notice.svelte';
-  let { onback, onshortcut }: {onback: () => void; onshortcut: (shortcut: string) => void} = $props();
+  let { onback, onshortcut, platform }: {onback: () => void; onshortcut: (shortcut: string) => void; platform: string} = $props();
   let login = $state(false), busy = $state(false), shortcut = $state(''), message = $state(''), error = $state('');
   onMount(() => {
     let disposed = false;
@@ -46,6 +46,7 @@
     <button class="btn" disabled={busy || !shortcut.trim() || !inDesktopApp()}>Save shortcut</button>
   </form>
   <Notice kind="info">Settings and favorites stay on this computer. Clipboard history is kept in memory. Oxbox implements no app telemetry; embedded runtime privacy is tracked in the project documentation.</Notice>
+  {#if platform === 'windows'}<Notice kind="info">The Windows runtime includes Microsoft Defender SmartScreen. SmartScreen collects and sends user information to Microsoft under the Microsoft Privacy Statement: privacy.microsoft.com/privacystatement.</Notice>{/if}
   {#if !inDesktopApp()}<Notice kind="info">Launch at login and global shortcuts are available in the desktop app.</Notice>{/if}
   {#if message}<Notice kind="success">{message}</Notice>{/if}
   {#if error || settings.error}<Notice kind="error">{error || settings.error}</Notice>{/if}
