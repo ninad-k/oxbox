@@ -145,6 +145,51 @@ This file records observed evidence, not planned results. Release gates remain o
 - GitHub Pages is configured for workflow deployment, including the implementation branch's environment policy.
   Public deployment, current native screenshots and rebuilt draft asset hashes are recorded after verification.
 
+## Verified revised Windows draft — 2026-11-21
+
+- Final functional source: `d4e50b762cb796f511281c17e3327de0776b2458`, on `codex/complete-v0-1`.
+  [CI 44917613996](https://github.com/ninad-k/oxbox/actions/runs/44917613996) passed all five jobs: UI check,
+  **35 UI tests**, frontend build, actual Rust 1.93 check, and Windows/macOS/Ubuntu 24.04 clippy, tests and
+  native builds. Earlier [b449806 CI](https://github.com/ninad-k/oxbox/actions/runs/44915821430) also passed;
+  it is superseded by the final run. The intermediate shortcut-only run was cancelled after the disclosure fix.
+- `pnpm tauri build` produced the following final unsigned Windows x64 artifacts. Read-only MSI inspection
+  confirmed `Oxbox` / `0.1.0`, x64 template, the application and exactly the three license/notice resources.
+  No installer was executed or installed on this host.
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `Oxbox_0.1.0_x64_en-US.msi` | 4,329,472 | `386586677a442355c6d48856768a3d6572cc9bd60681d59f875a66211ce94989` |
+| `Oxbox_0.1.0_x64-setup.exe` | 3,000,767 | `efbf843d24a5d8dba202d49872cdf66f71f647635edd4fb5a7f7c619ee9dd24f` |
+
+- Native Windows QA verified the normal square frame, empty favorites-only dashboard, four temporary pinned
+  tools, theme persistence and real [light](images/launcher-light.jpg)/[dark](images/launcher-dark.jpg)
+  screenshots. The original System appearance and empty favorite selection were restored and persisted.
+  Unit Converter returned 0.001 km for 1 m, then [1000 m for 1 km](images/unit-converter.jpg) through native IPC.
+- Native Ctrl+K focused search; typing and Enter opened a lazy tool. The initial automated Alt+number chord
+  failed on the physical-code-only implementation. A tested fallback for absent/Unidentified codes fixed it;
+  native Alt+1 and Alt+4 subsequently opened the selected favorites. Known numpad/other physical codes and
+  extra modifiers remain excluded. No cause beyond the observed input behavior is assumed.
+- Native Ctrl+Alt+O hid the app while its process stayed alive, then showed it when pressed from an inert,
+  locally built test window. The disposable fixture exited afterward. Ctrl+Q also exited the earlier native
+  QA copy and all seven recorded processes.
+- Mouse Activity native Start, Waiting, zero movement and banner Stop passed with idle 3600 seconds and a
+  one-minute cap. Restart was stopped. The final source's native Quit button was tested with a session enabled
+  and zero movements; all seven host/WebView2 processes exited. No physical pointer-motion/input-return,
+  held-input, protected-desktop, duration-expiry or multi-monitor claim is made from these no-motion checks.
+- The final Settings view displayed the Microsoft Defender SmartScreen data-transmission notice. Native UI QA left
+  launch-at-login and currency consent unchanged and did not change user privacy/security settings or invoke
+  camera/mic, desktop visibility, display, drive or power effects.
+- [GitHub Pages deployment 44915821604](https://github.com/ninad-k/oxbox/actions/runs/44915821604) succeeded.
+  The public [site](https://ninad-k.github.io/oxbox/) returned HTTP 200 for its HTML, CSS, JS, tools JSON and logo;
+  each response matched the verified local build byte-for-byte. The repository homepage points to that site.
+- Strict WebView2 offline acceptance remains failed as documented above. [ADR 0004](adr/0004-runtime-offline-boundary.md)
+  proposes a native-renderer migration and names the dependencies requiring approval; no renderer dependencies
+  or minimum-Rust change have been applied.
+- The existing [Windows draft](https://github.com/ninad-k/oxbox/releases/tag/untagged-cd5edee4ae6189e4d9fc)
+  was updated with both installers and `SHA256SUMS.txt`. All three GitHub-uploaded byte counts and SHA-256
+  digests match the local files; `isDraft: true`, prerelease status and the exact functional source target were
+  verified afterward. No version tag was pushed and no public installer release was published.
+
 ## Open acceptance gates
 
 - Full Windows manual tool matrix, including multi-monitor 100%/150% capture and destructive/power effects in a test account/VM.

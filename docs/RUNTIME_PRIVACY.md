@@ -45,6 +45,12 @@ diagnostic log option and cautions against shipping browser flags in production.
 
 ## Supported app-scoped controls
 
+**Windows runtime notice:** Oxbox includes Microsoft Defender SmartScreen through WebView2. SmartScreen
+collects and sends user information to Microsoft as described in the
+[Microsoft Privacy Statement](https://privacy.microsoft.com/privacystatement) and
+[SmartScreen privacy details](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/data-privacy#smartscreen).
+The same notice is visible in the app's Windows Settings. This is separate from Oxbox tool-command networking.
+
 The Windows initialization now creates a dedicated `webview-v1` profile beneath Oxbox's own local app-data
 directory. It preserves the previous profile. The main window and capture/focus overlays share one SDK
 environment on the UI thread with:
@@ -69,6 +75,43 @@ controls web resources, and does not claim to intercept browser-owned background
 
 ## Embedded runtime limits
 
+### Bounded production probe after the STA fix
+
+An intermediate production CLI build containing the supported controls and explicit UI-thread COM
+initialization was run with only per-child diagnostic logging and loopback DevTools enabled. It used the
+expected `webview-v1` profile and did **not** contain Wry's previous SmartScreen-disable feature flag.
+The native host and six WebView2 descendants started successfully.
+
+The SDK status reported `configured: true`, zero blocked web resources and 14 local resources before the
+fixed `example.invalid` navigation probe. The probe raised the blocked count to one; restoring the local
+app URL produced 54 local-resource callbacks and working status IPC. The browser showed its built-in error
+document for the denied navigation. This verifies SDK interception, not a guarantee that speculative DNS
+or connection setup cannot occur: the diagnostic log also recorded a preconnect job for the probe URL.
+
+The runtime initiated vendor requests despite that functioning filter:
+
+- `config.edge.skype.com/config/v1/Edge/157.0.4341.60`
+- `nav-edge.smartscreen.microsoft.com/api/browser/edge/navigate/3`
+- `data-edge.smartscreen.microsoft.com/api/browser/edge/data/settings/3`
+- `telem-edge.smartscreen.microsoft.com/api/browser/edge/telemetry/3`
+- `edge.microsoft.com/componentupdater/api/v1/update`
+
+Configuration and SmartScreen requests appeared **before** the external navigation probe. Component-update
+requests appeared later in the same run. Their presence is consistent with preserving Microsoft's security
+defaults; no protection was disabled to obtain a quieter measurement. Endpoint names do not establish which
+payload fields were transmitted or prove that every attempted request completed successfully.
+
+A 30-snapshot sample of the verified live host and descendants saw a maximum of one established public
+HTTPS connection, plus loopback connections, and no owned UDP endpoints. UDP endpoint counts are not packet
+capture and do not prove zero UDP traffic. These finite samples are not a complete startup or long-term audit.
+After the app's own `quit_app` command, all seven recorded processes disappeared and the diagnostic listener
+closed; the captured stderr contained no panic marker.
+
+The run was an intermediate privacy probe before final default-route normalization and mouse-dispatch
+integration. Final installer UI/overlay acceptance must use the final production build without diagnostic
+flags. No camera, microphone, recording, capture, clipboard-recording, currency, power or desktop effect
+was invoked in this probe. Raw logs remain local beneath ignored `target/runtime-privacy-qa/`.
+
 Microsoft documents optional and required WebView2 diagnostics, with required collection outside the
 application developer's overall control. Feature-specific APIs exist for crash reporting and reputation
 checking; they are not a general zero-network guarantee. [WebView2 privacy documentation](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/data-privacy).
@@ -87,8 +130,9 @@ disable component/security updates. [WebView2 policy reference](https://learn.mi
 ## Acceptance status
 
 The strict whole-process offline requirement has **not passed on Windows**. Keep the release a draft until
-the supported controls are tested in a production build and any remaining runtime requests are resolved.
-The isolated-profile diagnosis still recorded vendor configuration/component requests. Do not infer zero runtime traffic from the absence
+the remaining browser-owned requests are resolved within the authorized app-scoped/security-preserving
+constraints. Production testing confirms that the supported resource filter does not eliminate vendor
+configuration, SmartScreen or component-update requests. Do not infer zero runtime traffic from the absence
 of a Rust HTTP client, the CSP, the currency opt-in state or successful unit tests. macOS/Linux runtime
 traffic has not been measured by this Windows observation.
 

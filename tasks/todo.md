@@ -92,8 +92,9 @@ The user promoted the planned rows on 2026-11-21. Source implementations are com
 - [x] Implement favorites-only Dashboard, Ctrl+Alt+O / Cmd+Option+O default launcher, Alt+1–9 favorites, search and Quit shortcuts
 - [x] Add original branding and a normal 800 × 800 starting native window
 - [x] Add [GitHub Pages website source and generated catalog](../website/README.md)
-- [ ] Current-revision native UI/shortcut and Mouse Activity acceptance
-- [ ] Confirm website keyboard/mobile/filter behavior and successful public Pages deployment
+- [x] Current native launcher/shortcut smoke and no-motion Mouse Activity Start, banner Stop, Quit and restart checks
+- [ ] Mouse Activity idle movement, genuine-input return and full native monitor/desktop acceptance
+- [x] Confirm website keyboard/mobile/filter behavior and [successful public Pages deployment](https://github.com/ninad-k/oxbox/actions/runs/44915821604)
 - [ ] Complete strict runtime privacy, clean-machine installer, human security/license and full hardware acceptance gates
 
 Download Video/Audio and Free Memory remain explicitly deferred/excluded by the plan.

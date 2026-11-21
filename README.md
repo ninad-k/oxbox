@@ -65,14 +65,14 @@ See [the expanded tool guide](docs/ROADMAP_TOOLS.md) for platform support and lo
 Mouse Activity always starts stopped; it does not click, type or scroll. Read its [behavior and limits](docs/MOUSE_ACTIVITY.md)
 before starting a session. Its native Windows acceptance remains pending.
 
-The [GitHub Pages website](website/README.md) includes the complete searchable catalog, generated from the same
-registry as the app. Website deployment is separate from public installer publication.
+The [project website](https://ninad-k.github.io/oxbox/) includes the complete searchable catalog, generated from the same
+registry as the app. See the [website contributor guide](website/README.md). Website deployment is separate from public installer publication.
 
-The screenshots below show the earlier 48-tool Windows interface, before the current branding and favorites-dashboard
-revision. They do not establish native acceptance of the new interface or Mouse Activity.
+These native Windows screenshots show the revised dashboard with four favorites selected for the capture.
+A new dashboard starts empty until you star tools. See the [validation record](docs/VALIDATION.md) for the checks performed.
 
-<p align="center"><img src="docs/images/launcher-dark.png" width="900" alt="Oxbox native Windows launcher in dark appearance with 48 tools" /></p>
-<p align="center"><img src="docs/images/launcher-light.png" width="900" alt="Oxbox native Windows launcher in light appearance with 48 tools" /></p>
+<p align="center"><img src="docs/images/launcher-dark.jpg" width="803" alt="Oxbox native Windows favorites-only dashboard in dark appearance" /></p>
+<p align="center"><img src="docs/images/launcher-light.jpg" width="803" alt="Oxbox native Windows favorites-only dashboard in light appearance" /></p>
 
 ## Build from source
 

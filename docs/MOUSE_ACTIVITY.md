@@ -4,6 +4,8 @@ Mouse Activity is an optional Windows tool for gentle pointer activity during an
 Open the tool, choose an idle delay and movement interval, optionally set a duration, then select **Start**.
 It starts stopped each time Oxbox launches. It has no schedule, login activation or saved running state.
 
+![Native Windows Mouse Activity view, stopped before an explicit Start](images/mouse-activity.jpg)
+
 The tool waits for the full idle delay after Start or real keyboard/mouse input. While idle, it sends a small
 pointer-only movement at the selected interval. It alternates direction to avoid drifting across the screen.
 Real input suspends subsequent movements and restarts the idle delay. Its own synthetic events do not count
@@ -46,6 +48,13 @@ pointer. Before claiming Windows native acceptance, coordinate a disposable sess
 record the OS, idle/interval settings and results: full idle delay, real keyboard/mouse interruption,
 duration expiry, held input, multi-monitor edges, banner/tray Stop, Quit and restart stopped. Check unsupported
 platform labeling separately. See [the task specification](../tasks/mouse-activity.md).
+
+The 2026-11-21 Windows native control check verified Start, the Waiting state, zero movements and banner Stop
+using a 3600-second idle threshold with a one-minute cap. Restart was observed stopped. This deliberately
+did not exercise pointer movement; real-input interruption, multi-monitor behavior and protected desktops
+remain separate manual acceptance gates.
+The final production build also quit with such a session enabled and zero simulated movements; all seven
+recorded host/WebView2 processes exited. This verifies native cleanup without claiming idle-motion acceptance.
 
 The focused suite includes 17 tests on Windows: idle/interval/expiry logic, bounded motion/event flags,
 fake backend cleanup and errors, queued request ordering and token validation. These automated results do not establish

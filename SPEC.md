@@ -62,8 +62,9 @@ The launcher revision uses a favorites-only Dashboard, an original outlined O/em
 Core commands remain local by default, with explicit opt-in ECB currency refresh allowed after the
 user-authorized [network issue #1](https://github.com/ninad-k/oxbox/issues/1). Those requests send no user amounts or files.
 The strict whole-process offline goal in user story 3 is not yet accepted on Windows: release QA observed
-background WebView2 HTTPS traffic. Its purpose remains unresolved; see [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
-An isolated-profile diagnosis subsequently identified vendor configuration and component-update requests.
+background WebView2 HTTPS traffic; see [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
+An isolated-profile diagnosis subsequently identified vendor configuration and component-update requests;
+production testing of supported SDK controls also observed SmartScreen requests while retaining security defaults.
 The user approved supported app-scoped SDK controls and existing bindings; strict offline acceptance remains
 open until production verification of [the runtime privacy follow-up](tasks/runtime-privacy.md).
 
