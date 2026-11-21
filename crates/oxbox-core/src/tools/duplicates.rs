@@ -63,6 +63,13 @@ fn include_entry(entry: &walkdir::DirEntry, include_hidden: bool) -> bool {
     if entry.file_type().is_symlink() {
         return false;
     }
+    #[cfg(not(windows))]
+    if let Ok(metadata) = fs::symlink_metadata(entry.path())
+        && crate::fs_safe::is_link(&metadata)
+    {
+        return false;
+    }
+    #[cfg(windows)]
     if let Ok(metadata) = fs::symlink_metadata(entry.path()) {
         if crate::fs_safe::is_link(&metadata) {
             return false;
