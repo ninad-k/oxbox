@@ -1,22 +1,28 @@
 # ADR 0004: Separate the offline requirement from the embedded browser boundary
 
-- Status: **Proposed — architectural and dependency approval required**
+- Status: **Accepted and implemented — initial native shell feasibility observed; release acceptance remains open**
 - Date: 2026-11-21
-- Scope: research only; no renderer, dependency, lockfile, OS policy or security-setting changes
+- Scope: native migration authorized by the user on 2026-11-21, using exact eframe 0.37.0 and Rust 1.95
+
+The user explicitly approved this migration and its listed dependencies, required all 49 tools to be
+preserved, and required parallel agents and an unpublished release until verification. The implementation
+branch is `codex/native-renderer`; [the migration checklist](../../tasks/native-migration.md) records evidence.
+This approval permits the native implementation and its dependency graph; it does not waive any acceptance
+gate or authorize global OS/security changes. The legacy Tauri implementation remains available for comparison.
 
 ## Finding
 
 The current supported WebView2 controls do **not** establish zero network activity for the application and
-its browser descendants. Keep the release a draft and the strict acceptance gate open. This proposal does
-not supersede [ADR 0001](0001-rust-tauri-svelte.md) without an explicit decision.
+its browser descendants. Keep the release a draft and the strict acceptance gate open. The explicit native approval supersedes the runtime choice in [ADR 0001](0001-rust-tauri-svelte.md) for the
+selected entrypoint. The old host and its validation remain available for comparison.
 
 The [runtime investigation](../RUNTIME_PRIVACY.md) records working SDK resource interception alongside
 browser-owned ECS, component-update and SmartScreen requests. Microsoft documents required diagnostics
 outside the developer's overall control, plus narrower controls for crash reporting and SmartScreen.
-Retain security protections; disabling reputation checks is not this proposal's solution.
+Retain security protections; disabling reputation checks is not the selected solution.
 [Microsoft privacy documentation](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/data-privacy).
 
-## Supported controls and their limits
+## Historical embedded-browser controls and their limits
 
 | Approach | Assessment |
 |---|---|
@@ -36,78 +42,81 @@ future WebView2 release. Sources: [request-management scope](https://learn.micro
 Global Edge/Windows policy, firewall changes, security-disable switches, an app-wide proxy assumption and
 replacing one embedded browser with another are not accepted shortcuts to this requirement.
 
-## Proposed next decision
+## Selected decision
 
-If strict default offline behavior remains mandatory, approve a **separate native-renderer feasibility branch**,
-followed by a full migration only if its gates pass. The concrete candidate is egui through native `eframe`,
-without a webview. The upstream project supports Windows, macOS and Linux. This removes the particular
-WebView2 service dependency; it does **not** prove that a new binary, its drivers, OS integration or launched
-providers never communicate. [Upstream egui](https://github.com/emilk/egui).
+Implement the user-approved **eframe/egui 0.37.0 native host with Rust 1.95** on codex/native-renderer.
+The application runtime is crates/oxbox-native, reusing oxbox-core without an embedded webview. The legacy
+Svelte/Tauri implementation stays as a parity reference; no hidden browser is retained in the new host.
+All 49 source routes and concrete native forms are implemented, the local native test suite has passed,
+and a live Windows decorated launcher with AccessKit names has been observed. These are bounded source,
+automation and shell feasibility facts, not full native manual or release acceptance.
 
-The existing Svelte views cannot run inside egui. All **49 tool views and their interactions must be ported**;
-keeping a hidden webview would retain the same boundary. Keep the current implementation available during
-the migration, and preserve each tool's current platform availability rather than claiming all 49 work on every OS.
+Removing the WebView2 service dependency does not prove that the new binary, drivers, OS integrations or
+explicitly launched providers never communicate. Production privacy observations, all-platform/hardware
+behavior and native installer acceptance remain required. [Upstream egui](https://github.com/emilk/egui).
 
-### Exact dependency proposal
+## Approved dependency selection and historical alternatives
 
 Primary crates.io metadata checked on 2026-11-21 reports **egui 0.37.0 and eframe 0.37.0**, both non-yanked,
 MIT OR Apache-2.0, with declared **Rust 1.95**. The 0.36 line also requires 1.95. Version **0.35.0 declares
-Rust 1.92**, making it the newest published line compatible with Oxbox's current 1.93 minimum before resolving
-and checking transitives. No packages were downloaded or built for this investigation.
+Rust 1.92**, making it the newest published line compatible with Oxbox's then-current 1.93 minimum before resolving
+and checking transitives. During that pre-approval comparison no packages were downloaded or built. The subsequently approved
+0.37 native graph has now been built locally; current commands and manifests supersede the unselected alternatives.
 [eframe metadata](https://crates.io/api/v1/crates/eframe), [egui metadata](https://crates.io/api/v1/crates/egui),
 [0.35 manifest](https://github.com/emilk/egui/blob/0.35.0/crates/eframe/Cargo.toml),
 [0.37 workspace minimum](https://github.com/emilk/egui/blob/0.37.0/Cargo.toml).
 
-The proposed minimum-preserving spike adds one genuinely new direct renderer dependency:
+The selected native renderer configuration is:
 
 ```toml
-eframe = { version = "=0.35.0", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
+eframe = { version = "=0.37.0", default-features = false, features = ["accesskit", "clipboard", "default_fonts", "system_fonts", "glow", "wayland", "x11"] }
 ```
 
-Use `eframe::egui`; a second direct `egui` dependency is unnecessary. Enable no inspection/debug server,
-HTTP client, remote image loader or automatic external links. Draw charts/tables with existing widgets and
-upload core-produced raster previews; no `egui_extras` or SVG-rendering dependency is required. The alternative
-is exact 0.37.0 with a separately approved Rust 1.95 minimum and reviewed native features, including clipboard.
-The selected version and complete new transitive graph still need audit, notices and locked compiler checks.
-[eframe native renderer/accessibility features](https://docs.rs/eframe/0.35.0/eframe/).
+Use eframe::egui; no second direct egui dependency is needed. The reviewed 0.35 minimum-preserving option
+was not selected. Inspection/debug servers, HTTP clients, remote image loaders and automatic external links
+are disabled. Native widgets/charts and core-produced raster previews use the existing APIs; there is no new
+SVG parser or egui_extras dependency. Existing Lucide vectors are flattened into catalog/icons.json.
 
-Replacing Tauri plugins also needs explicit approval to promote these **already-locked** packages into the native host:
+The user also approved promoting the existing locked host packages below. Their versions/features and the
+complete resolved graph are recorded in the manifests/lockfile; audit/notices and platform verification remain
+release work. The packaging wrapper verifies the native graph excludes browser-host crates and uses the
+existing bundler only for distribution, with WebView installation and updater artifacts disabled.
 
-| Planned direct package | Purpose |
+| Approved direct package | Purpose |
 |---|---|
-| `rfd = 0.17.2` | Native open/save/confirmation dialogs |
-| `tray-icon = 0.25.1`, `global-hotkey = 0.8.0` | Tray lifecycle and configurable global launcher binding |
-| `auto-launch = 0.6.0`, `open = 5.4.5` | Login registration and explicit open-folder/document actions |
-| `tauri-winrt-notification = 0.8.1` (Windows) | Native reminder notifications |
-| `mac-notification-sys = 0.6.15` (macOS), `notify-rust = 4.19.0` (Linux) | Platform notification adapters |
-| `gtk = 0.18.2` (Linux) | Existing tray provider's GTK event-loop integration; its GLib advisory remains a separate unresolved review item |
-| `windows-sys = 0.61.2` (Windows), `raw-window-handle = 0.6.2` where needed | Native window/instance integration and overlay/capture identities |
+| rfd 0.17.2 | Explicit native open/save/confirmation dialogs |
+| tray-icon 0.25.1, global-hotkey 0.8.0 | Tray lifecycle and configurable launcher key |
+| auto-launch 0.6.0, open 5.4.5 | Login registration and explicit user-requested open actions |
+| tauri-winrt-notification 0.8.1 | Windows notification adapter; does not embed a browser |
+| mac-notification-sys 0.6.15, notify-rust 4.19.0 | macOS/Linux notifications |
+| gtk 0.18.2 (Linux) | Native tray provider/event-loop integration; existing GLib advisory remains separately tracked |
+| windows-sys 0.61.2, raw-window-handle 0.6.2 | Native windows, instance coordination and capture identities |
 
 Existing workspace serialization, paths, core image/clipboard operations and standard-library workers remain
 reusable. Single-instance locking can use standard-library file locking plus platform-local activation IPC.
-This is a planned host surface, not an assertion that event-loop integration or packaging already works.
+Native host implementations now exist; that fact does not certify every event-loop, device or packaging path.
 Any additional dependency, version change, renderer backend or installer tool must return for approval.
 
-## Migration and acceptance plan
+## Migration implementation and acceptance
 
 1. **Preserve the service boundary.** Reuse `oxbox-core` and its tests. Extract Tauri-managed app services into
    a toolkit-independent host layer: jobs/progress/cancellation, settings transaction/rollback, reminders,
    power/desktop leases, media children, clipboard and Mouse Activity. Keep matching stop/join/restore behavior.
    Port UI-only search/favorites, countdown/stopwatch and preference models with their regressions; Rust core
    reuse does not automatically preserve behavior currently implemented in TypeScript.
-2. **Prove the risky host pieces first.** Build the square favorites launcher, search/shortcuts, one file-dialog
-   tool and a timer. Prove tray/single-instance/login behavior, hidden notifications, image previews and a
-   multi-monitor HiDPI selection/focus overlay. Stop the spike if required host integration cannot match behavior.
+2. **Verify the risky host pieces.** The square favorites launcher and live native shell are observed. Tray,
+   single instance, login, hidden notifications, previews, file dialogs and multi-monitor/DPI selectors still
+   need their recorded runtime checks. Do not treat initial feasibility as completion of those checks.
 3. **Port every view.** Maintain a 49-row parity matrix for forms, errors, confirmations, progress, cancellation,
-   result copy/export, providers and unsupported-platform notices. Move catalog data into a shared neutral
-   manifest or generated interface so the native launcher and Pages catalog cannot diverge. Migrate existing
+   result copy/export, providers and unsupported-platform notices. Use the canonical
+   catalog/tools.json shared by native, legacy and Pages; typed adapters contain no duplicate final metadata. Migrate existing
    settings/favorites/reminders without losing data. Website hosting can remain static HTML.
 4. **Revalidate presentation and accessibility.** Preserve the graphite/ember identity and native decorations.
    Test keyboard traversal, focus restoration, screen-reader names and announcements, contrast, IME/Unicode,
    high contrast/scaling and reduced motion on each OS. AccessKit availability is not proof of accessibility.
-   Validate GPU/remote-session compatibility; OpenGL is a proposed first backend, not a universal fallback.
-5. **Repackage and measure.** Adapt the existing installer toolchain to the new entrypoint; verify this during
-   the spike rather than assume Tauri packaging remains unchanged. Recheck size/startup, fresh install/uninstall,
+   Validate GPU/remote-session compatibility; the selected Glow/OpenGL backend is not a universal fallback.
+5. **Repackage and measure.** Verify the native build wrapper and installer toolchain against the selected
+   entrypoint. Recheck size/startup, fresh install/uninstall,
    notices, MSRV, supported-tool hardware behavior and all Quit cleanup. Existing draft measurements do not transfer.
 6. **Measure the actual offline boundary.** Test production builds from clean profiles through startup, idle,
    every tool and Quit, including owned child/provider processes, DNS and TCP/UDP over bounded observation
@@ -120,7 +129,12 @@ Neither a native rewrite nor a finite packet sample warrants a universal zero-ne
 
 ## Approval and release consequence
 
-Keep the existing release a draft. Request a decision on the native feasibility branch, the exact proposed
-dependency promotions and either retaining Rust 1.93 through eframe 0.35 or raising it to 1.95 for current eframe.
-Do not replace all 49 views, add dependencies or relax the privacy requirement merely by accepting this research.
-Acceptance of a final migration requires evidence, not this proposed ADR.
+Architecture/dependency approval is complete: eframe 0.37.0, Rust 1.95 and the listed native adapters are selected.
+Current source and route/automation coverage are recorded in [the 49-tool migration matrix](../../tasks/native-migration.md).
+Use the native package/check/build commands in AGENTS.md and the build-native wrapper; the Tauri runtime is
+retained only for comparison. No additional renderer, dependency, global OS policy or security bypass is authorized.
+
+Keep the release an unpublished draft until native production privacy observations, current cross-platform CI,
+per-tool/hardware/accessibility behavior, notices/security review and native clean-machine installer acceptance
+are recorded. Prior Tauri installers and finite packet samples do not certify the replacement host or a universal
+zero-network guarantee. The runtime/release records distinguish historical and current evidence.

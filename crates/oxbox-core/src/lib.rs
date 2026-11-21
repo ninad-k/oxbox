@@ -9,7 +9,10 @@
 pub mod error;
 pub mod fs_safe;
 pub mod jobs;
+pub mod launcher;
 pub mod platform;
+pub mod preferences;
+pub mod startup;
 pub mod tools;
 
 pub use error::{CoreError, CoreResult};

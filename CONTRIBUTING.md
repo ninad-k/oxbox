@@ -5,20 +5,23 @@ Thanks for helping. Oxbox grows one tool at a time, and each tool is a small, se
 ## Quick start
 
 1. Install the prerequisites listed in the [README](README.md#build-from-source).
-2. `pnpm install`, then `pnpm tauri dev` to run the app.
+2. Run `cargo run -p oxbox-native --locked` for the selected native app. Use a disposable `--profile` directory for acceptance fixtures.
 3. Review [validation gaps](docs/VALIDATION.md) or pick a specified roadmap task in [tasks/plan.md](tasks/plan.md).
    Comment on its issue (or open one) so work isn't duplicated. Unchecked phase gates can refer to acceptance,
    even when their implementation already exists.
-4. Follow **"Recipe: add a tool"** in [AGENTS.md](AGENTS.md). It lists every file to touch.
+4. Follow **"Recipe: add or change a tool"** in [AGENTS.md](AGENTS.md). It lists every file to touch.
 5. Before opening the PR, run:
 
    ```bash
-   cargo fmt --all
-   cargo clippy --workspace --all-targets -- -D warnings
-   cargo test --workspace
+   cargo fmt --all -- --check
+   cargo clippy -p oxbox-core -p oxbox-native --all-targets --locked -- -D warnings
+   cargo test -p oxbox-core -p oxbox-native --locked
+   node scripts/build-native.mjs --check
    pnpm check
    pnpm test
    pnpm build
+   node scripts/build-website.mjs
+   node --test scripts/website.test.mjs
    ```
 
 6. In the PR description, say which OSes you tested on by hand and include a screenshot of the tool.
@@ -29,12 +32,13 @@ focused on one tool or one shared concern. Submit original code, tests, document
 
 ### Native prerequisites
 
-Use Rust 1.93+ and Node 22.17+; `package.json` pins pnpm. Windows needs MSVC C++ tools and WebView2.
+Use Rust **1.95+**. Node 22.17+ and the pinned pnpm are needed for legacy/site checks and packaging tooling,
+not for the native runtime. Windows needs MSVC C++ tools; the selected eframe/egui host has no WebView2 requirement.
 macOS needs Xcode command-line tools. Linux CI and packaging use Ubuntu 24.04; the capture backend needs
 PipeWire/SPA headers newer than Ubuntu 22.04's stock packages. Ubuntu/Debian development packages include:
 
 ```bash
-sudo apt-get install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf libpipewire-0.3-dev libspa-0.2-dev libwayland-dev libxcb1-dev libxcb-randr0-dev libgbm-dev libegl1-mesa-dev libclang-dev clang
+sudo apt-get install libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libpipewire-0.3-dev libspa-0.2-dev libwayland-dev libxcb1-dev libxcb-randr0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxi-dev libxcursor-dev libxrandr-dev libgbm-dev libegl1-mesa-dev libgl1-mesa-dev libclang-dev clang
 ```
 
 Package names may vary by distribution. Follow the CI workflow for the tested runner setup. Capture and
@@ -49,11 +53,19 @@ inject a backend or test pure command construction; reserve the real effect for 
 Document remaining manual checks without ticking their acceptance boxes. Do not weaken a failing check or replace
 a real feature with a planned-tool placeholder to make CI green.
 
-New command groups still follow the existing recipe: core module, thin adapter, registered handler, typed wrapper,
-view, catalogue entry, minimal permissions, tests and docs. Views may import the appropriate typed group wrapper;
-`api.ts` remains the public facade. No view may import `invoke`.
-Local imports use the `#lib/*` mapping in `package.json` with explicit extensions, for example
-`#lib/api.ts` and `#lib/ui/Notice.svelte`. SvelteKit 3 configuration is in `vite.config.js`.
+Native changes follow the current recipe: core module/tests, real typed form in the native tools group,
+canonical catalog/tools.json entry, minimal OS privileges and documentation. Use the bounded Task runner for
+streaming/CPU work; background services must work hidden and stop/join on Quit. Preferences use atomic
+transactions and preserve original legacy files. Do not substitute generic JSON forms or mock results.
+
+The Svelte/Tauri source remains a parity reference. Its registry files now hold only view/icon adapters and
+read metadata from the same canonical JSON. Keep those adapters and website output consistent when changing
+the catalogue. pnpm tauri dev is a legacy comparison command, not the selected native entrypoint.
+
+See [ADR 0004](docs/adr/0004-runtime-offline-boundary.md), [catalogue maintenance](catalog/README.md) and
+[the 49-tool migration matrix](tasks/native-migration.md). Existing manual/installer/privacy/hardware evidence
+does not transfer automatically between hosts. Native bundles use node scripts/build-native.mjs --bundle;
+the installed bundler is packaging tooling, not an embedded runtime.
 
 ## Ground rules
 

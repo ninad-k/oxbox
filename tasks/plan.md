@@ -1,51 +1,56 @@
 # Implementation Plan: Oxbox
 
-## Overview
+## Current implementation
 
-Oxbox is a tray launcher with one-click utilities, built as Rust (`oxbox-core` + Tauri 2) with a Svelte 5 UI.
-**Phase 0 (framework) is done**: tray, launcher with category sidebar, search, favourites, tool view frame,
-design system, CI, and two reference tools (Transform Text, Verify Checksum).
-Phases 1–4 deliver the remaining 18 tools of v0.1. Phase 5+ is the longer roadmap towards ~60 tools.
+The selected application is **native eframe/egui 0.37.0 on Rust 1.95**, with shared oxbox-core logic and all 49
+concrete tool routes. The user approved the dependency set and architecture in
+[ADR 0004](../docs/adr/0004-runtime-offline-boundary.md). Follow [native-migration.md](native-migration.md)
+for the per-tool route/automation/manual matrix and outstanding release gates. The retained Svelte/Tauri
+host is a behavior/parity reference, not the native runtime or its packaging command.
 
-**Implementation update (2026-11-21):** the detailed Phase 1–4 source tasks are integrated; use
-[todo.md](todo.md) for the distinction between implementation and remaining acceptance gates. The release is
-not published. The workspace now requires Rust 1.93 for bounded 7z decoding ([ADR 0003](../docs/adr/0003-bounded-7z.md)).
-The user subsequently promoted both the detailed phases and Phase 5+. The 48-tool source catalogue now includes
-[system/apps](phase5-system.md), [media/vision](phase5-media.md), [presentation/time](phase5-time.md), and
-[currency](phase5-currency.md) specifications. Deferred/excluded rows remain excluded. Opt-in currency networking
-was explicitly approved and raised as [issue #1](https://github.com/ninad-k/oxbox/issues/1).
-The Windows release privacy gate now has a separate [runtime privacy follow-up](runtime-privacy.md),
-including user-approved existing SDK bindings and production network verification.
+Metadata comes from catalog/tools.json for the native host, legacy adapters and static site. All file,
+crypto, platform/provider, opt-in networking and confirmation requirements continue to apply. Existing
+[Phase 5 specifications](todo.md#phase-5-roadmap), [Mouse Activity](mouse-activity.md) and original core
+acceptance criteria remain part of the 49-tool scope. Download Video/Audio and Free Memory stay excluded.
 
-Every tool task below is sized for **one focused session of a coding agent** (a local LLM is fine).
-Each one touches ≤ 5–6 files and follows the recipe in [`AGENTS.md`](../AGENTS.md#5-recipe-add-a-tool).
-The checklist version of this plan is [`todo.md`](todo.md).
+The original 7z update raised the minimum to 1.93; the selected current renderer now requires 1.95. Keep
+native privacy, packaging, hardware, accessibility and cross-platform runtime gates open until recorded.
+Earlier Tauri CI, screenshots and installer results are historical evidence, not native certification.
 
-## Architecture decisions (already made, see `docs/adr/`)
+## Architecture decisions
 
-- All logic in `crates/oxbox-core` (no Tauri). `src-tauri` holds thin commands, tray and window code.
-- One tool = core module + command(s) + `api.ts` wrapper + Svelte view + registry entry.
-- Offline only; destructive actions confirm and go to the Recycle Bin/Trash.
-- Long jobs use the shared progress/cancel infrastructure (task 2.1). Background tools use Tauri managed state.
+- Toolkit-neutral logic, validation and schedulers live in crates/oxbox-core with tests first.
+- crates/oxbox-native owns typed native forms, tasks, OS integration and application-lifetime workers.
+- Long jobs stream data with cancellation and bounded progress; navigation abandons stale view jobs.
+- Hidden timers/reminders and explicitly enabled background services run without UI frames and stop/join on Quit.
+- Storage is bounded/atomic; native imports preserve original legacy files. Invalid stores surface errors.
+- All tool metadata lives in the canonical JSON; adapters contain UI bindings, not duplicate descriptions/platform lists.
+- Default runtime work is offline. The reviewed manual ECB refresh alone requires opt-in and issue #1 approval.
 
-## How to run this plan with a local LLM
+## Working a task
 
-Give the agent **one task at a time** with this prompt (fill in the task id):
+Read AGENTS.md, SPEC.md, this plan and the relevant detailed specification. Write a failing core/fake-backend
+test for new logic, implement the real native form and update the catalogue/adapters/docs. Verify with:
 
-```
-You are working in the Oxbox repository. First read AGENTS.md completely, then SPEC.md.
-Implement task <ID> from tasks/plan.md, and nothing else.
-Follow "Recipe: add a tool" in AGENTS.md. Write the failing Rust tests first.
-Use only the dependencies listed in the task. Do not change unrelated files.
-When done, run: cargo fmt --all; cargo clippy --workspace --all-targets -- -D warnings;
-cargo test --workspace; pnpm check; pnpm test. Fix everything until all pass.
-Then tick the task in tasks/todo.md and update the tool's row in README.md.
-Reply with a summary of files changed and the test output.
-```
+    cargo fmt --all -- --check
+    cargo clippy -p oxbox-core -p oxbox-native --all-targets --locked -- -D warnings
+    cargo test -p oxbox-core -p oxbox-native --locked
+    node scripts/build-native.mjs --check
+    pnpm check
+    pnpm test
+    node scripts/build-website.mjs
+    node --test scripts/website.test.mjs
 
-Then run the app (`pnpm tauri dev`), try the tool by hand, and commit (`feat(<tool-id>): …`).
-Smaller local models do better if you also paste the two reference files the task names.
-At each **checkpoint**, have a stronger model (or a human) review the phase's diff before moving on.
+Then run cargo run -p oxbox-native with a disposable --profile and record the actual native interaction,
+keyboard/focus/error states and cleanup. Use the build-native wrapper for native bundles. Keep a focused PR;
+coordinate shared files and Windows test executables during parallel work. Do not tick manual gates on the
+basis of compilation, a fake backend or the legacy implementation.
+
+## Historical phase specifications
+
+The numbered phases below preserve the original Tauri/Svelte implementation plan and its behavioral intent.
+Their legacy file paths/plugin recipes are references for parity; apply the current native recipe above and
+AGENTS.md when changing the selected app. Existing phase/checkpoint marks do not certify native acceptance.
 
 ---
 

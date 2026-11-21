@@ -1,156 +1,127 @@
 # AGENTS.md: how to work on Oxbox
 
-This file is for AI coding agents (Claude, Codex, local LLMs via Continue/Aider/Cline/OpenCode, …)
-and for humans. Read it fully before changing code. Then read `SPEC.md` (what and why)
-and `tasks/plan.md` (what to build next, in which order).
+Read this file fully, then SPEC.md, tasks/plan.md and the relevant task specification before changing code.
+The user selected native eframe 0.37.0 and Rust 1.95 on 2026-11-21; ADR 0004 records the decision.
 
 ## 1. What Oxbox is
 
-A tray/menu-bar desktop app with many small one-click utilities ("tools").
-Rust does all the work; a Svelte UI shows a launcher (sidebar of categories + grid of tool tiles)
-and one view per tool. Targets: Windows 10/11 (primary), macOS 12+, Linux.
+A native tray/menu-bar desktop toolbox with 49 small utilities, an 800 × 800 favorites-first launcher,
+search and category browsing. Rust core logic is shared across Windows 10/11 (primary), macOS and Linux.
+The current app is crates/oxbox-native (eframe/egui with Glow), without an embedded browser. The original
+Tauri/Svelte source remains a parity reference; its previous validation does not certify the new host.
 
 ## 2. Golden rules
 
-1. **Logic lives in `crates/oxbox-core`.** No Tauri imports there. The Tauri crate (`src-tauri`) only adapts.
-2. **One tool = one core module + one command (or a few) + one Svelte view + one registry entry.** Don't spread a tool across unrelated files.
-3. **Never delete user data without confirmation.** Default to moving files to the Recycle Bin/Trash (`trash` crate), never permanent delete.
-4. **Offline by default.** No telemetry, no network calls. Anything needing the network must be raised in an issue first.
-5. **Never panic on user input.** Return `CoreError`. `unwrap()`/`expect()` are denied in `oxbox-core` outside tests.
-6. **Stream big files.** Never `read_to_end` a user file of unknown size.
-7. **Ask before adding dependencies** that are not already listed for your tool in `tasks/plan.md`.
-8. **Clean-room.** Do not copy code, icons, names or text from proprietary products. Write original code and copy.
-9. **Keep the UI consistent.** Use the tokens in `src/app.css` and the shared components in `src/lib/ui/`. No new colours or one-off spacing.
-10. **Tests first for logic.** Write the failing test in the core module, then the implementation.
+1. **Logic lives in crates/oxbox-core.** No eframe, Tauri or other UI imports there. Native host code adapts.
+2. **One tool = one core module + a concrete native form + one canonical catalogue entry.** Grouped native
+   view modules are allowed; every ID must expose its real controls, results, errors and platform limits.
+   Do not replace tools with generic JSON editors, mock results or placeholder routes.
+3. **Never delete user data without confirmation.** Default to Recycle Bin/Trash through the shared helper,
+   never permanent deletion. Outputs use exclusive creation and preserve originals.
+4. **Offline by default.** No telemetry, automatic URL loading or background refresh. The user-approved
+   manual ECB currency refresh is the documented opt-in exception (issue #1). New network use needs an issue
+   and approval. A native renderer alone is not proof of zero runtime network activity.
+5. **Never panic on user input.** Return CoreError; unwrap()/expect() remain denied in core outside tests.
+6. **Stream big files.** Never read_to_end a user file of unknown size. Bound metadata, previews and queues.
+7. **Ask before adding dependencies** outside the approved task/ADR set. The selected native packages and
+   versions are already authorized; do not ask again for those. Never silently add another renderer/backend.
+8. **Clean-room.** Write original code and copy; do not copy proprietary code, icons, names, text or UI art.
+9. **Keep the native UI consistent.** Use shared egui styles, real labels/AccessKit names, native dialogs and
+   existing Lucide vector assets. Do not add one-off colors, typography, remote fonts or image loaders.
+10. **Tests first for new logic.** Observe the failing core/fake-backend test, then implement. Tests must not
+    move the live pointer, capture private content, delete user data, change power/display settings or use the network.
+11. **Preserve saved data.** Use bounded atomic host storage and transactions. Import legacy files into separate
+    native-*.json stores once; leave originals intact. Surface invalid storage rather than silently resetting it.
+12. **Own background work.** Hidden timers/reminders cannot depend on UI frames. Workers, OS leases and media
+    children must cancel, join and restore cleanly on Quit. Do not register work after shutdown begins.
 
 ## 3. Repository map
 
-```
-crates/oxbox-core/src/
-  error.rs            CoreError (+ stable .code()) and CoreResult
-  platform/mod.rs     Os detection; put OS-specific code in platform/{windows,macos,linux}.rs
-  tools/mod.rs        list of tool modules
-  tools/<tool>.rs     tool logic + unit tests  (reference: text_transform.rs, checksum.rs)
-src-tauri/src/
-  lib.rs              app builder: plugins, tray, window behaviour, generate_handler![...]
-  commands.rs         #[tauri::command] adapters (validate size, spawn_blocking, map errors)
-  error.rs            ToolError { code, message } sent to the UI
-  tray.rs             tray icon + menu
-src-tauri/capabilities/default.json   Tauri permissions. Add only what a tool needs.
-src/lib/
-  registry.ts         THE tool catalogue (id, name, category, icon, platforms, phase, status, load)
-  api.ts              typed wrappers for every Rust command. Views never call invoke() directly.
-  search.ts           launcher filtering/ranking (+ search.test.ts)
-  favorites.svelte.ts favourites store
-  ui/                 shared components: Sidebar, ToolTile, ToolView, Notice, Segmented, CopyButton, PlannedTool
-  tools/<Tool>.svelte one view per tool (reference: TransformText.svelte, VerifyChecksum.svelte)
-src/routes/+page.svelte  launcher shell (search, grid, opening tools)
-```
+- crates/oxbox-core/src/tools/<tool>.rs: toolkit-neutral logic and unit tests.
+- crates/oxbox-core/src/platform/: OS-specific core adapters with explicit Unsupported errors.
+- crates/oxbox-core/src/{launcher,preferences}.rs: shared catalogue/search and safe local persistence.
+- crates/oxbox-native/src/app.rs: launcher, settings, focus, navigation and global UI lifecycle.
+- crates/oxbox-native/src/{host,jobs,integration,instance}.rs: storage/notifications, cancellable tasks,
+  tray/hotkeys/login and local single-instance activation.
+- crates/oxbox-native/src/tools/{system,media,utilities}.rs and submodules: all 49 concrete native forms.
+- catalog/tools.json: the sole tool/category metadata authority for native, legacy and website interfaces.
+- catalog/icons.json: flattened existing Lucide vectors; scripts/generate-native-icons.mjs regenerates them.
+- src/, src-tauri/: retained legacy comparison host. Legacy registries contain only typed view/icon adapters.
+- website/: static Pages source; no application commands or automatic external resources execute there.
+- tasks/native-migration.md: route parity matrix and acceptance gates. docs/VALIDATION.md holds dated evidence.
 
 ## 4. Commands
 
-```bash
-pnpm install                                         # once
-pnpm tauri dev                                       # run the desktop app with hot reload
-pnpm dev                                             # UI only in a browser (Rust commands unavailable)
-cargo test --workspace                               # Rust tests
-cargo clippy --workspace --all-targets -- -D warnings
-cargo fmt --all                                      # format Rust
-pnpm check                                           # Svelte + TypeScript type check
-pnpm test                                            # UI unit tests (vitest)
-pnpm tauri build                                     # release installers
-```
+Run from the repository root with Rust 1.95 and the native OS development packages installed.
 
-Windows tip: if the repo sits in a very deep folder, MSVC's linker fails with `LNK1104` (path too long).
-Clone to a short path (e.g. `D:\src\oxbox`) or set `CARGO_TARGET_DIR=C:\t\oxbox`.
+    cargo run -p oxbox-native --locked
+    cargo run -p oxbox-native --locked -- --profile <disposable-profile-directory>
+    cargo test -p oxbox-core -p oxbox-native --locked
+    cargo clippy -p oxbox-core -p oxbox-native --all-targets --locked -- -D warnings
+    cargo fmt --all -- --check
+    node scripts/build-native.mjs --check
+    node scripts/build-native.mjs
+    node scripts/build-native.mjs --bundle
 
-## 5. Recipe: add a tool
+The build wrapper verifies the selected package graph, builds oxbox-native and reuses the installed bundler
+only as a packaging tool. Do not substitute pnpm tauri build for a native release build.
 
-Example: building `unit-converter`. Follow every step; tick them off in `tasks/todo.md`.
+Legacy/catalogue and website checks (Node 22.17+ and frozen pnpm dependencies for legacy UI):
 
-**Step 1: Core logic + tests** in `crates/oxbox-core/src/tools/unit_convert.rs`, registered in `tools/mod.rs`.
+    pnpm install --frozen-lockfile
+    pnpm check
+    pnpm test
+    pnpm build
+    node scripts/build-website.mjs
+    node --test scripts/website.test.mjs
 
-```rust
-//! Tool: **Unit Converter** (`unit-converter`).
-use serde::{Deserialize, Serialize};
-use crate::{CoreError, CoreResult};
+Use pnpm tauri dev only for an explicitly identified legacy comparison. On Windows, coordinate Rust builds/tests
+across agents to avoid executable/link locks. Use a short target directory if MSVC paths become too long.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Unit { Meter, Kilometer, Mile /* … */ }
+## 5. Recipe: add or change a tool
 
-pub fn convert(value: f64, from: Unit, to: Unit) -> CoreResult<f64> {
-    if !value.is_finite() { return Err(CoreError::InvalidInput("value must be a number".into())); }
-    // …
-}
+1. Read its specification and existing core/view reference. Add failing core tests for normal, edge and error
+   cases, including cancellation and fake OS effects where relevant. Implement without UI dependencies.
+2. Add the actual typed native form in the appropriate tools group. Call core APIs directly or through the
+   host task/controller; never invoke a shell string or place business logic in widget callbacks.
+3. Use Task for file/CPU jobs, progress and user Cancel. Call abandon() on navigation to discard stale results;
+   hiding the window preserves in-flight work. Keep explicit background controllers alive until Stop/expiry/Quit.
+4. Use Host load/save/save_at and transactions for app data. Persist alarm/date firing state before notifying;
+   recover on storage failure. Passphrases stay transient, are never logged/persisted, and draft fields clear on leave/hide.
+5. Update catalog/tools.json. Keep stable IDs, existing platform constraints and provider notes. Maintain the
+   legacy component/icon adapters while that comparison host remains. Do not duplicate metadata in TypeScript.
+6. Confirm destructive actions with exact reviewed paths/commands/counts. Use shared path guards and Trash.
+   Unsupported controls must report real limits; OS settings delegation is acceptable only where specified.
+7. Run scoped tests, then the full native checks and relevant legacy/site checks. Verify manually in a
+   disposable profile on a consenting desktop; test keyboard, focus, empty/busy/success/error states and Quit.
+8. Update task/docs evidence. A checked source row or fake backend is not native manual acceptance. Leave
+   installer, hardware, accessibility, privacy and independent review gates open until recorded evidence exists.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn km_to_miles() { assert!((convert(1.0, Unit::Kilometer, Unit::Mile).unwrap() - 0.621371).abs() < 1e-6); }
-}
-```
+## 6. Patterns and lifecycle
 
-Run `cargo test -p oxbox-core`; it must fail first, then pass.
+Keep command construction pure and testable; pass executable arguments separately, never through shell strings.
+Use platform modules and cfg guards for unavailable APIs. Long work checks CancelToken in streaming loops and
+reports Progress through the bounded native Task mechanism. Task shutdown cancels and joins its worker.
 
-**Step 2: Command** in `src-tauri/src/commands.rs`, then add it to `generate_handler![…]` in `lib.rs`.
+Native tools may use shared Arc/Mutex state, dedicated workers and cloned Notifier handles. Avoid locks across
+UI callbacks or blocking I/O where possible. Explicit Stop must await cleanup. Queued starts/results must not
+outlive Stop/navigation/Quit, and settings failures must restore the preceding runtime/storage state.
 
-```rust
-#[tauri::command]
-pub fn convert_unit(value: f64, from: unit_convert::Unit, to: unit_convert::Unit) -> Result<f64, ToolError> {
-    Ok(unit_convert::convert(value, from, to)?)
-}
-// Disk/CPU heavy? make it `async` and wrap the call in `run_blocking(move || …).await`.
-```
+Tests with egui Context::run_ui are headless: consume/clear returned textures_delta because no GPU painter is
+present. Such tests prove route/widget construction, not real GPU, screen-reader or hardware behavior.
 
-**Step 3: Typed wrapper** in `src/lib/api.ts`: mirror Rust enums as TS string unions and add a method to `api`.
-Tauri converts argument names: Rust `snake_case` params ↔ JS `camelCase` keys.
+## 7. Definition of done
 
-**Step 4: View** `src/lib/tools/UnitConverter.svelte`. Start from `TransformText.svelte` (instant results)
-or `VerifyChecksum.svelte` (file picking + long work). Rules:
-- Use `.field`, `.field-label`, `.input`, `.btn`, `.btn-primary`, `.card` classes and `Segmented`, `CopyButton`, `Notice`.
-- Every control has a visible label or `aria-label`. State is never shown by colour alone (use `Notice`).
-- Handle the states: empty, working (`aria-busy`), success, error (`Notice kind="error"`).
-- Guard against stale async results with a `requestId` counter (see both reference views).
-
-**Step 5: Registry**: in `src/lib/registry.ts` set `status: 'ready'` and
-`load: () => import('./tools/UnitConverter.svelte')`. Import icons per file:
-`import Ruler from '@lucide/svelte/icons/ruler'` (never the barrel import; it slows builds).
-
-**Step 6: Permissions**: if the view uses a Tauri plugin (dialog, notification, …), add the narrowest permission
-to `src-tauri/capabilities/default.json`.
-
-**Step 7: Verify** (all must pass): `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`,
-`cargo test --workspace`, `pnpm check`, `pnpm test`, then `pnpm tauri dev` and use the tool by hand.
-
-**Step 8: Docs**: tick the task in `tasks/todo.md`, update the tool's row in `README.md` to "Ready".
-
-## 6. Patterns for harder tools
-
-- **OS-specific behaviour** (lock screen, hide desktop, sleep): add `platform/windows.rs`, `macos.rs`, `linux.rs`
-  with the same function signature behind `#[cfg(target_os = "…")]`; unsupported → `Err(CoreError::Unsupported(Os::current().display_name()))`.
-  Keep command construction (e.g. which shell command or API call) in a pure function you can unit-test.
-  Prefer crates (`keepawake`, `xcap`, `arboard`, `trash`) over shelling out; when shelling out, pass args as an
-  array (`std::process::Command::arg`), never via a shell string.
-- **Stateful / background tools** (Do Not Sleep, Clipboard History, Break Time): hold state in a struct managed
-  by Tauri (`app.manage(Mutex<State>)`) and expose `start`/`stop`/`status` commands. Stop cleanly on app exit.
-- **Progress for long jobs** (duplicates, clean drive, archive): pass a `&mut dyn FnMut(Progress)` callback from
-  core; in the command, emit `app.emit("tool://<id>/progress", payload)`; listen with `listen()` in the view.
-  Support cancel with an `Arc<AtomicBool>` checked in the loop → `CoreError::Cancelled`.
-- **Destructive actions**: show a confirmation (`ask()` from `@tauri-apps/plugin-dialog`) listing what will happen,
-  then move to trash.
-
-## 7. Definition of done (per tool)
-
-- [ ] Core logic has unit tests covering normal, edge and error cases; they pass.
-- [ ] clippy (`-D warnings`), fmt, `pnpm check`, `pnpm test` are clean.
-- [ ] The tool works by hand in `pnpm tauri dev` on Windows; macOS/Linux either work or show "not available".
-- [ ] Empty, busy, success and error states are handled; keyboard-only use works.
-- [ ] No new network access, no permanent deletion, no new deps outside the plan without approval.
-- [ ] `tasks/todo.md` and `README.md` updated.
+- Core normal/edge/error and meaningful lifecycle tests pass; native fmt/clippy/tests/build are clean.
+- Catalogue metadata, icon/view bindings and any website output agree; relevant UI/site checks pass.
+- Supported native behavior is tested by hand; unavailable OS/provider behavior is clearly labeled.
+- Keyboard-only operation, labels, focus and empty/busy/success/error states are reviewed.
+- No unauthorized dependency/network use, permanent deletion, overwritten input or lingering worker exists.
+- Task/README/validation records distinguish implemented source from remaining acceptance.
+- The release remains an unpublished draft until all required release gates are satisfied.
 
 ## 8. Git
 
-Conventional Commits (`feat(unit-converter): …`, `fix(tray): …`, `docs: …`). One tool per branch/PR.
-Never commit secrets, `target/`, `node_modules/` or `build/`.
+Use Conventional Commits and codex/ branches by default; prefer one focused tool/change per PR. Never commit
+secrets, target/, node_modules/, generated build/ or website/dist/. Do not push, tag, publish or alter external
+services unless the session authorizes it. The integrator owns shared release and CI changes during parallel work.

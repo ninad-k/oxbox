@@ -30,3 +30,5 @@
   .mock-tile small { font-size: 7.5px; line-height: 1.2; margin-top: 3px; }
   .mock-footer { display: none; }
 }
+
+.product-shot { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 24px 65px #0004; }

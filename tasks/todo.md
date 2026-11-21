@@ -6,14 +6,14 @@ Work top to bottom; one task per branch/PR. Tick a box only when its acceptance 
 
 ## Implementation status — 2026-11-21
 
-The detailed v0.1, user-promoted Phase 5 and Mouse Activity source is integrated on `codex/complete-v0-1`.
-All **49 catalogue entries** register their views; core tests, typed command groups, background lifecycle,
-and documentation are present. Dashboard defaults to favorites only; the new original brand and normal
-800 × 800 starting window are source changes awaiting current-revision native acceptance.
-The original acceptance boxes below remain open where Windows manual checks, independent review, runtime privacy
-or public release signoff are outstanding. [Public CI passed at the earlier 5117e6d revision](https://github.com/ninad-k/oxbox/actions/runs/44909470452);
-that result does not certify the newer launcher or Mouse Activity revision.
-These boxes are not a list of missing source implementations.
+The current implementation branch is codex/native-renderer. The selected eframe 0.37/Rust 1.95 host contains
+all 49 source routes and concrete forms, reusing the core. Debug native builds, 23 host/headless tests and a
+live Windows launcher have been observed; this does not close every tool's runtime or accessibility gate.
+See [the 49-row native migration matrix](native-migration.md) for source, automated and pending manual scope.
+
+The original Svelte/Tauri source and its public CI/deployment records below are retained historical evidence.
+Earlier [CI at 5117e6d](https://github.com/ninad-k/oxbox/actions/runs/44909470452) does not certify the native
+host. Unchecked boxes describe acceptance work, not an absence of source implementations.
 
 | Tasks | Source status | Acceptance still required |
 |---|---|---|
@@ -21,7 +21,7 @@ These boxes are not a list of missing source implementations.
 | 2.1–2.5 | Implemented; hostile-archive/path/cancellation tests added | Large-file UI/drop/Trash recovery checks; human security checkpoint |
 | 3.1–3.6 | Implemented; lifecycle and fake-clock tests added | Real Windows power/break effects and Quit verification on a consenting test machine |
 | 4.1–4.6 | Implemented; media/privacy tests added | Multi-monitor/scaling/capture/clipboard and OS-specific runtime checks |
-| 4.7 | Earlier 5117e6d Windows draft artifacts and three-platform builds are recorded in validation; current revision is separate | Current-source packaging evidence, clean-machine/tool runtime acceptance, cold startup, WebView2 privacy gap, publication |
+| 4.7 | Earlier 5117e6d Windows draft artifacts and three-platform builds are recorded in validation; current revision is separate | Current-source packaging evidence, clean-machine/tool runtime acceptance, cold startup, native production privacy observation, publication |
 | Phase 5 system/apps | Twelve tools implemented | Real Windows window/display/eject/uninstall effects in a consenting test account |
 | Phase 5 media/vision | Ten tools implemented | Device/provider/session-specific recording, OCR and color sampling checks |
 | Phase 5 presentation/time | Five tools implemented | External-display presentation and native alarm/OS-control checks |
@@ -32,7 +32,7 @@ These boxes are not a list of missing source implementations.
 See [validation evidence](../docs/VALIDATION.md), [test matrix](../docs/TESTING.md), and
 [release checklist](../docs/RELEASE.md) before closing a gate.
 
-## Phase 0: Framework
+## Original Phase 0: framework (legacy source milestone)
 - [x] 0.1 Workspace, Tauri 2 + SvelteKit, icons
 - [x] 0.2 Tray icon and close-to-tray
 - [x] 0.3 Launcher UI (sidebar, search, favourites, tool view, light/dark)
@@ -86,15 +86,23 @@ The user promoted the planned rows on 2026-11-21. Source implementations are com
 - [ ] Full Phase 5 Windows/provider/hardware smoke matrix and cross-platform acceptance
 - [ ] Human review and public release signoff
 
-## Launcher, Mouse Activity and website revision
+## Legacy launcher, Mouse Activity and website observations
 
 - [x] Implement the [Windows-only Mouse Activity source and fake-backend tests](mouse-activity.md)
 - [x] Implement favorites-only Dashboard, Ctrl+Alt+O / Cmd+Option+O default launcher, Alt+1–9 favorites, search and Quit shortcuts
 - [x] Add original branding and a normal 800 × 800 starting native window
 - [x] Add [GitHub Pages website source and generated catalog](../website/README.md)
-- [x] Current native launcher/shortcut smoke and no-motion Mouse Activity Start, banner Stop, Quit and restart checks
+- [x] Historical Tauri Windows launcher/shortcut smoke and no-motion Mouse Activity Start, banner Stop, Quit and restart checks
 - [ ] Mouse Activity idle movement, genuine-input return and full native monitor/desktop acceptance
 - [x] Confirm website keyboard/mobile/filter behavior and [successful public Pages deployment](https://github.com/ninad-k/oxbox/actions/runs/44915821604)
 - [ ] Complete strict runtime privacy, clean-machine installer, human security/license and full hardware acceptance gates
+
+## Selected native migration
+
+- [x] Implement the approved Rust native host and 49 concrete routes; share canonical metadata across interfaces
+- [x] Preserve legacy files and provide separate native settings/cache stores
+- [x] Observe local native debug build, 23 native automated tests and live launcher feasibility
+- [ ] Complete the [per-tool matrix](native-migration.md), native production privacy observations and platform/device/accessibility checks
+- [ ] Verify native bundles, clean-machine installation, size/startup, licenses/security and release publication
 
 Download Video/Audio and Free Memory remain explicitly deferred/excluded by the plan.

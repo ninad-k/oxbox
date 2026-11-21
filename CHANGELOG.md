@@ -5,6 +5,29 @@ the presence of this changelog does not mean installers have been published.
 
 ## 0.1.0 — draft, 2026-11-21
 
+### Installed startup default
+
+- Fresh installed Windows/macOS copies enable current-user login startup on first launch; subsequent logins
+  open quietly in the tray. Settings allows opt-out, and upgrades preserve existing/OS-disabled choices.
+- Development and isolated profiles cannot register login startup. Default startup never enables Mouse Activity,
+  clipboard history or recordings. Startup preference writes roll back OS registration on failure.
+- Windows command paths are quoted and uninstall cleanup checks exact ownership before removing an entry.
+
+### Native renderer migration
+
+- Replaced the production browser host with exact eframe 0.37.0 and raised the minimum Rust version to
+  1.95, following the user-approved ADR 0004. All 49 stable tools have native forms; the former Tauri/Svelte
+  source remains available for comparison. There is no hidden fallback webview.
+- Shared `catalog/tools.json` now drives the native launcher, website and legacy registry adapters.
+- Added native tray/shortcut registration rollback, local single-instance activation, atomic preference
+  storage, bounded cancellable workers, independent reminder scheduling and stop/join cleanup.
+- Preserved legacy stores while importing into separate native files; currency download consent resets off.
+- Restored exact keyboard modifier matching, Escape/Slash navigation and tray controls. Native dialogs retain
+  their parent window and restore focus on accept/cancel. Clipboard Pause/Clear/consent withdrawal supersedes
+  pending Start, and Quit prevents late clipboard workers from reopening.
+- Native manual, platform, installer, hardware, accessibility and privacy acceptance remains tracked separately
+  from automated tests. The release stays an unpublished draft until those checks are complete.
+
 ### Launcher, Mouse Activity and website revision
 
 - Added Windows-only **Mouse Activity**, bringing the catalog to 49 tools. Sessions require explicit Start,
@@ -15,8 +38,8 @@ the presence of this changelog does not mean installers have been published.
   resizable native window starts at 800 × 800 logical pixels and uses the original outlined O/ember brand.
 - Changed the default global launcher binding to Ctrl+Alt+O, or Cmd+Option+O on macOS. Existing saved bindings
   remain in effect. Alt+1–9 opens favorites, Ctrl/Cmd+K searches, and Ctrl/Cmd+Q quits inside the app.
-- Added a responsive, static GitHub Pages website with a 49-tool catalog generated from the TypeScript
-  registries, search/category/platform filters, provider notes and contribution guidance. It uses the same
+- Added a responsive, static GitHub Pages website with a 49-tool catalog generated from shared JSON,
+  search/category/platform filters, provider notes and contribution guidance. It uses the same
   SVG brand asset as the app, without external fonts, analytics or CDN scripts.
 - Fixed website Reset so the search fields, visible cards and result status update together; regression coverage
   models form-reset default-action ordering.
@@ -61,6 +84,7 @@ the presence of this changelog does not mean installers have been published.
   `#lib/*` package subpath imports. Node.js 22.17+ is required.
 - Updated ZIP to 9.8 and rqrr to 0.11 to remove the ZIP and LRU audit findings. Upstream maintenance and
   Linux GLib warnings are recorded with their scope in [dependency notes](docs/DEPENDENCIES.md).
-- Public CI now passes Windows, macOS and Ubuntu 24.04 native builds, UI checks and the Rust 1.93 check.
+- Historical Tauri CI passed Windows, macOS and Ubuntu 24.04 builds, UI checks and Rust 1.93. Native
+  CI uses Rust 1.95 and is recorded independently in the validation record.
 - Windows runtime QA observed independent WebView2 HTTPS traffic. App telemetry claims are explicitly scoped,
   and strict whole-process offline acceptance remains open; see [runtime privacy findings](docs/RUNTIME_PRIVACY.md).

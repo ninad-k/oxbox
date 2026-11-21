@@ -7,6 +7,15 @@ import test from 'node:test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalogue = JSON.parse(fs.readFileSync(path.join(root, 'website/dist/tools.json'), 'utf8'));
+const canonical = JSON.parse(fs.readFileSync(path.join(root, 'catalog/tools.json'), 'utf8'));
+const notes = JSON.parse(fs.readFileSync(path.join(root, 'website/tool-notes.json'), 'utf8'));
+
+test('website catalogue preserves canonical metadata, order and platform restrictions', () => {
+  assert.equal(catalogue.tools.length, 49);
+  assert.deepEqual(catalogue.categories, canonical.categories);
+  assert.deepEqual(catalogue.tools, canonical.tools.map(tool => ({ ...tool, note: Object.hasOwn(notes, tool.id) ? notes[tool.id] : tool.note ?? '' })));
+  assert.deepEqual(catalogue.tools.find(tool => tool.id === 'mouse-activity').platforms, ['windows']);
+});
 
 function page() {
   const listeners = new Map();

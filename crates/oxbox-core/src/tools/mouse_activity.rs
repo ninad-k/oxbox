@@ -4,14 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{
     Arc, Mutex,
-    atomic::{AtomicU64, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 #[cfg(any(windows, test))]
-use std::{
-    sync::{atomic::AtomicBool, mpsc},
-    thread::JoinHandle,
-    time::Duration,
-};
+use std::{sync::mpsc, thread::JoinHandle, time::Duration};
 
 #[cfg(windows)]
 #[path = "../platform/mouse_input.rs"]
@@ -222,13 +218,16 @@ fn unavailable() -> CoreError {
 }
 impl Controller {
     pub fn start(&mut self, config: Config) -> CoreResult<Status> {
+        self.start_signalled(config, Arc::new(AtomicBool::new(false)))
+    }
+    fn start_signalled(&mut self, config: Config, stop: Arc<AtomicBool>) -> CoreResult<Status> {
         config.validate()?;
-        if self.stopping {
+        if self.stopping || stop.load(Ordering::Acquire) {
             return Err(CoreError::Cancelled);
         }
         #[cfg(windows)]
         {
-            self.start_with(config, native::NativeInput::new)
+            self.start_with_stop(config, native::NativeInput::new, stop)
         }
         #[cfg(not(windows))]
         {
@@ -258,18 +257,26 @@ impl Controller {
         self.stopping = true;
         let _ = self.stop();
     }
-    #[cfg(any(windows, test))]
+    #[cfg(test)]
     fn start_with<B: Backend + 'static>(
         &mut self,
         config: Config,
         factory: impl FnOnce() -> CoreResult<B> + Send + 'static,
     ) -> CoreResult<Status> {
+        self.start_with_stop(config, factory, Arc::new(AtomicBool::new(false)))
+    }
+    #[cfg(any(windows, test))]
+    fn start_with_stop<B: Backend + 'static>(
+        &mut self,
+        config: Config,
+        factory: impl FnOnce() -> CoreResult<B> + Send + 'static,
+        stop: Arc<AtomicBool>,
+    ) -> CoreResult<Status> {
         config.validate()?;
-        if self.stopping {
+        if self.stopping || stop.load(Ordering::Acquire) {
             return Err(CoreError::Cancelled);
         }
         self.stop()?;
-        let stop = Arc::new(AtomicBool::new(false));
         let worker_stop = stop.clone();
         let status = self.status.clone();
         let (ready, reply) = mpsc::sync_channel(1);
@@ -277,7 +284,13 @@ impl Controller {
             .name("oxbox-mouse-activity".into())
             .spawn(move || {
                 let result: CoreResult<()> = (|| {
+                    if worker_stop.load(Ordering::Acquire) {
+                        return Err(CoreError::Cancelled);
+                    }
                     let mut backend = factory()?;
+                    if worker_stop.load(Ordering::Acquire) {
+                        return Err(CoreError::Cancelled);
+                    }
                     let initial = backend.poll()?;
                     let mut engine = Engine::new(config, initial.now)?;
                     let initial_status = engine.status(initial.now);
@@ -416,13 +429,50 @@ struct Session {
 /// Orders command intentions independently of blocking-pool scheduling.
 #[derive(Default)]
 pub struct Service {
+    closed: AtomicBool,
     requested: AtomicU64,
     issued: Mutex<BTreeMap<u64, Action>>,
     session: Mutex<Session>,
+    active_stop: Mutex<Option<Arc<AtomicBool>>>,
 }
 impl Service {
+    /// Signal recovery without waiting for the managed session or its worker.
+    pub fn request_stop(&self) -> CoreResult<Request> {
+        let request = self.reserve(Action::Stop);
+        if request.is_err() {
+            self.closed.store(true, Ordering::Release);
+        }
+        self.signal_active();
+        request
+    }
+    /// Close admission and signal recovery; normal shutdown still joins ownership.
+    pub fn request_shutdown(&self) {
+        self.closed.store(true, Ordering::Release);
+        self.signal_active();
+        let mut issued = self
+            .issued
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
+        self.requested.store(
+            self.requested.load(Ordering::SeqCst).saturating_add(1),
+            Ordering::SeqCst,
+        );
+        issued.clear();
+    }
+    fn signal_active(&self) {
+        let active = self
+            .active_stop
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
+        if let Some(stop) = &*active {
+            stop.store(true, Ordering::Release);
+        }
+    }
     pub fn reserve(&self, action: Action) -> CoreResult<Request> {
         let mut issued = self.issued.lock().map_err(|_| unavailable())?;
+        if action == Action::Start && self.closed.load(Ordering::Acquire) {
+            return Err(CoreError::Cancelled);
+        }
         let id = self
             .requested
             .load(Ordering::SeqCst)
@@ -446,27 +496,55 @@ impl Service {
     fn apply_start(
         &self,
         request: Request,
-        start: impl FnOnce(&mut Controller) -> CoreResult<Status>,
+        start: impl FnOnce(&mut Controller, Arc<AtomicBool>) -> CoreResult<Status>,
     ) -> CoreResult<Status> {
-        self.claim(request, Action::Start)?;
-        let mut session = self.session.lock().map_err(|_| unavailable())?;
-        if self.requested.load(Ordering::SeqCst) != request.id {
+        if self.closed.load(Ordering::Acquire) {
             return Err(CoreError::Cancelled);
         }
-        let result = start(&mut session.controller);
+        self.claim(request, Action::Start)?;
+        let mut session = self.session.lock().map_err(|_| unavailable())?;
+        if self.closed.load(Ordering::Acquire)
+            || self.requested.load(Ordering::SeqCst) != request.id
+        {
+            return Err(CoreError::Cancelled);
+        }
+        let stop = Arc::new(AtomicBool::new(false));
+        {
+            let mut active = self.active_stop.lock().map_err(|_| unavailable())?;
+            // A replacement Start already owns ending its predecessor. Signal
+            // it before publishing the new flag so recovery cannot miss either.
+            if let Some(previous) = active.replace(stop.clone()) {
+                previous.store(true, Ordering::Release);
+            }
+        }
+        // Recovery can arrive before or during publication. Never reset this
+        // flag: the exact published Arc belongs to the eventual native worker.
+        if self.closed.load(Ordering::Acquire)
+            || self.requested.load(Ordering::SeqCst) != request.id
+        {
+            stop.store(true, Ordering::Release);
+            session.controller.stop()?;
+            return Err(CoreError::Cancelled);
+        }
+        let result = start(&mut session.controller, stop);
         if result.is_ok() {
             session.applied = request.id;
         }
         // Stop may arrive while native observation is being initialized. Release
         // any just-created worker before returning a stale Start response.
-        if self.requested.load(Ordering::SeqCst) != request.id {
+        if self.closed.load(Ordering::Acquire)
+            || self.requested.load(Ordering::SeqCst) != request.id
+        {
             session.controller.stop()?;
             return Err(CoreError::Cancelled);
         }
         result
     }
     pub fn start(&self, request: Request, config: Config) -> CoreResult<Status> {
-        self.apply_start(request, |controller| controller.start(config))
+        config.validate()?;
+        self.apply_start(request, |controller, stop| {
+            controller.start_signalled(config, stop)
+        })
     }
     pub fn stop(&self, request: Request) -> CoreResult<Status> {
         self.claim(request, Action::Stop)?;
@@ -487,17 +565,7 @@ impl Service {
             .status()
     }
     pub fn shutdown(&self) {
-        {
-            let mut issued = self
-                .issued
-                .lock()
-                .unwrap_or_else(|poison| poison.into_inner());
-            self.requested.store(
-                self.requested.load(Ordering::SeqCst).saturating_add(1),
-                Ordering::SeqCst,
-            );
-            issued.clear();
-        }
+        self.request_shutdown();
         self.session
             .lock()
             .unwrap_or_else(|poison| poison.into_inner())
@@ -511,7 +579,10 @@ impl Service {
         config: Config,
         factory: impl FnOnce() -> CoreResult<B> + Send + 'static,
     ) -> CoreResult<Status> {
-        self.apply_start(request, |controller| controller.start_with(config, factory))
+        config.validate()?;
+        self.apply_start(request, |controller, stop| {
+            controller.start_with_stop(config, factory, stop)
+        })
     }
 }
 
@@ -525,6 +596,71 @@ mod tests {
             interval_seconds: 5,
             duration_minutes: Some(1),
         }
+    }
+    #[test]
+    fn fast_stop_ends_an_active_worker_while_the_session_mutex_is_held() {
+        let service = Service::default();
+        let (backend, now, _, moves, dropped) = fake(false);
+        let start = service.reserve(Action::Start).unwrap();
+        service
+            .start_with(start, config(), move || Ok(backend))
+            .unwrap();
+        let held = service.session.lock().unwrap();
+        let stop = service.request_stop().unwrap();
+        now.store(30_000, Ordering::Release);
+        let ended_before_release = dropped.recv_timeout(Duration::from_secs(2)).is_ok();
+        drop(held);
+        service.stop(stop).unwrap();
+        assert!(
+            ended_before_release,
+            "fast Stop waited for the session mutex"
+        );
+        assert!(
+            moves.try_recv().is_err(),
+            "worker moved after the stop signal"
+        );
+    }
+    #[test]
+    fn fast_shutdown_refuses_a_previously_reserved_start_and_new_admission() {
+        let service = Service::default();
+        let start = service.reserve(Action::Start).unwrap();
+        service.request_shutdown();
+        let result = service.start_with(start, config(), move || Ok(fake(false).0));
+        let late_admission = service.reserve(Action::Start);
+        service.shutdown();
+        assert!(matches!(result, Err(CoreError::Cancelled)));
+        assert!(matches!(late_admission, Err(CoreError::Cancelled)));
+    }
+    #[test]
+    fn fast_stop_signals_the_same_flag_while_start_factory_is_blocked() {
+        let service = Arc::new(Service::default());
+        let start = service.reserve(Action::Start).unwrap();
+        let (entered, ready) = mpsc::sync_channel(1);
+        let (release, wait) = mpsc::sync_channel(1);
+        let (backend, _, _, moves, dropped) = fake(false);
+        let pending = service.clone();
+        let worker = std::thread::spawn(move || {
+            pending.start_with(start, config(), move || {
+                entered.send(()).unwrap();
+                wait.recv().unwrap();
+                Ok(backend)
+            })
+        });
+        ready.recv_timeout(Duration::from_secs(5)).unwrap();
+        let published = service.active_stop.lock().unwrap().clone().unwrap();
+        let stop = service.request_stop().unwrap();
+        let signalled_during_setup = published.load(Ordering::Acquire);
+        release.send(()).unwrap();
+        let result = worker.join().unwrap();
+        service.stop(stop).unwrap();
+        assert!(signalled_during_setup);
+        assert!(matches!(result, Err(CoreError::Cancelled)));
+        dropped.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert!(moves.try_recv().is_err());
+        assert!(
+            published.load(Ordering::Acquire),
+            "a later worker reset the old Stop signal"
+        );
     }
     #[test]
     fn validates_ranges_before_starting() {
@@ -818,12 +954,10 @@ mod tests {
         assert!(!service.stop(stop).unwrap().active);
         dropped.recv_timeout(Duration::from_secs(1)).unwrap();
         service.shutdown();
-        let later = service.reserve(Action::Start).unwrap();
-        assert!(
-            service
-                .start_with(later, config(), || Ok(fake(false).0))
-                .is_err()
-        );
+        assert!(matches!(
+            service.reserve(Action::Start),
+            Err(CoreError::Cancelled)
+        ));
     }
     #[test]
     fn reservation_precedes_first_poll_and_tokens_remain_exact_strings() {

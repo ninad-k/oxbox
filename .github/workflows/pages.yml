@@ -2,8 +2,9 @@ name: GitHub Pages
 
 on:
   push:
-    branches: [main, codex/complete-v0-1]
+    branches: [main, codex/complete-v0-1, codex/native-renderer]
     paths:
+      - 'catalog/**'
       - 'website/**'
       - 'scripts/build-website.mjs'
       - 'scripts/website.test.mjs'

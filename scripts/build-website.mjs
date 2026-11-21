@@ -1,69 +1,49 @@
 #!/usr/bin/env node
-/** Static Pages build. Read registry literals through TypeScript's AST; never execute app imports. */
+/** Static Pages build from the shared JSON catalogue. No application imports execute. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ts from 'typescript';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = path.join(root, 'website');
 const output = path.join(source, 'dist');
-const declarations = new Map();
-for (const relative of ['src/lib/registry.ts', 'src/lib/roadmap-registry.ts']) {
-  const file = ts.createSourceFile(relative, fs.readFileSync(path.join(root, relative), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  for (const statement of file.statements) {
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      if (ts.isIdentifier(declaration.name) && declaration.initializer) declarations.set(declaration.name.text, declaration.initializer);
-    }
-  }
-}
-const omitted = new Set(['icon', 'load', 'tone']);
-function literal(node, locals = new Map(), stack = new Set()) {
-  if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node)) return literal(node.expression, locals, stack);
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (ts.isNumericLiteral(node)) return Number(node.text);
-  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
-  if (ts.isIdentifier(node)) {
-    if (locals.has(node.text)) return locals.get(node.text);
-    if (!declarations.has(node.text) || stack.has(node.text)) throw new Error(`Unsupported or cyclic catalogue identifier: ${node.text}`);
-    return literal(declarations.get(node.text), locals, new Set([...stack, node.text]));
-  }
-  if (ts.isArrayLiteralExpression(node)) return node.elements.flatMap(item => ts.isSpreadElement(item) ? literal(item.expression, locals, stack) : [literal(item, locals, stack)]);
-  if (ts.isObjectLiteralExpression(node)) {
-    const value = {};
-    for (const property of node.properties) {
-      if (ts.isSpreadAssignment(property)) { Object.assign(value, literal(property.expression, locals, stack)); continue; }
-      if (!ts.isPropertyAssignment(property) || !('text' in property.name)) throw new Error('Catalogue properties must be static named assignments.');
-      if (!omitted.has(property.name.text)) value[property.name.text] = literal(property.initializer, locals, stack);
-    }
-    return value;
-  }
-  if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'map') {
-    const callback = node.arguments[0];
-    if (node.arguments.length !== 1 || !ts.isArrowFunction(callback) || callback.parameters.length !== 1 || !ts.isIdentifier(callback.parameters[0].name)) throw new Error('Unsupported catalogue mapper.');
-    return literal(node.expression.expression, locals, stack).map(item => literal(callback.body, new Map([...locals, [callback.parameters[0].name.text, item]]), stack));
-  }
-  throw new Error(`Unsupported catalogue syntax: ${ts.SyntaxKind[node.kind]}`);
-}
-const categories = literal(declarations.get('categories'));
-const tools = literal(declarations.get('tools'));
+const catalogue = JSON.parse(fs.readFileSync(path.join(root, 'catalog/tools.json'), 'utf8'));
+const iconCatalogue = JSON.parse(fs.readFileSync(path.join(root, 'catalog/icons.json'), 'utf8'));
+const { categories, tools } = catalogue;
 const notes = JSON.parse(fs.readFileSync(path.join(source, 'tool-notes.json'), 'utf8'));
-const categoryById = new Map(categories.map(item => [item.id, item.label]));
+if (!Array.isArray(categories) || !categories.length || !Array.isArray(tools) || !tools.length) throw new Error('The canonical catalogue needs categories and tools.');
+if (!iconCatalogue.icons || typeof iconCatalogue.icons !== 'object' || Array.isArray(iconCatalogue.icons)) throw new Error('Missing canonical icon bindings.');
+if (!notes || typeof notes !== 'object' || Array.isArray(notes)) throw new Error('Website note overrides must be an object.');
+const stableId = value => typeof value === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+const text = value => typeof value === 'string' && value.trim().length > 0;
+const icon = value => stableId(value) && Object.hasOwn(iconCatalogue.icons, value);
+const categoryById = new Map();
+for (const category of categories) {
+  if (!category || !stableId(category.id) || categoryById.has(category.id) || !text(category.label) || !icon(category.icon)) throw new Error('Invalid or duplicate canonical category: ' + category?.id);
+  categoryById.set(category.id, category.label);
+}
 const ids = new Set();
 for (const tool of tools) {
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tool.id) || ids.has(tool.id)) throw new Error(`Invalid or duplicate tool ID: ${tool.id}`);
+  if (!tool || !stableId(tool.id) || ids.has(tool.id)) throw new Error('Invalid or duplicate tool ID: ' + tool?.id);
   ids.add(tool.id);
-  if (!tool.name || !tool.description || !categoryById.has(tool.category) || !['ready', 'planned'].includes(tool.status) || !Number.isInteger(tool.phase) || !Array.isArray(tool.keywords) || !tool.platforms?.length || tool.platforms.some(os => !['windows', 'macos', 'linux'].includes(os))) throw new Error(`Incomplete catalogue entry: ${tool.id}`);
+  if (!text(tool.name) || !text(tool.description) || !categoryById.has(tool.category) || !icon(tool.icon)
+    || !['ready', 'planned'].includes(tool.status) || !Number.isInteger(tool.phase) || tool.phase < 0
+    || !Array.isArray(tool.keywords) || tool.keywords.some(keyword => !text(keyword))
+    || !Array.isArray(tool.platforms) || !tool.platforms.length || new Set(tool.platforms).size !== tool.platforms.length
+    || tool.platforms.some(os => !['windows', 'macos', 'linux'].includes(os))
+    || (tool.note !== undefined && typeof tool.note !== 'string')) throw new Error('Incomplete canonical catalogue entry: ' + tool.id);
 }
-for (const id of Object.keys(notes)) if (!ids.has(id)) throw new Error(`Website note has no matching registry tool: ${id}`);
+for (const [id, note] of Object.entries(notes)) {
+  if (!ids.has(id)) throw new Error('Website note has no matching canonical tool: ' + id);
+  if (typeof note !== 'string') throw new Error('Website note must be text: ' + id);
+}
+const noteFor = tool => Object.hasOwn(notes, tool.id) ? notes[tool.id] : tool.note ?? '';
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const osNames = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
 const cards = tools.map(tool => {
   const category = categoryById.get(tool.category);
-  const search = [tool.name, tool.description, category, ...tool.keywords, notes[tool.id] || ''].join(' ').toLowerCase();
-  return `<article class="tool-card" id="tool-${escape(tool.id)}" data-category="${escape(tool.category)}" data-platforms="${escape(tool.platforms.join(' '))}" data-search="${escape(search)}"><div class="tool-card-top"><span class="tool-glyph" aria-hidden="true">${escape(tool.name.split(/\s+/).map(word => word[0]).slice(0, 2).join(''))}</span><span class="tool-category">${escape(category)}</span></div><h3>${escape(tool.name)}</h3><p>${escape(tool.description)}</p>${notes[tool.id] ? `<p class="tool-note">${escape(notes[tool.id])}</p>` : ''}<div class="tool-platforms"><span class="sr-only">Platforms in source: </span>${escape(tool.platforms.map(os => osNames[os]).join(' · '))}${tool.status === 'planned' ? ' · Planned' : ''}</div></article>`;
+  const search = [tool.name, tool.description, category, ...tool.keywords, noteFor(tool)].join(' ').toLowerCase();
+  return `<article class="tool-card" id="tool-${escape(tool.id)}" data-category="${escape(tool.category)}" data-platforms="${escape(tool.platforms.join(' '))}" data-search="${escape(search)}"><div class="tool-card-top"><span class="tool-glyph" aria-hidden="true">${escape(tool.name.split(/\s+/).map(word => word[0]).slice(0, 2).join(''))}</span><span class="tool-category">${escape(category)}</span></div><h3>${escape(tool.name)}</h3><p>${escape(tool.description)}</p>${noteFor(tool) ? `<p class="tool-note">${escape(noteFor(tool))}</p>` : ''}<div class="tool-platforms"><span class="sr-only">Platforms in source: </span>${escape(tool.platforms.map(os => osNames[os]).join(' · '))}${tool.status === 'planned' ? ' · Planned' : ''}</div></article>`;
 }).join('\n');
 const substitutions = {
   TOOL_COUNT: tools.length,
@@ -83,7 +63,7 @@ if (fs.existsSync(path.join(source, 'assets'))) fs.cpSync(path.join(source, 'ass
 fs.mkdirSync(path.join(output, 'assets'), { recursive: true });
 fs.copyFileSync(path.join(root, 'static', 'oxbox.svg'), path.join(output, 'assets', 'oxbox.svg'));
 fs.writeFileSync(path.join(output, 'index.html'), html);
-fs.writeFileSync(path.join(output, 'tools.json'), `${JSON.stringify({ categories, tools: tools.map(tool => ({ ...tool, note: notes[tool.id] || '' })) }, null, 2)}\n`);
+fs.writeFileSync(path.join(output, 'tools.json'), `${JSON.stringify({ categories, tools: tools.map(tool => ({ ...tool, note: noteFor(tool) })) }, null, 2)}\n`);
 fs.writeFileSync(path.join(output, '.nojekyll'), '');
 // Reject missing local resources and root-relative URLs that would break a project Pages path.
 for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
@@ -93,4 +73,4 @@ for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
 }
 const anchors = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
 for (const match of html.matchAll(/href="#([^"]+)"/g)) if (!anchors.has(match[1])) throw new Error(`Missing website anchor: ${match[1]}`);
-console.log(`Built website/dist: ${tools.length} registry tools, ${categories.length} categories; local resources and anchors verified.`);
+console.log(`Built website/dist: ${tools.length} canonical tools, ${categories.length} categories; local resources and anchors verified.`);

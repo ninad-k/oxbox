@@ -105,7 +105,9 @@ fn image_error(error: impl std::fmt::Display) -> CoreError {
     CoreError::InvalidInput(format!("image processing failed: {error}"))
 }
 
-pub(crate) fn decode_oriented(path: &Path) -> CoreResult<DynamicImage> {
+/// Decode a local image within the existing pixel/allocation limits and apply
+/// its EXIF orientation. Native previews reuse the same validated image path.
+pub fn decode_oriented(path: &Path) -> CoreResult<DynamicImage> {
     let mut reader = ImageReader::new(BufReader::new(File::open(path)?)).with_guessed_format()?;
     let mut limits = Limits::default();
     limits.max_image_width = Some(MAX_DIMENSION);

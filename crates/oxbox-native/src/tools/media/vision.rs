@@ -1,0 +1,474 @@
+use super::{
+    Shared,
+    widgets::{self, Asset, Preview, Providers},
+};
+use crate::{host::Host, jobs::Task};
+use eframe::egui;
+use oxbox_core::tools::{
+    barcode_reader::{self, BarcodeResult},
+    color_picker::{self, ColorValue},
+    ocr,
+    screenshot::{self, CaptureKind},
+};
+use std::{path::PathBuf, time::Duration};
+
+pub struct VisionUi {
+    providers: Providers,
+    ocr_path: String,
+    ocr_provider: usize,
+    ocr_language: String,
+    ocr_job: Task<String>,
+    ocr_text: String,
+    barcode_path: String,
+    barcode_job: Task<Vec<BarcodeResult>>,
+    barcodes: Vec<BarcodeResult>,
+    color_path: String,
+    color_source: usize,
+    x: u32,
+    y: u32,
+    targets: Task<Vec<screenshot::TargetInfo>>,
+    monitors: Vec<screenshot::TargetInfo>,
+    monitor: usize,
+    color_job: Task<ColorValue>,
+    color: Option<ColorValue>,
+    hidden: bool,
+    preview_job: Task<(usize, Asset)>,
+    ocr_preview: Preview,
+    barcode_preview: Preview,
+    color_preview: Preview,
+    error: Option<String>,
+}
+impl Default for VisionUi {
+    fn default() -> Self {
+        Self {
+            providers: Providers::default(),
+            ocr_path: String::new(),
+            ocr_provider: usize::from(!cfg!(target_os = "windows")),
+            ocr_language: if cfg!(target_os = "windows") {
+                "en-US".into()
+            } else {
+                "eng".into()
+            },
+            ocr_job: Task::default(),
+            ocr_text: String::new(),
+            barcode_path: String::new(),
+            barcode_job: Task::default(),
+            barcodes: Vec::new(),
+            color_path: String::new(),
+            color_source: 0,
+            x: 0,
+            y: 0,
+            targets: Task::default(),
+            monitors: Vec::new(),
+            monitor: 0,
+            color_job: Task::default(),
+            color: None,
+            hidden: false,
+            preview_job: Task::default(),
+            ocr_preview: Preview::default(),
+            barcode_preview: Preview::default(),
+            color_preview: Preview::default(),
+            error: None,
+        }
+    }
+}
+impl VisionUi {
+    pub fn show(&mut self, ui: &mut egui::Ui, id: &str, host: &mut Host, shared: &Shared) {
+        match id {
+            "recognize-text" => self.ocr(ui),
+            "barcode-reader" => self.barcode(ui),
+            _ => self.color(ui, host, shared),
+        }
+    }
+    fn preview_button(&mut self, ui: &mut egui::Ui, path: String, slot: usize) {
+        if ui
+            .add_enabled(
+                !path.is_empty() && !self.preview_job.running(),
+                egui::Button::new("Preview image"),
+            )
+            .clicked()
+        {
+            self.preview_job.start(ui.ctx(), move |cancel, _| {
+                cancel.check()?;
+                Ok((slot, Asset::load(&PathBuf::from(path))?))
+            });
+        }
+        self.preview_job.show(ui);
+    }
+    fn ocr(&mut self, ui: &mut egui::Ui) {
+        widgets::introduction(
+            ui,
+            "Recognize text in a local image using an installed offline engine. The image is never uploaded.",
+        );
+        widgets::file(
+            ui,
+            "Image to recognize",
+            &mut self.ocr_path,
+            &["png", "jpg", "jpeg", "webp"],
+        );
+        self.preview_button(ui, self.ocr_path.clone(), 0);
+        self.ocr_preview.show(ui);
+        let old = self.ocr_provider;
+        widgets::choice(
+            ui,
+            "Recognition engine",
+            &mut self.ocr_provider,
+            &["Windows native OCR", "Local Tesseract"],
+        );
+        if old != self.ocr_provider {
+            self.ocr_language = if self.ocr_provider == 0 {
+                "en-US".into()
+            } else {
+                "eng".into()
+            };
+        }
+        widgets::text(ui, "OCR language", &mut self.ocr_language);
+        if self.ocr_provider == 1 {
+            self.providers.show(ui);
+            widgets::note(
+                ui,
+                "Tesseract language codes use installed traineddata, for example eng or eng+deu. No language data is downloaded.",
+            );
+        } else {
+            widgets::note(
+                ui,
+                "Windows language tags use BCP-47, for example en-US. Install the OCR language through Windows yourself if unavailable.",
+            );
+        }
+        let available = self.ocr_provider != 0 || cfg!(target_os = "windows");
+        if !available {
+            widgets::note(
+                ui,
+                "Windows native OCR is unavailable on this platform. Select the local Tesseract provider.",
+            );
+        }
+        if ui
+            .add_enabled(
+                available
+                    && !self.ocr_path.is_empty()
+                    && !self.ocr_language.is_empty()
+                    && !self.ocr_job.running(),
+                egui::Button::new("Recognize text"),
+            )
+            .clicked()
+        {
+            let path = PathBuf::from(&self.ocr_path);
+            let provider = if self.ocr_provider == 0 {
+                "native"
+            } else {
+                "tesseract"
+            };
+            let language = self.ocr_language.clone();
+            self.ocr_text.clear();
+            self.ocr_job.start(ui.ctx(), move |cancel, progress| {
+                ocr::recognize(&path, provider, &language, &cancel, progress)
+            });
+        }
+        self.ocr_job.show(ui);
+        if !self.ocr_text.is_empty() {
+            let label = ui.label("Recognized text");
+            ui.add(
+                egui::TextEdit::multiline(&mut self.ocr_text)
+                    .desired_rows(10)
+                    .desired_width(f32::INFINITY),
+            )
+            .labelled_by(label.id);
+            if ui.button("Copy all text").clicked() {
+                ui.ctx().copy_text(self.ocr_text.clone());
+            }
+        }
+    }
+    fn barcode(&mut self, ui: &mut egui::Ui) {
+        widgets::introduction(
+            ui,
+            "Read QR, Code 128, EAN-13 and other supported barcode formats from a local image. Decoded links are displayed as text, never opened automatically.",
+        );
+        widgets::file(
+            ui,
+            "Barcode image",
+            &mut self.barcode_path,
+            &["png", "jpg", "jpeg", "webp"],
+        );
+        self.preview_button(ui, self.barcode_path.clone(), 1);
+        self.barcode_preview.show(ui);
+        if ui
+            .add_enabled(
+                !self.barcode_path.is_empty() && !self.barcode_job.running(),
+                egui::Button::new("Read barcodes"),
+            )
+            .clicked()
+        {
+            let path = PathBuf::from(&self.barcode_path);
+            self.barcodes.clear();
+            self.barcode_job.start(ui.ctx(), move |cancel, _| {
+                cancel.check()?;
+                barcode_reader::read(&path)
+            });
+        }
+        self.barcode_job.show(ui);
+        for result in &self.barcodes {
+            ui.group(|ui| {
+                ui.strong(&result.format);
+                ui.label(&result.text);
+                if ui.button("Copy decoded text").clicked() {
+                    ui.ctx().copy_text(result.text.clone());
+                }
+            });
+        }
+        if self.barcodes.is_empty() && !self.barcode_job.running() {
+            widgets::note(
+                ui,
+                "Choose a sharp, high-contrast barcode image, then select Read barcodes.",
+            );
+        }
+    }
+    fn color(&mut self, ui: &mut egui::Ui, host: &mut Host, shared: &Shared) {
+        widgets::introduction(
+            ui,
+            "Measure a pixel as HEX, RGB, HSL and CMYK. Screen capture happens only after your explicit sampling action.",
+        );
+        widgets::choice(
+            ui,
+            "Pixel source",
+            &mut self.color_source,
+            &["Local image", "Display coordinates", "Cursor · Windows"],
+        );
+        if self.color_source == 0 {
+            widgets::file(
+                ui,
+                "Image to sample",
+                &mut self.color_path,
+                &["png", "jpg", "jpeg", "webp"],
+            );
+            self.preview_button(ui, self.color_path.clone(), 2);
+            if let Some(response) = self.color_preview.show(ui)
+                && response.clicked()
+                && let Some(position) = response.interact_pointer_pos()
+                && let Some(image) = &self.color_preview.image
+            {
+                self.x = (((position.x - response.rect.min.x) / response.rect.width())
+                    * image.width() as f32)
+                    .floor()
+                    .max(0.0) as u32;
+                self.y = (((position.y - response.rect.min.y) / response.rect.height())
+                    * image.height() as f32)
+                    .floor()
+                    .max(0.0) as u32;
+                self.x = self.x.min(image.width().saturating_sub(1));
+                self.y = self.y.min(image.height().saturating_sub(1));
+                self.apply_color(color_picker::sample_image(image, self.x, self.y));
+            }
+            widgets::number(ui, "Pixel X", &mut self.x, 0..=32767);
+            widgets::number(ui, "Pixel Y", &mut self.y, 0..=32767);
+            if ui
+                .add_enabled(
+                    self.color_preview.image.is_some(),
+                    egui::Button::new("Sample image pixel"),
+                )
+                .clicked()
+                && let Some(image) = &self.color_preview.image
+            {
+                self.apply_color(color_picker::sample_image(image, self.x, self.y));
+            }
+        } else if self.color_source == 1 {
+            if ui.button("Find displays").clicked() {
+                self.targets.start(ui.ctx(), |cancel, _| {
+                    cancel.check()?;
+                    Ok(screenshot::targets()?
+                        .into_iter()
+                        .filter(|target| target.kind == CaptureKind::Monitor)
+                        .collect())
+                });
+            }
+            egui::ComboBox::from_id_salt("color display")
+                .selected_text(
+                    self.monitors
+                        .get(self.monitor)
+                        .map_or("Choose a display", |target| target.name.as_str()),
+                )
+                .show_ui(ui, |ui| {
+                    for (index, target) in self.monitors.iter().enumerate() {
+                        ui.selectable_value(&mut self.monitor, index, &target.name);
+                    }
+                });
+            self.targets.show(ui);
+            widgets::number(ui, "Physical pixel X", &mut self.x, 0..=32767);
+            widgets::number(ui, "Physical pixel Y", &mut self.y, 0..=32767);
+            if ui
+                .add_enabled(
+                    self.monitors.get(self.monitor).is_some() && !self.color_job.running(),
+                    egui::Button::new("Sample display pixel"),
+                )
+                .clicked()
+                && let Some(target) = self.monitors.get(self.monitor)
+            {
+                let id = target.id;
+                let x = self.x;
+                let y = self.y;
+                let quit = shared.quit.clone();
+                host.hide(ui.ctx());
+                self.hidden = true;
+                self.color_job.start(ui.ctx(), move |cancel, _| {
+                    screenshot::capture_after_delay(Duration::from_millis(250), &cancel, || {
+                        quit.check()?;
+                        color_picker::sample_monitor(id, x, y)
+                    })
+                });
+            }
+        } else {
+            widgets::note(
+                ui,
+                "The launcher hides for three seconds so you can position the cursor. One screen pixel is sampled, then the launcher returns.",
+            );
+            if ui
+                .add_enabled(
+                    cfg!(target_os = "windows") && !self.color_job.running(),
+                    egui::Button::new("Sample under cursor in 3 seconds"),
+                )
+                .clicked()
+            {
+                let quit = shared.quit.clone();
+                host.hide(ui.ctx());
+                self.hidden = true;
+                self.color_job.start(ui.ctx(), move |cancel, _| {
+                    screenshot::capture_after_delay(Duration::from_secs(3), &cancel, || {
+                        quit.check()?;
+                        color_picker::sample_cursor()
+                    })
+                });
+            }
+            if !cfg!(target_os = "windows") {
+                widgets::note(
+                    ui,
+                    "Cursor sampling is unavailable on this platform. Choose a local image or display coordinates.",
+                );
+            }
+        }
+        self.color_job.show(ui);
+        widgets::error(ui, &self.error);
+        if let Some(color) = &self.color {
+            ui.group(|ui| {
+                ui.horizontal(|ui| {
+                    ui.colored_label(
+                        egui::Color32::from_rgb(color.rgb[0], color.rgb[1], color.rgb[2]),
+                        egui::RichText::new("■").size(36.0),
+                    );
+                    ui.strong(&color.hex);
+                });
+                for (label, value) in [
+                    ("HEX", color.hex.clone()),
+                    (
+                        "RGB",
+                        format!("rgb({}, {}, {})", color.rgb[0], color.rgb[1], color.rgb[2]),
+                    ),
+                    (
+                        "HSL",
+                        format!(
+                            "hsl({}°, {}%, {}%)",
+                            color.hsl[0], color.hsl[1], color.hsl[2]
+                        ),
+                    ),
+                    (
+                        "CMYK",
+                        format!(
+                            "cmyk({}%, {}%, {}%, {}%)",
+                            color.cmyk[0], color.cmyk[1], color.cmyk[2], color.cmyk[3]
+                        ),
+                    ),
+                ] {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("{label}: {value}"));
+                        if ui.button(format!("Copy {label}")).clicked() {
+                            ui.ctx().copy_text(value);
+                        }
+                    });
+                }
+            });
+        }
+    }
+    fn apply_color(&mut self, value: oxbox_core::CoreResult<ColorValue>) {
+        match value {
+            Ok(value) => {
+                self.color = Some(value);
+                self.error = None;
+            }
+            Err(error) => self.error = Some(error.to_string()),
+        }
+    }
+    pub fn tick(&mut self, ctx: Option<&egui::Context>, host: &mut Host) {
+        self.providers.tick();
+        self.ocr_job.poll();
+        self.barcode_job.poll();
+        self.targets.poll();
+        self.color_job.poll();
+        self.preview_job.poll();
+        if let Some(text) = self.ocr_job.result.take() {
+            self.ocr_text = text;
+        }
+        if let Some(results) = self.barcode_job.result.take() {
+            self.barcodes = results;
+        }
+        if let Some(targets) = self.targets.result.take() {
+            self.monitors = targets;
+            self.monitor = 0;
+        }
+        if let Some(value) = self.color_job.result.take() {
+            self.color = Some(value);
+        }
+        if self.hidden && !self.color_job.running() {
+            self.hidden = false;
+            if let Some(ctx) = ctx {
+                host.restore(ctx);
+            }
+        }
+        if let Some((slot, asset)) = self.preview_job.result.take()
+            && let Some(ctx) = ctx
+        {
+            match slot {
+                0 => self.ocr_preview.set(ctx, asset),
+                1 => self.barcode_preview.set(ctx, asset),
+                _ => self.color_preview.set(ctx, asset),
+            }
+        }
+    }
+    pub fn shutdown(&mut self) {
+        self.providers.cancel();
+        self.ocr_job.cancel();
+        self.barcode_job.cancel();
+        self.targets.cancel();
+        self.color_job.cancel();
+        self.preview_job.cancel();
+        self.providers.shutdown();
+        self.ocr_job.shutdown();
+        self.barcode_job.shutdown();
+        self.targets.shutdown();
+        self.color_job.shutdown();
+        self.preview_job.shutdown();
+    }
+    pub fn leave(&mut self, id: &str) {
+        self.preview_job.abandon();
+        self.error = None;
+        match id {
+            "recognize-text" => {
+                self.ocr_job.abandon();
+                self.ocr_text.clear();
+                self.ocr_preview = Preview::default();
+                self.providers.leave();
+            }
+            "barcode-reader" => {
+                self.barcode_job.abandon();
+                self.barcodes.clear();
+                self.barcode_preview = Preview::default();
+            }
+            "measure-color" => {
+                self.color_job.abandon();
+                self.targets.abandon();
+                self.color = None;
+                self.color_preview = Preview::default();
+            }
+            _ => {}
+        }
+        // A hidden sampling operation restores the launcher from tick after
+        // cancellation completes; Host retains authoritative visibility.
+    }
+}

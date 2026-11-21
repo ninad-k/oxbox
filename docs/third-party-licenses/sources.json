@@ -1,17 +1,148 @@
 {
-  "Cargo:age@0.11.5": {
-    "repository": "https://github.com/str4d/rage",
-    "revision": "7f29934dc58e058e7a588ac3a9a7e946198a73a7",
+  "Cargo:accesskit@0.25.2": {
+    "repository": "https://github.com/AccessKit/accesskit",
+    "revision": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
     "files": [
       {
-        "file": "Cargo_age_0.11.5/LICENSE-APACHE",
-        "url": "https://raw.githubusercontent.com/str4d/rage/7f29934dc58e058e7a588ac3a9a7e946198a73a7/LICENSE-APACHE",
-        "sha256": "3708458dee7f359ac6c9c5558023ed481be87e5372c43ebd7f2ca7ad23c12026"
+        "file": "Cargo_accesskit_0.25.2/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
       },
       {
-        "file": "Cargo_age_0.11.5/LICENSE-MIT",
-        "url": "https://raw.githubusercontent.com/str4d/rage/7f29934dc58e058e7a588ac3a9a7e946198a73a7/LICENSE-MIT",
-        "sha256": "fe56c030c2d8c3404a37fe711cebb27ebea13d0aacf7e3524db4198335ad8cd1"
+        "file": "Cargo_accesskit_0.25.2/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      },
+      {
+        "file": "Cargo_accesskit_0.25.2/LICENSE.chromium",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE.chromium",
+        "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308"
+      }
+    ]
+  },
+  "Cargo:accesskit_atspi_common@0.21.1": {
+    "repository": "https://github.com/AccessKit/accesskit",
+    "revision": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
+    "files": [
+      {
+        "file": "Cargo_accesskit_atspi_common_0.21.1/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "file": "Cargo_accesskit_atspi_common_0.21.1/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      },
+      {
+        "file": "Cargo_accesskit_atspi_common_0.21.1/LICENSE.chromium",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE.chromium",
+        "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308"
+      }
+    ]
+  },
+  "Cargo:accesskit_consumer@0.39.2": {
+    "repository": "https://github.com/AccessKit/accesskit",
+    "revision": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
+    "files": [
+      {
+        "file": "Cargo_accesskit_consumer_0.39.2/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "file": "Cargo_accesskit_consumer_0.39.2/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      },
+      {
+        "file": "Cargo_accesskit_consumer_0.39.2/LICENSE.chromium",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE.chromium",
+        "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308"
+      }
+    ]
+  },
+  "Cargo:accesskit_macos@0.27.2": {
+    "repository": "https://github.com/AccessKit/accesskit",
+    "revision": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
+    "files": [
+      {
+        "file": "Cargo_accesskit_macos_0.27.2/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "file": "Cargo_accesskit_macos_0.27.2/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      },
+      {
+        "file": "Cargo_accesskit_macos_0.27.2/LICENSE.chromium",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE.chromium",
+        "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308"
+      }
+    ]
+  },
+  "Cargo:accesskit_unix@0.24.1": {
+    "repository": "https://github.com/AccessKit/accesskit",
+    "revision": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
+    "files": [
+      {
+        "file": "Cargo_accesskit_unix_0.24.1/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "file": "Cargo_accesskit_unix_0.24.1/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      },
+      {
+        "file": "Cargo_accesskit_unix_0.24.1/LICENSE.chromium",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE.chromium",
+        "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308"
+      }
+    ]
+  },
+  "Cargo:accesskit_windows@0.35.2": {
+    "repository": "https://github.com/AccessKit/accesskit",
+    "revision": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
+    "files": [
+      {
+        "file": "Cargo_accesskit_windows_0.35.2/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "file": "Cargo_accesskit_windows_0.35.2/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      },
+      {
+        "file": "Cargo_accesskit_windows_0.35.2/LICENSE.chromium",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE.chromium",
+        "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308"
+      }
+    ]
+  },
+  "Cargo:accesskit_winit@0.34.2": {
+    "repository": "https://github.com/AccessKit/accesskit",
+    "revision": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
+    "files": [
+      {
+        "file": "Cargo_accesskit_winit_0.34.2/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "file": "Cargo_accesskit_winit_0.34.2/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      },
+      {
+        "file": "Cargo_accesskit_winit_0.34.2/LICENSE.chromium",
+        "url": "https://raw.githubusercontent.com/AccessKit/accesskit/f3026222559c7f5f46d8f25cb7404de68eb149f0/LICENSE.chromium",
+        "sha256": "845022e0c1db1abb41a6ba4cd3c4b674ec290f3359d9d3c78ae558d4c0ed9308"
       }
     ]
   },
@@ -31,6 +162,22 @@
       }
     ]
   },
+  "Cargo:age@0.11.5": {
+    "repository": "https://github.com/str4d/rage",
+    "revision": "7f29934dc58e058e7a588ac3a9a7e946198a73a7",
+    "files": [
+      {
+        "file": "Cargo_age_0.11.5/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/str4d/rage/7f29934dc58e058e7a588ac3a9a7e946198a73a7/LICENSE-APACHE",
+        "sha256": "3708458dee7f359ac6c9c5558023ed481be87e5372c43ebd7f2ca7ad23c12026"
+      },
+      {
+        "file": "Cargo_age_0.11.5/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/str4d/rage/7f29934dc58e058e7a588ac3a9a7e946198a73a7/LICENSE-MIT",
+        "sha256": "fe56c030c2d8c3404a37fe711cebb27ebea13d0aacf7e3524db4198335ad8cd1"
+      }
+    ]
+  },
   "Cargo:alloc-stdlib@0.3.0": {
     "repository": "https://github.com/dropbox/rust-alloc-no-stdlib",
     "revision": "0a81fd6928ea3b33c8cd484aa4575d50ffb98012",
@@ -42,6 +189,47 @@
       }
     ]
   },
+  "Cargo:bech32@0.9.1": {
+    "repository": "https://github.com/rust-bitcoin/rust-bech32",
+    "revision": "d12513f1e3768a7f2a2e1b4d650139eb92a4ae9b",
+    "files": [
+      {
+        "file": "Cargo_bech32_0.9.1/SOURCE-LICENSE-HEADER.txt",
+        "url": "https://raw.githubusercontent.com/rust-bitcoin/rust-bech32/d12513f1e3768a7f2a2e1b4d650139eb92a4ae9b/src/lib.rs",
+        "sha256": "74375f18b087dc11b0d356d423601acf4bcfc2bc86ac95dc72336d362f869f0d",
+        "excerpt": "Initial complete MIT license and copyright comment block"
+      }
+    ]
+  },
+  "Cargo:block2@0.5.1": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "4fc083f1c6d6784577e38b0ee8dbd344481e2fd2",
+    "files": [
+      {
+        "file": "Cargo_block2_0.5.1/LICENSE.txt",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/4fc083f1c6d6784577e38b0ee8dbd344481e2fd2/LICENSE.txt",
+        "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5"
+      }
+    ]
+  },
+  "Cargo:block2@0.6.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "b4167b582b2f75f9a1be75495c41b765344fd03c",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "MIT",
+    "files": [
+      {
+        "file": "Cargo_block2_0.6.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/b4167b582b2f75f9a1be75495c41b765344fd03c/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_block2_0.6.2/MIT-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    ]
+  },
   "Cargo:clipboard-win@5.4.3": {
     "repository": "https://github.com/DoumanAsh/clipboard-win",
     "revision": "ed27008ae5d1f10cfbb266de039f0fb35fd05a56",
@@ -50,6 +238,263 @@
         "file": "Cargo_clipboard-win_5.4.3/LICENSE",
         "url": "https://raw.githubusercontent.com/DoumanAsh/clipboard-win/ed27008ae5d1f10cfbb266de039f0fb35fd05a56/LICENSE",
         "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+      }
+    ]
+  },
+  "Cargo:cookie-factory@0.3.3": {
+    "repository": "https://github.com/rust-bakery/cookie-factory",
+    "revision": "d36b805dbd7dd65f2df947235c5bcc573afe2c76",
+    "files": [
+      {
+        "file": "Cargo_cookie-factory_0.3.3/MIT.txt",
+        "url": "https://raw.githubusercontent.com/rust-bakery/cookie-factory/d36b805dbd7dd65f2df947235c5bcc573afe2c76/LICENSES/MIT.txt",
+        "sha256": "d09216dc1ea5f273997667935a8d6514d80f00b89fb6954ecc3a43e0a6e360de"
+      }
+    ]
+  },
+  "Cargo:dispatch2@0.3.1": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "8852b424193ca41602281b3d7540d7c8ed51e49a",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_dispatch2_0.3.1/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/8852b424193ca41602281b3d7540d7c8ed51e49a/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_dispatch2_0.3.1/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:dispatch@0.2.0": {
+    "repository": "https://github.com/SSheldon/rust-dispatch",
+    "revision": "82d6c7a5b75dc0c71c3f46f87bb6c16a476f7748",
+    "review": "The published package and pinned repository declare MIT but contain no standalone copyright/license notice. The exact manifest and canonical reference terms are preserved; copyright owners or years have not been invented. A maintainer must resolve upstream attribution before distribution.",
+    "selectedLicense": "MIT",
+    "files": [
+      {
+        "file": "Cargo_dispatch_0.2.0/UPSTREAM-CARGO-MANIFEST.toml",
+        "url": "https://raw.githubusercontent.com/SSheldon/rust-dispatch/82d6c7a5b75dc0c71c3f46f87bb6c16a476f7748/Cargo.toml",
+        "sha256": "05c60b829931ef7f1f130735843c11f5cf9cc69546eca5fc941d014781c68e31"
+      },
+      {
+        "file": "Cargo_dispatch_0.2.0/MIT-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    ]
+  },
+  "Cargo:drm-fourcc@2.2.0": {
+    "repository": "https://github.com/danielzfranklin/drm-fourcc-rs",
+    "revision": "7b9f80060ffd4b35cd236437e65a17fb517d163c",
+    "review": "The published package and pinned repository declare MIT but contain no standalone copyright/license notice. The exact manifest and canonical reference terms are preserved; copyright owners or years have not been invented. A maintainer must resolve upstream attribution before distribution. Its generated DRM-format definitions also require corresponding header/source attribution review.",
+    "selectedLicense": "MIT",
+    "files": [
+      {
+        "file": "Cargo_drm-fourcc_2.2.0/UPSTREAM-CARGO-MANIFEST.toml",
+        "url": "https://raw.githubusercontent.com/danielzfranklin/drm-fourcc-rs/7b9f80060ffd4b35cd236437e65a17fb517d163c/Cargo.toml",
+        "sha256": "0660e17d634e5b8c2a82cd0b0328c42fbc6e8b77a9f37b85f49bfeba1f4931ca"
+      },
+      {
+        "file": "Cargo_drm-fourcc_2.2.0/MIT-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    ]
+  },
+  "Cargo:ecolor@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "841a328ba2dd8f6996beb7189ebb7fc00e668a2a",
+    "packageRevision": "7c0b40402271e8d40cda69f87cf3c2617c2e4382",
+    "provenance": "Published .cargo_vcs_info revision was unavailable from upstream GitHub (422). Exact upstream 0.37.0 release tag was dereferenced to this pinned commit for workspace license texts; package sources remain linked separately in the inventory.",
+    "releaseTag": "0.37.0",
+    "releaseTagObject": "418687fa18fdac8a9b1b6c8f4a2eb1afd2df4c47",
+    "files": [
+      {
+        "file": "Cargo_ecolor_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_ecolor_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:eframe@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "3c6eb8261c3293ad9c7ea1ed58487e038860ebef",
+    "files": [
+      {
+        "file": "Cargo_eframe_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/3c6eb8261c3293ad9c7ea1ed58487e038860ebef/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_eframe_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/3c6eb8261c3293ad9c7ea1ed58487e038860ebef/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:egui-winit@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "841a328ba2dd8f6996beb7189ebb7fc00e668a2a",
+    "packageRevision": "7c0b40402271e8d40cda69f87cf3c2617c2e4382",
+    "provenance": "Published .cargo_vcs_info revision was unavailable from upstream GitHub (422). Exact upstream 0.37.0 release tag was dereferenced to this pinned commit for workspace license texts; package sources remain linked separately in the inventory.",
+    "releaseTag": "0.37.0",
+    "releaseTagObject": "418687fa18fdac8a9b1b6c8f4a2eb1afd2df4c47",
+    "files": [
+      {
+        "file": "Cargo_egui-winit_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_egui-winit_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:egui@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "841a328ba2dd8f6996beb7189ebb7fc00e668a2a",
+    "packageRevision": "7c0b40402271e8d40cda69f87cf3c2617c2e4382",
+    "provenance": "Published .cargo_vcs_info revision was unavailable from upstream GitHub (422). Exact upstream 0.37.0 release tag was dereferenced to this pinned commit for workspace license texts; package sources remain linked separately in the inventory.",
+    "releaseTag": "0.37.0",
+    "releaseTagObject": "418687fa18fdac8a9b1b6c8f4a2eb1afd2df4c47",
+    "files": [
+      {
+        "file": "Cargo_egui_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_egui_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:egui_glow@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "841a328ba2dd8f6996beb7189ebb7fc00e668a2a",
+    "packageRevision": "7c0b40402271e8d40cda69f87cf3c2617c2e4382",
+    "provenance": "Published .cargo_vcs_info revision was unavailable from upstream GitHub (422). Exact upstream 0.37.0 release tag was dereferenced to this pinned commit for workspace license texts; package sources remain linked separately in the inventory.",
+    "releaseTag": "0.37.0",
+    "releaseTagObject": "418687fa18fdac8a9b1b6c8f4a2eb1afd2df4c47",
+    "files": [
+      {
+        "file": "Cargo_egui_glow_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_egui_glow_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:egui_system_font_provider@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "3c6eb8261c3293ad9c7ea1ed58487e038860ebef",
+    "files": [
+      {
+        "file": "Cargo_egui_system_font_provider_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/3c6eb8261c3293ad9c7ea1ed58487e038860ebef/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_egui_system_font_provider_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/3c6eb8261c3293ad9c7ea1ed58487e038860ebef/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:emath@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "841a328ba2dd8f6996beb7189ebb7fc00e668a2a",
+    "packageRevision": "7c0b40402271e8d40cda69f87cf3c2617c2e4382",
+    "provenance": "Published .cargo_vcs_info revision was unavailable from upstream GitHub (422). Exact upstream 0.37.0 release tag was dereferenced to this pinned commit for workspace license texts; package sources remain linked separately in the inventory.",
+    "releaseTag": "0.37.0",
+    "releaseTagObject": "418687fa18fdac8a9b1b6c8f4a2eb1afd2df4c47",
+    "files": [
+      {
+        "file": "Cargo_emath_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_emath_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:epaint@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "841a328ba2dd8f6996beb7189ebb7fc00e668a2a",
+    "packageRevision": "7c0b40402271e8d40cda69f87cf3c2617c2e4382",
+    "provenance": "Published .cargo_vcs_info revision was unavailable from upstream GitHub (422). Exact upstream 0.37.0 release tag was dereferenced to this pinned commit for workspace license texts; package sources remain linked separately in the inventory.",
+    "releaseTag": "0.37.0",
+    "releaseTagObject": "418687fa18fdac8a9b1b6c8f4a2eb1afd2df4c47",
+    "files": [
+      {
+        "file": "Cargo_epaint_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_epaint_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      }
+    ]
+  },
+  "Cargo:epaint_default_fonts@0.37.0": {
+    "repository": "https://github.com/emilk/egui",
+    "revision": "841a328ba2dd8f6996beb7189ebb7fc00e668a2a",
+    "packageRevision": "7c0b40402271e8d40cda69f87cf3c2617c2e4382",
+    "provenance": "Published .cargo_vcs_info revision was unavailable from upstream GitHub (422). Exact upstream 0.37.0 release tag was dereferenced to this pinned commit for workspace license texts; package sources remain linked separately in the inventory.",
+    "releaseTag": "0.37.0",
+    "releaseTagObject": "418687fa18fdac8a9b1b6c8f4a2eb1afd2df4c47",
+    "files": [
+      {
+        "file": "Cargo_epaint_default_fonts_0.37.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-APACHE",
+        "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+      },
+      {
+        "file": "Cargo_epaint_default_fonts_0.37.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/LICENSE-MIT",
+        "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+      },
+      {
+        "file": "Cargo_epaint_default_fonts_0.37.0/Hack-Regular.txt",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/crates/epaint_default_fonts/fonts/Hack-Regular.txt",
+        "sha256": "47c0cccbeec7e8614548cc485588b28149e7874188df5f41b36efebcee285c87"
+      },
+      {
+        "file": "Cargo_epaint_default_fonts_0.37.0/OFL.txt",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/crates/epaint_default_fonts/fonts/OFL.txt",
+        "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+      },
+      {
+        "file": "Cargo_epaint_default_fonts_0.37.0/UFL.txt",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/crates/epaint_default_fonts/fonts/UFL.txt",
+        "sha256": "2f0015108d68627bd788d313f529c21ff4da2c2c42a5e1f3883acc83480f9002"
+      },
+      {
+        "file": "Cargo_epaint_default_fonts_0.37.0/emoji-icon-font-mit-license.txt",
+        "url": "https://raw.githubusercontent.com/emilk/egui/841a328ba2dd8f6996beb7189ebb7fc00e668a2a/crates/epaint_default_fonts/fonts/emoji-icon-font-mit-license.txt",
+        "sha256": "b9d2c1d909aa149996fd4c91dcb92b2362a04431640c1d200959da94caf8cde1"
       }
     ]
   },
@@ -69,6 +514,39 @@
       }
     ]
   },
+  "Cargo:gbm-sys@0.4.0": {
+    "repository": "https://github.com/Drakulix/gbm.rs",
+    "revision": "2b4047f8e5ab4d050d4ed88f5ee2515069478fac",
+    "files": [
+      {
+        "file": "Cargo_gbm-sys_0.4.0/LICENSE",
+        "url": "https://raw.githubusercontent.com/Drakulix/gbm.rs/2b4047f8e5ab4d050d4ed88f5ee2515069478fac/LICENSE",
+        "sha256": "56ab09c42eb251646c1c00ba32f5db0e51e297cd379eccc5a1cb7808f2de4ce7"
+      }
+    ]
+  },
+  "Cargo:gl@0.14.0": {
+    "repository": "https://github.com/brendanzab/gl-rs",
+    "revision": "ea503e8d5fb6d73c6030e6191ce738cd3bf3433e",
+    "files": [
+      {
+        "file": "Cargo_gl_0.14.0/LICENSE",
+        "url": "https://raw.githubusercontent.com/brendanzab/gl-rs/ea503e8d5fb6d73c6030e6191ce738cd3bf3433e/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      }
+    ]
+  },
+  "Cargo:gl_generator@0.14.0": {
+    "repository": "https://github.com/brendanzab/gl-rs",
+    "revision": "ea503e8d5fb6d73c6030e6191ce738cd3bf3433e",
+    "files": [
+      {
+        "file": "Cargo_gl_generator_0.14.0/LICENSE",
+        "url": "https://raw.githubusercontent.com/brendanzab/gl-rs/ea503e8d5fb6d73c6030e6191ce738cd3bf3433e/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      }
+    ]
+  },
   "Cargo:intl_pluralrules@7.0.2": {
     "repository": "https://github.com/zbraniecki/pluralrules",
     "revision": "d0715d5b7cca72e228d6e6c4de154bd30dfdd06a",
@@ -82,6 +560,570 @@
         "file": "Cargo_intl_pluralrules_7.0.2/LICENSE-MIT",
         "url": "https://raw.githubusercontent.com/zbraniecki/pluralrules/d0715d5b7cca72e228d6e6c4de154bd30dfdd06a/intl_pluralrules/LICENSE-MIT",
         "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      }
+    ]
+  },
+  "Cargo:io_tee@0.1.1": {
+    "repository": "https://github.com/TheOnlyMrCat/io_tee",
+    "revision": "8a7adecebf3429cbc58a0368751d1851dfaf58ed",
+    "review": "The published package and pinned source provide a license declaration but no standalone copyright/license notice. The declaration and canonical reference terms are preserved; copyright owners or years have not been invented. A maintainer must review upstream attribution before public publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_io_tee_0.1.1/UPSTREAM-LICENSE-DECLARATION.txt",
+        "url": "https://raw.githubusercontent.com/TheOnlyMrCat/io_tee/8a7adecebf3429cbc58a0368751d1851dfaf58ed/README.md",
+        "sha256": "9de286725450e7036d60c1afd456252280d5c444b2554fb05f66afb93af81387",
+        "excerpt": "License and contribution sections"
+      },
+      {
+        "file": "Cargo_io_tee_0.1.1/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:khronos_api@3.1.0": {
+    "repository": "https://github.com/brendanzab/gl-rs",
+    "revision": "f150967b1c44ae888e6676f93f639ebc82771bdc",
+    "files": [
+      {
+        "file": "Cargo_khronos_api_3.1.0/LICENSE",
+        "url": "https://raw.githubusercontent.com/brendanzab/gl-rs/f150967b1c44ae888e6676f93f639ebc82771bdc/LICENSE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      }
+    ]
+  },
+  "Cargo:libappindicator-sys@0.9.0": {
+    "repository": "https://github.com/tauri-apps/libappindicator-rs",
+    "revision": "eafd1e3682a1247f595410266091e9684021cb6f",
+    "files": [
+      {
+        "file": "Cargo_libappindicator-sys_0.9.0/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/tauri-apps/libappindicator-rs/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-APACHE",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+      },
+      {
+        "file": "Cargo_libappindicator-sys_0.9.0/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/tauri-apps/libappindicator-rs/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-MIT",
+        "sha256": "eb227437252b2a7a9c1fc342c93ade1f3d7ce38cc6dd754f613db07d53ceff0b"
+      }
+    ]
+  },
+  "Cargo:libwayshot-xcap@0.3.3": {
+    "repository": "https://github.com/nashaofu/wayshot",
+    "revision": "4351de93758fa02e3c01b712aabbb8fdb8d7ef19",
+    "files": [
+      {
+        "file": "Cargo_libwayshot-xcap_0.3.3/LICENSE",
+        "url": "https://raw.githubusercontent.com/nashaofu/wayshot/4351de93758fa02e3c01b712aabbb8fdb8d7ef19/LICENSE",
+        "sha256": "5e7ded91ff4154ae6787c6abafba9d63d2b12a0167382fb9ca50ce73e1b9e8ab"
+      }
+    ]
+  },
+  "Cargo:mac-notification-sys@0.6.15": {
+    "repository": "https://github.com/h4llow3En/mac-notification-sys",
+    "revision": "deb559683962d314a7693478476bf8d052efa84e",
+    "files": [
+      {
+        "file": "Cargo_mac-notification-sys_0.6.15/LICENSE-Apache",
+        "url": "https://raw.githubusercontent.com/h4llow3En/mac-notification-sys/deb559683962d314a7693478476bf8d052efa84e/LICENSE-Apache",
+        "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+      },
+      {
+        "file": "Cargo_mac-notification-sys_0.6.15/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/h4llow3En/mac-notification-sys/deb559683962d314a7693478476bf8d052efa84e/LICENSE-MIT",
+        "sha256": "1299b4d9d15e9d67e4ac0e7d47ae9404887ca3cf0764aadeec7588d5a6e8e0cc"
+      }
+    ]
+  },
+  "Cargo:objc-sys@0.3.5": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "4fc083f1c6d6784577e38b0ee8dbd344481e2fd2",
+    "files": [
+      {
+        "file": "Cargo_objc-sys_0.3.5/LICENSE.txt",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/4fc083f1c6d6784577e38b0ee8dbd344481e2fd2/LICENSE.txt",
+        "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5"
+      }
+    ]
+  },
+  "Cargo:objc2-app-kit@0.2.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "e282618be4c3a3b9542957e0c8540e9588472ce8",
+    "files": [
+      {
+        "file": "Cargo_objc2-app-kit_0.2.2/LICENSE.txt",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/e282618be4c3a3b9542957e0c8540e9588472ce8/LICENSE.txt",
+        "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5"
+      }
+    ]
+  },
+  "Cargo:objc2-app-kit@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-app-kit_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-app-kit_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-av-foundation@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-av-foundation_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-av-foundation_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-avf-audio@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-avf-audio_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-avf-audio_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-cloud-kit@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-cloud-kit_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-cloud-kit_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-audio-types@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-audio-types_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-audio-types_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-audio@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-audio_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-audio_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-data@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-data_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-data_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-foundation@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-foundation_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-foundation_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-graphics@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-graphics_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-graphics_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-image@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-image_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-image_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-media@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-media_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-media_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-text@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-text_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-text_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-core-video@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-core-video_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-core-video_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-encode@4.1.0": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "8d214f5477365ffcbcbb7de058c86ed9a518efb7",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "MIT",
+    "files": [
+      {
+        "file": "Cargo_objc2-encode_4.1.0/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/8d214f5477365ffcbcbb7de058c86ed9a518efb7/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-encode_4.1.0/MIT-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    ]
+  },
+  "Cargo:objc2-foundation@0.2.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "e282618be4c3a3b9542957e0c8540e9588472ce8",
+    "files": [
+      {
+        "file": "Cargo_objc2-foundation_0.2.2/LICENSE.txt",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/e282618be4c3a3b9542957e0c8540e9588472ce8/LICENSE.txt",
+        "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5"
+      }
+    ]
+  },
+  "Cargo:objc2-foundation@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "MIT",
+    "files": [
+      {
+        "file": "Cargo_objc2-foundation_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-foundation_0.3.2/MIT-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    ]
+  },
+  "Cargo:objc2-image-io@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-image-io_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-image-io_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-io-kit@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-io-kit_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-io-kit_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-media-toolbox@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-media-toolbox_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-media-toolbox_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-metal@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-metal_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-metal_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-quartz-core@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-quartz-core_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-quartz-core_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-security@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-security_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-security_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2-service-management@0.3.2": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "7b1abfd750a2cacaea71d6a56ecfb83cb7de560b",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "Apache-2.0",
+    "files": [
+      {
+        "file": "Cargo_objc2-service-management_0.3.2/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2-service-management_0.3.2/Apache-2.0-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
+        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+      }
+    ]
+  },
+  "Cargo:objc2@0.5.3": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "5237cbf081d04ef75a1f6a207b4018e7c1ae7438",
+    "files": [
+      {
+        "file": "Cargo_objc2_0.5.3/LICENSE.txt",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/5237cbf081d04ef75a1f6a207b4018e7c1ae7438/LICENSE.txt",
+        "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5"
+      }
+    ]
+  },
+  "Cargo:objc2@0.6.5": {
+    "repository": "https://github.com/madsmtm/objc2",
+    "revision": "d7d2fa23ceaa5e6096c923b081040e5d81b3b9df",
+    "review": "The exact published-revision LICENSE.md declares the available license options but does not supply a standalone copyright/license notice. It also explicitly discusses Apple SDK-derived-work licensing uncertainty. The declaration and canonical reference terms are preserved without inventing owners or dates; a maintainer must review attribution and SDK-related distribution conditions before macOS publication.",
+    "selectedLicense": "MIT",
+    "files": [
+      {
+        "file": "Cargo_objc2_0.6.5/UPSTREAM-LICENSE-DECLARATION.md",
+        "url": "https://raw.githubusercontent.com/madsmtm/objc2/d7d2fa23ceaa5e6096c923b081040e5d81b3b9df/LICENSE.md",
+        "sha256": "7f976f7e9cb2d87df7230606feb932c3f21ac0e664045a775b600046ff850c54"
+      },
+      {
+        "file": "Cargo_objc2_0.6.5/MIT-REFERENCE-TERMS.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    ]
+  },
+  "Cargo:profiling@1.0.18": {
+    "repository": "https://github.com/aclysma/profiling",
+    "revision": "8271551172eb6fa4cba47369aedd93790c623df9",
+    "files": [
+      {
+        "file": "Cargo_profiling_1.0.18/LICENSE-APACHE",
+        "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-APACHE",
+        "sha256": "10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551"
+      },
+      {
+        "file": "Cargo_profiling_1.0.18/LICENSE-MIT",
+        "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT",
+        "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333"
+      }
+    ]
+  },
+  "Cargo:selectors@0.38.0": {
+    "repository": "https://github.com/servo/stylo",
+    "revision": "572ecba2d1600e7c3d490586692a209faf703baa",
+    "files": [
+      {
+        "file": "Cargo_selectors_0.38.0/SOURCE-LICENSE-HEADER.txt",
+        "url": "https://raw.githubusercontent.com/servo/stylo/572ecba2d1600e7c3d490586692a209faf703baa/selectors/lib.rs",
+        "sha256": "766674381e88a468d55e07de3596987391cf0e8beebe51baf4fddf11078785b3",
+        "excerpt": "Initial MPL-2.0 licensing comment block"
+      },
+      {
+        "file": "Cargo_selectors_0.38.0/MPL-2.0.txt",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MPL-2.0.txt",
+        "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
       }
     ]
   },
@@ -103,17 +1145,6 @@
         "file": "Cargo_tauri-plugin_2.7.4/LICENSE.spdx",
         "url": "https://raw.githubusercontent.com/tauri-apps/tauri/9319e539f34237035cb4693bed9246660bc0a926/LICENSE.spdx",
         "sha256": "5e834fe9788c524210deda859c46a550ffa5aa0cba9ea0572f0d81120e97c008"
-      }
-    ]
-  },
-  "Cargo:webview2-com@0.39.1": {
-    "repository": "https://github.com/wravery/webview2-rs",
-    "revision": "edc2caf886175ccaebe86078c9cfe1ae2a187328",
-    "files": [
-      {
-        "file": "Cargo_webview2-com_0.39.1/LICENSE",
-        "url": "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE",
-        "sha256": "0dcf41516e608bbcb6cdc5229feb7b86fe4a643b85e7df251133c93408fdac73"
       }
     ]
   },
@@ -139,6 +1170,17 @@
       }
     ]
   },
+  "Cargo:webview2-com@0.39.1": {
+    "repository": "https://github.com/wravery/webview2-rs",
+    "revision": "edc2caf886175ccaebe86078c9cfe1ae2a187328",
+    "files": [
+      {
+        "file": "Cargo_webview2-com_0.39.1/LICENSE",
+        "url": "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE",
+        "sha256": "0dcf41516e608bbcb6cdc5229feb7b86fe4a643b85e7df251133c93408fdac73"
+      }
+    ]
+  },
   "npm:@polka/url@1.0.0-next.29": {
     "repository": "https://github.com/lukeed/polka",
     "revision": "02cbdb529ddca0a9f3d225e2abb2931924219cc3",
@@ -158,76 +1200,6 @@
         "file": "npm__rolldown_binding-win32-x64-msvc_1.2.19/LICENSE",
         "url": "https://raw.githubusercontent.com/rolldown/rolldown/b9c75ddc8bd50f2c1a4c7be0b548bdab5cba85ab/LICENSE",
         "sha256": "23ecfff35a5a2e80d92142f75228912c3b1abc4b5a8337a821ff4397e2f9f734"
-      }
-    ]
-  },
-  "npm:sirv@3.0.2": {
-    "repository": "https://github.com/lukeed/sirv",
-    "revision": "1135207e92c40354543cbd15c763c7a61d79d432",
-    "files": [
-      {
-        "file": "npm_sirv_3.0.2/license",
-        "url": "https://raw.githubusercontent.com/lukeed/sirv/1135207e92c40354543cbd15c763c7a61d79d432/license",
-        "sha256": "ba573393f24555ac0528612ad39665fab5bdcc80330a61096024bbf5f736526d"
-      }
-    ]
-  },
-  "Cargo:bech32@0.9.1": {
-    "repository": "https://github.com/rust-bitcoin/rust-bech32",
-    "revision": "d12513f1e3768a7f2a2e1b4d650139eb92a4ae9b",
-    "files": [
-      {
-        "file": "Cargo_bech32_0.9.1/SOURCE-LICENSE-HEADER.txt",
-        "url": "https://raw.githubusercontent.com/rust-bitcoin/rust-bech32/d12513f1e3768a7f2a2e1b4d650139eb92a4ae9b/src/lib.rs",
-        "sha256": "74375f18b087dc11b0d356d423601acf4bcfc2bc86ac95dc72336d362f869f0d",
-        "excerpt": "Initial complete MIT license and copyright comment block"
-      }
-    ]
-  },
-  "Cargo:cookie-factory@0.3.3": {
-    "repository": "https://github.com/rust-bakery/cookie-factory",
-    "revision": "d36b805dbd7dd65f2df947235c5bcc573afe2c76",
-    "files": [
-      {
-        "file": "Cargo_cookie-factory_0.3.3/MIT.txt",
-        "url": "https://raw.githubusercontent.com/rust-bakery/cookie-factory/d36b805dbd7dd65f2df947235c5bcc573afe2c76/LICENSES/MIT.txt",
-        "sha256": "d09216dc1ea5f273997667935a8d6514d80f00b89fb6954ecc3a43e0a6e360de"
-      }
-    ]
-  },
-  "Cargo:selectors@0.38.0": {
-    "repository": "https://github.com/servo/stylo",
-    "revision": "572ecba2d1600e7c3d490586692a209faf703baa",
-    "files": [
-      {
-        "file": "Cargo_selectors_0.38.0/SOURCE-LICENSE-HEADER.txt",
-        "url": "https://raw.githubusercontent.com/servo/stylo/572ecba2d1600e7c3d490586692a209faf703baa/selectors/lib.rs",
-        "sha256": "766674381e88a468d55e07de3596987391cf0e8beebe51baf4fddf11078785b3",
-        "excerpt": "Initial MPL-2.0 licensing comment block"
-      },
-      {
-        "file": "Cargo_selectors_0.38.0/MPL-2.0.txt",
-        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MPL-2.0.txt",
-        "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
-      }
-    ]
-  },
-  "Cargo:io_tee@0.1.1": {
-    "repository": "https://github.com/TheOnlyMrCat/io_tee",
-    "revision": "8a7adecebf3429cbc58a0368751d1851dfaf58ed",
-    "review": "The published package and pinned source provide a license declaration but no standalone copyright/license notice. The declaration and canonical reference terms are preserved; copyright owners or years have not been invented. A maintainer must review upstream attribution before public publication.",
-    "selectedLicense": "Apache-2.0",
-    "files": [
-      {
-        "file": "Cargo_io_tee_0.1.1/UPSTREAM-LICENSE-DECLARATION.txt",
-        "url": "https://raw.githubusercontent.com/TheOnlyMrCat/io_tee/8a7adecebf3429cbc58a0368751d1851dfaf58ed/README.md",
-        "sha256": "9de286725450e7036d60c1afd456252280d5c444b2554fb05f66afb93af81387",
-        "excerpt": "License and contribution sections"
-      },
-      {
-        "file": "Cargo_io_tee_0.1.1/Apache-2.0-REFERENCE-TERMS.txt",
-        "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/Apache-2.0.txt",
-        "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
       }
     ]
   },
@@ -264,6 +1236,17 @@
         "file": "npm_locate-character_3.0.0/MIT-REFERENCE-TERMS.txt",
         "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/text/MIT.txt",
         "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    ]
+  },
+  "npm:sirv@3.0.2": {
+    "repository": "https://github.com/lukeed/sirv",
+    "revision": "1135207e92c40354543cbd15c763c7a61d79d432",
+    "files": [
+      {
+        "file": "npm_sirv_3.0.2/license",
+        "url": "https://raw.githubusercontent.com/lukeed/sirv/1135207e92c40354543cbd15c763c7a61d79d432/license",
+        "sha256": "ba573393f24555ac0528612ad39665fab5bdcc80330a61096024bbf5f736526d"
       }
     ]
   }

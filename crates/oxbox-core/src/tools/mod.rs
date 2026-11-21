@@ -49,6 +49,7 @@ pub mod system_monitor;
 pub mod take_photo;
 pub mod take_video;
 pub mod text_transform;
+pub mod timer_stopwatch;
 pub mod uninstall;
 pub mod unit_convert;
 pub mod window_manager;

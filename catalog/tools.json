@@ -1,0 +1,1068 @@
+{
+  "categories": [
+    {
+      "id": "productivity",
+      "label": "Productivity",
+      "icon": "sparkles"
+    },
+    {
+      "id": "time",
+      "label": "Time",
+      "icon": "clock"
+    },
+    {
+      "id": "files",
+      "label": "Files",
+      "icon": "folder-open"
+    },
+    {
+      "id": "capture",
+      "label": "Screen Capture",
+      "icon": "camera"
+    },
+    {
+      "id": "media",
+      "label": "Images & Media",
+      "icon": "image"
+    },
+    {
+      "id": "system",
+      "label": "System",
+      "icon": "cpu"
+    },
+    {
+      "id": "privacy",
+      "label": "Privacy & Security",
+      "icon": "shield"
+    }
+  ],
+  "tools": [
+    {
+      "id": "transform-text",
+      "name": "Transform Text",
+      "description": "Switch text between UPPER, lower, Title, camelCase, snake_case and more",
+      "category": "productivity",
+      "keywords": [
+        "case",
+        "uppercase",
+        "lowercase",
+        "camel",
+        "snake",
+        "kebab",
+        "title"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 0,
+      "status": "ready",
+      "note": "",
+      "icon": "case-sensitive"
+    },
+    {
+      "id": "clipboard-history",
+      "name": "Clipboard History",
+      "description": "Keep recent copied text and images and paste any of them again",
+      "category": "productivity",
+      "keywords": [
+        "copy",
+        "paste",
+        "clipboard"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 4,
+      "status": "ready",
+      "note": "Opt-in monitoring. History is kept in memory; review clipboard privacy limits before enabling it.",
+      "icon": "clipboard-list"
+    },
+    {
+      "id": "unit-converter",
+      "name": "Unit Converter",
+      "description": "Convert length, mass, temperature, data size and time",
+      "category": "productivity",
+      "keywords": [
+        "convert",
+        "units",
+        "metric",
+        "imperial",
+        "celsius",
+        "fahrenheit",
+        "bytes"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 1,
+      "status": "ready",
+      "note": "",
+      "icon": "ruler"
+    },
+    {
+      "id": "break-time",
+      "name": "Break Time",
+      "description": "Get gentle reminders to step away from the screen",
+      "category": "time",
+      "keywords": [
+        "reminder",
+        "pomodoro",
+        "rest",
+        "health"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 3,
+      "status": "ready",
+      "note": "Notifications require permission. Full-screen activity detection is best effort.",
+      "icon": "coffee"
+    },
+    {
+      "id": "timer-stopwatch",
+      "name": "Timer & Stopwatch",
+      "description": "Count down to zero or measure elapsed time with laps",
+      "category": "time",
+      "keywords": [
+        "countdown",
+        "stopwatch",
+        "lap",
+        "alarm"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 1,
+      "status": "ready",
+      "note": "",
+      "icon": "timer"
+    },
+    {
+      "id": "world-time",
+      "name": "World Time",
+      "description": "See the current time in cities around the world",
+      "category": "time",
+      "keywords": [
+        "timezone",
+        "clock",
+        "city",
+        "utc"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 1,
+      "status": "ready",
+      "note": "",
+      "icon": "globe"
+    },
+    {
+      "id": "verify-checksum",
+      "name": "Verify Checksum",
+      "description": "Hash a file with SHA-256, SHA-1, MD5 or BLAKE3 and compare it",
+      "category": "files",
+      "keywords": [
+        "hash",
+        "sha256",
+        "md5",
+        "blake3",
+        "integrity",
+        "verify"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 0,
+      "status": "ready",
+      "note": "",
+      "icon": "file-check"
+    },
+    {
+      "id": "find-duplicates",
+      "name": "Find Duplicates",
+      "description": "Find identical files, even with different names, and free up space",
+      "category": "files",
+      "keywords": [
+        "duplicate",
+        "same",
+        "space",
+        "cleanup"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 2,
+      "status": "ready",
+      "note": "",
+      "icon": "copy"
+    },
+    {
+      "id": "archive",
+      "name": "Archive & Unarchive",
+      "description": "Compress files to zip or tar.gz and extract zip, tar and 7z",
+      "category": "files",
+      "keywords": [
+        "zip",
+        "unzip",
+        "compress",
+        "extract",
+        "7z",
+        "tar"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 2,
+      "status": "ready",
+      "note": "",
+      "icon": "archive"
+    },
+    {
+      "id": "clean-drive",
+      "name": "Clean Drive",
+      "description": "Find temporary and cache files and move what you choose to the trash",
+      "category": "files",
+      "keywords": [
+        "junk",
+        "cache",
+        "temp",
+        "disk",
+        "space"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 2,
+      "status": "ready",
+      "note": "",
+      "icon": "brush-cleaning"
+    },
+    {
+      "id": "screenshot",
+      "name": "Screenshot",
+      "description": "Capture the whole screen, a window or an area to file and clipboard",
+      "category": "capture",
+      "keywords": [
+        "capture",
+        "screen",
+        "window",
+        "area",
+        "snip"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 4,
+      "status": "ready",
+      "note": "Capture permissions and desktop-session restrictions apply, especially on Wayland.",
+      "icon": "camera"
+    },
+    {
+      "id": "resize-images",
+      "name": "Resize Images",
+      "description": "Resize one or many images and convert between formats",
+      "category": "media",
+      "keywords": [
+        "resize",
+        "scale",
+        "png",
+        "jpg",
+        "webp",
+        "convert",
+        "batch"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 4,
+      "status": "ready",
+      "note": "",
+      "icon": "image"
+    },
+    {
+      "id": "qr-code",
+      "name": "QR & Barcode",
+      "description": "Turn text or a link into a QR code or barcode image",
+      "category": "media",
+      "keywords": [
+        "qr",
+        "barcode",
+        "code",
+        "generate"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 1,
+      "status": "ready",
+      "note": "",
+      "icon": "qr-code"
+    },
+    {
+      "id": "system-monitor",
+      "name": "System Monitor",
+      "description": "Watch CPU, memory, disk and the busiest processes in one view",
+      "category": "system",
+      "keywords": [
+        "cpu",
+        "ram",
+        "memory",
+        "disk",
+        "process",
+        "performance"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 3,
+      "status": "ready",
+      "note": "",
+      "icon": "activity"
+    },
+    {
+      "id": "network-usage",
+      "name": "Network Usage",
+      "description": "See live upload and download speed and totals",
+      "category": "system",
+      "keywords": [
+        "bandwidth",
+        "speed",
+        "upload",
+        "download",
+        "traffic"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 3,
+      "status": "ready",
+      "note": "",
+      "icon": "network"
+    },
+    {
+      "id": "do-not-sleep",
+      "name": "Do Not Sleep",
+      "description": "Keep the computer and display awake for as long as you need",
+      "category": "system",
+      "keywords": [
+        "awake",
+        "caffeine",
+        "sleep",
+        "display",
+        "power"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 3,
+      "status": "ready",
+      "note": "",
+      "icon": "sun"
+    },
+    {
+      "id": "sleep-timer",
+      "name": "Sleep Timer",
+      "description": "Put the computer to sleep or shut it down after a countdown",
+      "category": "system",
+      "keywords": [
+        "shutdown",
+        "sleep",
+        "timer",
+        "power off"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 3,
+      "status": "ready",
+      "note": "Explicit confirmation before arming a power action. Cancel from the launcher banner.",
+      "icon": "hourglass"
+    },
+    {
+      "id": "lock-screen",
+      "name": "Lock Screen",
+      "description": "Lock the computer instantly",
+      "category": "privacy",
+      "keywords": [
+        "lock",
+        "secure",
+        "away"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 3,
+      "status": "ready",
+      "note": "macOS uses display sleep; immediate password protection depends on your OS settings.",
+      "icon": "lock"
+    },
+    {
+      "id": "hide-desktop",
+      "name": "Hide Desktop",
+      "description": "Hide desktop icons for presentations and screen sharing",
+      "category": "privacy",
+      "keywords": [
+        "icons",
+        "presentation",
+        "clean",
+        "desktop"
+      ],
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "phase": 4,
+      "status": "ready",
+      "note": "Changes desktop icon visibility. Linux is not supported.",
+      "icon": "eye-off"
+    },
+    {
+      "id": "encrypt-files",
+      "name": "Encrypt Files",
+      "description": "Protect files with a passphrase using modern age encryption",
+      "category": "privacy",
+      "keywords": [
+        "encrypt",
+        "decrypt",
+        "password",
+        "secure",
+        "age"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 4,
+      "status": "ready",
+      "note": "",
+      "icon": "file-lock"
+    },
+    {
+      "id": "mouse-activity",
+      "name": "Mouse Activity",
+      "description": "Gently move the pointer while idle and automatically yield when you return",
+      "category": "system",
+      "keywords": [
+        "mouse",
+        "idle",
+        "activity",
+        "pointer",
+        "move"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows only. Starts only when you choose, moves the pointer while idle, and yields when input resumes. Stop from the app or tray.",
+      "icon": "mouse-pointer-2"
+    },
+    {
+      "id": "window-on-top",
+      "name": "Window on Top",
+      "description": "Keep a chosen window above other windows",
+      "category": "productivity",
+      "keywords": [
+        "window",
+        "top",
+        "pin",
+        "always"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows native window controls; some protected applications may refuse changes.",
+      "icon": "pin"
+    },
+    {
+      "id": "window-manager",
+      "name": "Window Manager",
+      "description": "Place windows in halves, thirds or quarters of a display",
+      "category": "productivity",
+      "keywords": [
+        "snap",
+        "window",
+        "layout",
+        "third",
+        "half"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows native window controls; minimum window sizes can constrain layouts.",
+      "icon": "panels-top-left"
+    },
+    {
+      "id": "show-desktop",
+      "name": "Show Desktop",
+      "description": "Minimize application windows to reveal the desktop",
+      "category": "productivity",
+      "keywords": [
+        "desktop",
+        "minimize",
+        "windows"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows only. Restores the windows tracked by this session.",
+      "icon": "monitor"
+    },
+    {
+      "id": "close-apps",
+      "name": "Close Apps",
+      "description": "Review open windows and request that selected apps close",
+      "category": "system",
+      "keywords": [
+        "close",
+        "apps",
+        "windows"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requests normal window closure after review. Applications may show their own save prompts.",
+      "icon": "app-window"
+    },
+    {
+      "id": "focus-window",
+      "name": "Focus on Window",
+      "description": "Dim the space around a chosen window",
+      "category": "productivity",
+      "keywords": [
+        "focus",
+        "window",
+        "dim"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows dimming overlays; multi-monitor runtime acceptance is still open.",
+      "icon": "focus"
+    },
+    {
+      "id": "switch-resolution",
+      "name": "Switch Resolution",
+      "description": "Try a display mode with an automatic rollback countdown",
+      "category": "system",
+      "keywords": [
+        "resolution",
+        "monitor",
+        "display",
+        "scale"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows only. A confirmation countdown automatically requests rollback if you do not keep the mode.",
+      "icon": "scan"
+    },
+    {
+      "id": "eject-volumes",
+      "name": "Eject Volumes",
+      "description": "Review removable volumes and request a safe eject",
+      "category": "system",
+      "keywords": [
+        "eject",
+        "usb",
+        "volume",
+        "drive"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows only. Busy or protected devices can refuse an eject request.",
+      "icon": "unplug"
+    },
+    {
+      "id": "energy-saver",
+      "name": "Energy Saver",
+      "description": "Choose an available operating-system power plan",
+      "category": "system",
+      "keywords": [
+        "battery",
+        "power",
+        "energy",
+        "saver"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Selects an available Windows power plan; available plans depend on the device.",
+      "icon": "battery"
+    },
+    {
+      "id": "hidden-files",
+      "name": "Hidden Files",
+      "description": "Show or hide hidden files in the system file manager",
+      "category": "system",
+      "keywords": [
+        "hidden",
+        "files",
+        "explorer",
+        "finder"
+      ],
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Uses file-manager settings on Windows and macOS; changing macOS settings can restart Finder.",
+      "icon": "folder-open"
+    },
+    {
+      "id": "cpu-temperature",
+      "name": "CPU Temperature",
+      "description": "Read temperature sensors exposed by the operating system",
+      "category": "system",
+      "keywords": [
+        "temperature",
+        "sensor",
+        "cpu",
+        "heat"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Only sensors exposed by the system are available. Many Windows devices expose none.",
+      "icon": "thermometer"
+    },
+    {
+      "id": "launch-app-sets",
+      "name": "Launch App Sets",
+      "description": "Save and open a reviewed group of local apps or files",
+      "category": "productivity",
+      "keywords": [
+        "launch",
+        "apps",
+        "sets",
+        "workspace"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "",
+      "icon": "sparkles"
+    },
+    {
+      "id": "uninstall-apps",
+      "name": "Uninstall Apps",
+      "description": "Review registered uninstallers and separately inspect leftovers",
+      "category": "system",
+      "keywords": [
+        "uninstall",
+        "apps",
+        "remove",
+        "leftovers"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows registered uninstallers. Leftover inspection is separate from uninstalling.",
+      "icon": "package-minus"
+    },
+    {
+      "id": "presentation-mode",
+      "name": "Presentation Mode",
+      "description": "Coordinate keep-awake and desktop visibility for a presentation",
+      "category": "productivity",
+      "keywords": [
+        "presentation",
+        "awake",
+        "desktop",
+        "external",
+        "display"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Combines keep-awake with supported desktop controls. Notification settings remain manual OS controls.",
+      "icon": "presentation"
+    },
+    {
+      "id": "do-not-disturb",
+      "name": "Do Not Disturb",
+      "description": "Open the supported system controls for notification interruptions",
+      "category": "system",
+      "keywords": [
+        "focus",
+        "notifications",
+        "disturb"
+      ],
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Opens supported OS settings. You change the notification mode yourself.",
+      "icon": "bell-off"
+    },
+    {
+      "id": "airplane-mode",
+      "name": "Airplane Mode",
+      "description": "Open Windows controls for wireless radios and airplane mode",
+      "category": "system",
+      "keywords": [
+        "airplane",
+        "wireless",
+        "radio",
+        "wifi"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Opens Windows airplane-mode settings. You control the radios in Windows.",
+      "icon": "plane"
+    },
+    {
+      "id": "alarm",
+      "name": "Alarm",
+      "description": "Schedule local reminders with time-zone and recurrence controls",
+      "category": "time",
+      "keywords": [
+        "alarm",
+        "schedule",
+        "reminder",
+        "daily",
+        "weekday"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requires notification permission and Oxbox to remain running; the app does not wake a powered-off computer.",
+      "icon": "bell"
+    },
+    {
+      "id": "date-countdown",
+      "name": "Date Countdown",
+      "description": "Count down to dated events in explicit time zones",
+      "category": "time",
+      "keywords": [
+        "date",
+        "countdown",
+        "event",
+        "deadline"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Uses explicit time zones. Notifications require permission and a running app.",
+      "icon": "calendar-days"
+    },
+    {
+      "id": "mute-microphone",
+      "name": "Mute Microphone",
+      "description": "Inspect and toggle the default input-device mute state",
+      "category": "media",
+      "keywords": [
+        "microphone",
+        "mute",
+        "audio",
+        "input"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows default input device; Linux requires a working pactl/PulseAudio-compatible server.",
+      "icon": "mic-off"
+    },
+    {
+      "id": "record-audio",
+      "name": "Record Audio",
+      "description": "Record an explicitly selected audio input to a new local file",
+      "category": "media",
+      "keywords": [
+        "record",
+        "audio",
+        "microphone",
+        "wav"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requires your own FFmpeg installation, a supported input device, and OS permission.",
+      "icon": "mic"
+    },
+    {
+      "id": "record-screen",
+      "name": "Record Screen",
+      "description": "Record a screen, area or window with explicit start and stop",
+      "category": "capture",
+      "keywords": [
+        "record",
+        "screen",
+        "area",
+        "window",
+        "video"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requires FFmpeg. Linux recording currently uses X11; macOS and Wayland recording are unavailable through this provider.",
+      "icon": "screen-share"
+    },
+    {
+      "id": "make-gif",
+      "name": "Make GIF",
+      "description": "Create a local animated GIF from a video segment",
+      "category": "media",
+      "keywords": [
+        "gif",
+        "animation",
+        "video"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requires your own FFmpeg installation. Converts a selected local video segment.",
+      "icon": "film"
+    },
+    {
+      "id": "convert-audio-video",
+      "name": "Convert Audio / Video",
+      "description": "Convert local media with reviewed offline format presets",
+      "category": "media",
+      "keywords": [
+        "convert",
+        "audio",
+        "video",
+        "mp4",
+        "mp3",
+        "wav",
+        "webm"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requires your own FFmpeg installation. Available codecs depend on that build.",
+      "icon": "file-video"
+    },
+    {
+      "id": "take-photo",
+      "name": "Take Photo",
+      "description": "Capture a photo from an explicitly selected camera",
+      "category": "capture",
+      "keywords": [
+        "photo",
+        "camera",
+        "webcam"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requires FFmpeg, a supported camera and OS camera permission.",
+      "icon": "camera"
+    },
+    {
+      "id": "take-video",
+      "name": "Take Video",
+      "description": "Record a selected camera with visible controls and a duration limit",
+      "category": "capture",
+      "keywords": [
+        "video",
+        "camera",
+        "webcam",
+        "record"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Requires FFmpeg and camera permission. Camera recording does not include microphone audio.",
+      "icon": "video"
+    },
+    {
+      "id": "recognize-text",
+      "name": "Recognize Text",
+      "description": "Extract text from a local image using an available offline OCR engine",
+      "category": "productivity",
+      "keywords": [
+        "ocr",
+        "recognize",
+        "text",
+        "image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Windows OCR uses installed language packs. Other platforms require user-installed Tesseract and language data.",
+      "icon": "scan-text"
+    },
+    {
+      "id": "barcode-reader",
+      "name": "Barcode Reader",
+      "description": "Read QR codes and supported barcodes from a local image",
+      "category": "media",
+      "keywords": [
+        "barcode",
+        "reader",
+        "qr",
+        "scan"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "",
+      "icon": "scan-line"
+    },
+    {
+      "id": "measure-color",
+      "name": "Measure Color",
+      "description": "Sample an image or screen pixel as HEX, RGB, HSL and CMYK",
+      "category": "media",
+      "keywords": [
+        "color",
+        "colour",
+        "picker",
+        "hex",
+        "rgb",
+        "hsl",
+        "cmyk"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Local-image sampling works without screen permission; screen sampling inherits capture restrictions.",
+      "icon": "pipette"
+    },
+    {
+      "id": "currency-converter",
+      "name": "Currency Converter",
+      "description": "Convert dated reference rates with offline import and opt-in ECB refresh",
+      "category": "productivity",
+      "keywords": [
+        "currency",
+        "exchange",
+        "rates",
+        "ecb",
+        "money",
+        "convert"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "phase": 5,
+      "status": "ready",
+      "note": "Import dated reference rates locally, or explicitly opt into a manual ECB HTTPS refresh. Reference rates are not live trading quotes.",
+      "icon": "coins"
+    }
+  ]
+}

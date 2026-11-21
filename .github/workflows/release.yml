@@ -1,5 +1,5 @@
-# Builds installers for Windows, macOS (Apple Silicon + Intel) and Linux when a version tag is pushed,
-# and attaches them to a DRAFT GitHub release for a maintainer to review and publish.
+# Existing Tauri CLI is a packaging tool, never part of the native runtime graph.
+# This workflow never publishes a release; assets remain in a maintainer-reviewed draft.
 name: Release
 
 on:
@@ -8,12 +8,16 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag to build (for example v0.1.0)
+        description: Existing native version tag to build (for example v0.1.0)
         required: true
         type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: native-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   bundle:
@@ -23,35 +27,35 @@ jobs:
         include:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-            args: ''
-          - platform: macos-latest
+            bundles: msi,nsis
+          - platform: macos-15
             target: aarch64-apple-darwin
-            args: '--target aarch64-apple-darwin'
-          - platform: macos-latest
+            bundles: app,dmg
+          - platform: macos-15-intel
             target: x86_64-apple-darwin
-            args: '--target x86_64-apple-darwin'
+            bundles: app,dmg
           - platform: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            args: ''
+            bundles: tar.gz
     runs-on: ${{ matrix.platform }}
+    env:
+      OXBOX_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Validate version tag
         shell: bash
-        env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$OXBOX_RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "Use an existing version tag such as v0.1.0"
             exit 1
           fi
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
-      - name: Install Linux system dependencies
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+      - name: Install native Linux system dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf libpipewire-0.3-dev libspa-0.2-dev libwayland-dev libxcb1-dev libxcb-randr0-dev libgbm-dev libegl1-mesa-dev libclang-dev clang
+          sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libpipewire-0.3-dev libspa-0.2-dev libwayland-dev libxcb1-dev libxcb-randr0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxi-dev libxcursor-dev libxrandr-dev libgbm-dev libegl1-mesa-dev libgl1-mesa-dev libclang-dev clang
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -59,27 +63,94 @@ jobs:
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          toolchain: '1.95.0'
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm test
-      - run: cargo test --workspace --locked
+      - run: node --test scripts/build-native.test.mjs scripts/license-inventory.test.mjs
+      - run: cargo test -p oxbox-core -p oxbox-native --locked --target ${{ matrix.target }}
       - name: Fetch locked target sources for notices
         run: cargo fetch --locked --target ${{ matrix.target }}
-      - name: Generate target third-party notices
+      - name: Generate native target third-party notices
         run: node scripts/generate-third-party-notices.mjs --target ${{ matrix.target }}
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build and package native application
+        run: node scripts/build-native.mjs --bundle --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Collect native draft assets
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NATIVE_TARGET: ${{ matrix.target }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const target = process.env.NATIVE_TARGET;
+          const version = process.env.OXBOX_RELEASE_TAG.slice(1);
+          const directory = path.join('target/native-dist', target, 'release');
+          const output = path.join('target/native-assets', target);
+          fs.mkdirSync(output, { recursive: true });
+          let count = 0;
+          function collect(directory) {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const filename = path.join(directory, entry.name);
+              if (entry.isDirectory()) {
+                if (!entry.name.endsWith('.app')) collect(filename);
+              } else if (entry.name.includes(version) && (/\.(?:msi|dmg|tar\.gz)$/.test(entry.name) || /-setup\.exe$/.test(entry.name))) {
+                fs.copyFileSync(filename, path.join(output, `native-${entry.name}`));
+                count++;
+              }
+            }
+          }
+          if (target.includes('linux')) {
+            const archive = `oxbox-${version}-${target}.tar.gz`;
+            fs.copyFileSync(path.join(directory, archive), path.join(output, `native-${archive}`));
+            count++;
+          } else collect(path.join(directory, 'bundle'));
+          if (!count) throw new Error('No native installer/archive assets were generated.');
+          fs.copyFileSync('docs/THIRD_PARTY_NOTICES.txt', path.join(output, `THIRD_PARTY_NOTICES-${target}.txt`));
+          for (const name of ['LICENSE-MIT', 'LICENSE-APACHE']) fs.copyFileSync(name, path.join(output, name));
+          NODE
+      - uses: actions/upload-artifact@v4
         with:
-          tagName: ${{ inputs.tag || github.ref_name }}
-          releaseName: 'Oxbox ${{ inputs.tag || github.ref_name }}'
-          releaseBody: >-
-            Draft prerelease for maintainer review. Builds are unsigned. Review CHANGELOG.md,
-            docs/VALIDATION.md and docs/RELEASE.md at this tag, verify installer checksums, and
-            complete the recorded platform, hardware, installer, security and attribution gates
-            before publishing. Optional FFmpeg/Tesseract providers are not bundled.
-          releaseDraft: true
-          prerelease: true
-          args: ${{ matrix.args }}
+          name: native-${{ matrix.target }}
+          path: target/native-assets/${{ matrix.target }}/*
+          if-no-files-found: error
+
+  draft:
+    name: Attach verified build outputs to draft
+    needs: bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OXBOX_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: native-release
+          merge-multiple: true
+      - name: Compute checksums and create or update draft
+        shell: bash
+        run: |
+          if [[ ! "$OXBOX_RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then exit 1; fi
+          cd native-release
+          LC_ALL=C sha256sum -- * > SHA256SUMS.txt
+          cd ..
+          if gh release view "$OXBOX_RELEASE_TAG" --json isDraft --jq .isDraft > draft-state.txt 2> draft-error.txt; then
+            if [[ "$(cat draft-state.txt)" != "true" ]]; then
+              echo "Refusing to alter assets on a published release."
+              exit 1
+            fi
+          else
+            if ! grep -qi 'release not found' draft-error.txt; then cat draft-error.txt; exit 1; fi
+            gh release create "$OXBOX_RELEASE_TAG" --verify-tag --draft --prerelease --title "Oxbox $OXBOX_RELEASE_TAG (native draft)" --notes-file packaging/native/RELEASE-NOTES.md
+          fi
+          gh release upload "$OXBOX_RELEASE_TAG" native-release/* --clobber
+          if [[ "$(gh release view "$OXBOX_RELEASE_TAG" --json isDraft --jq .isDraft)" != "true" ]]; then
+            echo "Draft-only postcondition failed."
+            exit 1
+          fi

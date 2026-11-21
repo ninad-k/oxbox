@@ -3,7 +3,38 @@
 Oxbox implements no application telemetry. Tool commands operate locally; the only intentional application
 network feature is separately opted-in, manually requested ECB currency refresh, approved in
 [issue #1](https://github.com/ninad-k/oxbox/issues/1). Its request contains no user amounts or files.
-This statement does not guarantee that the embedded operating-system webview makes no network requests.
+The approved native migration removes the embedded browser from the production host. Finite network observations
+do not establish a universal zero-network guarantee; the historical browser investigation is retained below.
+
+## Native migration — 2026-11-21
+
+The selected renderer is exact eframe 0.37.0 with Rust 1.95. The Windows native normal dependency graph has
+no Tauri host, Wry, WebView2 SDK or common HTTP client. `tauri-winrt-notification` is a local toast adapter,
+not a browser host. The legacy implementation remains in the workspace but is not compiled into the native
+application. Explicit currency refresh uses fixed system `curl.exe` after opt-in and a manual action;
+startup and background ticks never call it. Imported legacy download consent starts off.
+
+A first **debug-only**, clean-profile Windows observation began before launch and covered startup, idle,
+read-only launcher/Unit Converter interactions and application Quit. Over **397.547 seconds / 7,845 samples**,
+there were no observed owned TCP rows or UDP bindings, and no sampler failures. The maximum process tree
+was the native executable plus its debug `conhost.exe`; no browser descendant appeared. All recorded owned
+processes disappeared before observation ended. A later polished debug run independently verified favorites,
+Alt+1, global Ctrl+Alt+O hide and second-launch restoration of the existing process.
+
+The observer uses read-only Windows IP Helper owner-PID TCP/UDP tables and Toolhelp process ancestry.
+Only aggregate counts are retained; no addresses, ports, command lines or unrelated process names are exported.
+Requested interval was 50 ms, actual p95 start-to-start gap **62.96 ms**, maximum **551.38 ms**. Sockets wholly
+between samples can be missed. UDP tables show bindings rather than destinations or traffic. Windows DNS
+Client/cache, other OS brokers, drivers and explicitly opened external apps are outside this attribution;
+no ETW/DNS or packet trace is claimed. This is preliminary evidence, not production or other-OS acceptance.
+Production binary measurements, per-tool providers, DNS coverage and all-platform acceptance remain open.
+
+No Windows/Edge policy, firewall, privacy or security setting was changed. The draft must remain unpublished.
+
+## Historical embedded browser investigation
+
+The following findings apply to the retained Tauri implementation and its former draft assets, not to the
+new native binary. They explain why supported WebView2 settings were insufficient for the selected boundary.
 
 ## Observed Windows release behavior — 2026-11-21
 
@@ -127,7 +158,7 @@ that disabling the service limits its ability to respond to severe bugs. Oxbox d
 disable component/security updates. [WebView2 policy reference](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-webview-policies#experimentationandconfigurationservicecontrol),
 [configuration-service caveat](https://learn.microsoft.com/en-us/deployedge/edge-configuration-and-experiments).
 
-## Acceptance status
+## Historical Tauri acceptance status
 
 The strict whole-process offline requirement has **not passed on Windows**. Keep the release a draft until
 the remaining browser-owned requests are resolved within the authorized app-scoped/security-preserving

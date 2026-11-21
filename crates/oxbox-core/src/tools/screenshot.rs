@@ -130,6 +130,75 @@ pub struct TargetInfo {
     pub scale_factor: f32,
 }
 
+/// Match capture metadata to a native-renderer monitor inventory. Native `id`
+/// values are renderer monitor indices. xcap macOS/Linux metadata uses logical
+/// units; Windows metadata uses physical pixels. Never guess among mirrors.
+pub fn native_monitor_index(
+    target: &TargetInfo,
+    native: &[TargetInfo],
+    source_is_logical: bool,
+) -> CoreResult<u32> {
+    let scale = if source_is_logical {
+        f64::from(target.scale_factor)
+    } else {
+        1.0
+    };
+    if target.kind != CaptureKind::Monitor
+        || target.width == 0
+        || target.height == 0
+        || !scale.is_finite()
+        || scale <= 0.0
+    {
+        return Err(crate::CoreError::InvalidInput(
+            "display metadata has invalid dimensions or scale".into(),
+        ));
+    }
+    let bounds = [
+        f64::from(target.x) * scale,
+        f64::from(target.y) * scale,
+        f64::from(target.width) * scale,
+        f64::from(target.height) * scale,
+    ];
+    if bounds
+        .iter()
+        .any(|value| !value.is_finite() || value.abs() > f64::from(u32::MAX))
+    {
+        return Err(crate::CoreError::InvalidInput(
+            "display metadata is outside the supported coordinate range".into(),
+        ));
+    }
+    let size_matches = |item: &&TargetInfo| {
+        item.kind == CaptureKind::Monitor
+            && (f64::from(item.width) - bounds[2]).abs() <= 1.0
+            && (f64::from(item.height) - bounds[3]).abs() <= 1.0
+    };
+    let exact: Vec<_> = native
+        .iter()
+        .filter(size_matches)
+        .filter(|item| {
+            (f64::from(item.x) - bounds[0]).abs() <= 1.0
+                && (f64::from(item.y) - bounds[1]).abs() <= 1.0
+        })
+        .collect();
+    if exact.len() == 1 {
+        return Ok(exact[0].id);
+    }
+    if exact.len() > 1 {
+        return Err(crate::CoreError::InvalidInput(
+            "mirrored display mapping is ambiguous; capture a single display instead".into(),
+        ));
+    }
+    let named: Vec<_> = native
+        .iter()
+        .filter(size_matches)
+        .filter(|item| item.name == target.name)
+        .collect();
+    if named.len() == 1 {
+        return Ok(named[0].id);
+    }
+    Err(crate::CoreError::InvalidInput("the selected display cannot be mapped uniquely to a native monitor; refresh the display list".into()))
+}
+
 fn capture_error(error: impl std::fmt::Display) -> CoreError {
     CoreError::InvalidInput(format!("screen capture failed: {error}"))
 }
@@ -276,6 +345,85 @@ pub fn save_capture(image: &RgbaImage, folder: &Path) -> CoreResult<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn display(id: u32, name: &str, bounds: (i32, i32, u32, u32), scale: f32) -> TargetInfo {
+        TargetInfo {
+            kind: CaptureKind::Monitor,
+            id,
+            name: name.into(),
+            x: bounds.0,
+            y: bounds.1,
+            width: bounds.2,
+            height: bounds.3,
+            scale_factor: scale,
+        }
+    }
+    #[test]
+    fn native_monitor_matching_preserves_physical_mixed_dpi_origins() {
+        let native = [
+            display(0, "left", (-1920, 0, 1920, 1080), 1.0),
+            display(1, "right", (0, 0, 3840, 2160), 1.5),
+        ];
+        assert_eq!(
+            native_monitor_index(
+                &display(45, "other driver label", (0, 0, 3840, 2160), 1.5),
+                &native,
+                false
+            )
+            .unwrap(),
+            1
+        );
+        assert_eq!(
+            native_monitor_index(
+                &display(46, "left", (-1920, 0, 1920, 1080), 1.0),
+                &native,
+                false
+            )
+            .unwrap(),
+            0
+        );
+    }
+    #[test]
+    fn native_monitor_matching_converts_retina_metadata_to_pixels() {
+        let native = [display(3, "Retina", (2880, -1800, 2880, 1800), 2.0)];
+        assert_eq!(
+            native_monitor_index(
+                &display(42, "Retina", (1440, -900, 1440, 900), 2.0),
+                &native,
+                true
+            )
+            .unwrap(),
+            3
+        );
+        assert!(
+            native_monitor_index(
+                &display(42, "unknown", (1440, -900, 1440, 900), 2.0),
+                &native,
+                false
+            )
+            .is_err()
+        );
+        let native = [display(2, "X11", (-1920, 0, 3840, 2160), 1.5)];
+        assert_eq!(
+            native_monitor_index(
+                &display(57, "X11", (-1280, 0, 2560, 1440), 1.5),
+                &native,
+                true,
+            )
+            .unwrap(),
+            2
+        );
+    }
+    #[test]
+    fn native_monitor_matching_refuses_ambiguous_or_invalid_displays() {
+        let target = display(1, "panel", (0, 0, 1920, 1080), 1.0);
+        assert!(native_monitor_index(&target, &[target.clone(), target.clone()], false).is_err());
+        assert!(native_monitor_index(&target, &[], false).is_err());
+        let bad = display(2, "panel", (0, 0, 1920, 1080), f32::NAN);
+        assert!(native_monitor_index(&bad, std::slice::from_ref(&target), true).is_err());
+        let shifted = display(7, "panel", (100, 100, 1920, 1080), 1.0);
+        assert_eq!(native_monitor_index(&target, &[shifted], false).unwrap(), 7);
+    }
     #[test]
     fn release_media_bounds_cancelled_delay_does_not_capture() {
         let cancel = crate::jobs::CancelToken::default();

@@ -14,7 +14,7 @@ subscriptions or telemetry.
 
 **How we build it (clean room):** we rebuild the *functionality* described in public product pages.
 We do **not** decompile, disassemble or copy any proprietary binaries, code, icons, names, text or UI art.
-All code, icons and copy in Oxbox are original.
+Oxbox-specific code and copy are original; third-party libraries and Lucide icons retain their licenses and attribution.
 
 **Success looks like:** a user installs a <15 MB app, clicks the tray icon, picks a tool from a searchable grid,
 and gets the result in one or two clicks, on all three OSes.
@@ -23,9 +23,9 @@ and gets the result in one or two clicks, on all three OSes.
 1. As a user, I click the tray icon and see a searchable grid of tools grouped by category.
 2. As a user, I can pin favourite tools and launch a tool with a global shortcut.
 3. As a user, each tool works offline, does nothing destructive without confirmation, and sends no data anywhere.
-4. As a contributor, I can add a new tool by adding one Rust module in `oxbox-core`, one UI view and one registry entry.
+4. As a contributor, I can add a new tool by adding one Rust module in `oxbox-core`, one native form and one canonical catalogue entry.
 
-## Capability map (v0.1 = 20 tools + shell)
+## Original v0.1 capability map (20 tools + shell)
 
 | Module id | Responsibility | Depends on |
 |---|---|---|
@@ -38,13 +38,13 @@ and gets the result in one or two clicks, on all three OSes.
 | `media` | **Resize Images** (batch, format convert), **Barcode / QR Generator** | shell |
 | `system` | **System Monitor** (CPU, RAM, disk, processes), **Network Usage** (live speed + session totals) | shell |
 | `time` | **Break Time** reminders, **Timer**, **Stopwatch**, **World Time** | shell |
-| `text` | **Transform Text** (UPPER, lower, Title, camelCase, snake_case, kebab-case…), **Unit Converter** (length, mass, temperature, data size, time; no currency in v0.1) | shell |
+| `text` | **Transform Text** (UPPER, lower, Title, camelCase, snake_case, kebab-case…), **Unit Converter** (length, mass, temperature, data size, time; approved currency is now a separate promoted tool) | shell |
 
 Build order: `shell` → `text`, `files` (pure logic, easiest to test) → `system`, `power`, `time` → `media`, `capture`, `clipboard`, `privacy`.
 
 ### Platform support targets (v0.1)
 - **Windows 10/11:** primary development target. Native spot checks are recorded, while full tool-by-tool acceptance remains open.
-- **macOS 12+ and Linux (X11/Wayland, GNOME/KDE):** builds in CI. Where an OS API differs, the tool either has an
+- **macOS 12+ and Linux (X11/Wayland, GNOME/KDE):** native builds are configured in CI; current results must be checked. Where an OS API differs, the tool either has an
   implementation or is shown as "not available on this OS". It is never shown broken.
   Known gaps: Hide Desktop on Linux varies by desktop environment; window capture on Wayland is limited.
 
@@ -66,80 +66,77 @@ background WebView2 HTTPS traffic; see [runtime privacy findings](docs/RUNTIME_P
 An isolated-profile diagnosis subsequently identified vendor configuration and component-update requests;
 production testing of supported SDK controls also observed SmartScreen requests while retaining security defaults.
 The user approved supported app-scoped SDK controls and existing bindings; strict offline acceptance remains
-open until production verification of [the runtime privacy follow-up](tasks/runtime-privacy.md).
+open. The selected native migration removes the embedded browser dependency; it still requires new production observation and the [migration acceptance gates](tasks/native-migration.md). The earlier [SDK follow-up](tasks/runtime-privacy.md) remains historical evidence.
 
-## Tech Stack
+## Selected native architecture
 
-| Layer | Choice | Why |
+The user selected **eframe 0.37.0 and Rust 1.95** on 2026-11-21. All 49 tools now have concrete native
+forms, reusing the Rust core and existing platform/provider limits. A live Windows native window and
+headless route construction have been observed; full native tool, accessibility, privacy and installer
+acceptance remains open in [the migration matrix](tasks/native-migration.md).
+The retained Tauri/Svelte host is a comparison implementation, not the current native runtime.
+[ADR 0004](docs/adr/0004-runtime-offline-boundary.md) records the selected stack and its limits.
+
+| Layer | Choice | Purpose |
 |---|---|---|
-| Language | Rust (stable, edition 2024, MSRV 1.93) | Speed, safety, tiny binaries, great OS crates; safe bounded 7z reader requires 1.93 |
-| Desktop shell | **Tauri 2** (`tray-icon`, `global-shortcut`, `notification`, `dialog`, `autostart` plugins) | Native installers for all 3 OSes; small; Rust backend |
-| UI | **Svelte 5 + TypeScript + Vite**, plain CSS with design tokens (light/dark) | Small bundle, little boilerplate for ~20 views |
-| Core crates | `sysinfo`, `xcap`, `arboard`, `keepawake`, `image`, `qrcode`, `age`, `zip`, `tar` + `flate2`, `sevenz-rust`, `blake3`, `sha2`, `sha1`, `md-5`, `walkdir`, `trash`, `chrono` + `chrono-tz`, `serde`, `thiserror`, `tracing` | Mature and widely used; each one is pinned in Cargo.lock |
-| Package manager | pnpm (UI), cargo (Rust) | Already installed |
+| Language | Rust, edition 2024, minimum 1.95 | Shared core and native host; exact selected eframe line requires 1.95 |
+| UI/renderer | eframe/egui 0.37.0, Glow, bundled/system fonts, AccessKit | Native forms, previews, keyboard/accessibility support; no embedded webview or automatic remote loader |
+| Desktop integration | rfd, tray-icon, global-hotkey, auto-launch, open, platform notification adapters | Explicit native dialogs, launcher lifecycle, login setting and user-requested open actions |
+| Services | Standard-library workers, bounded Task progress, atomic local storage | Hidden reminders, cancellation/Stop/Quit ownership and recoverable preferences |
+| Metadata/assets | catalog/tools.json and flattened existing Lucide vectors | One ordered 49-tool capability catalogue for native, legacy and website interfaces |
+| Core | Existing file, crypto, capture, media, system and time crates | Toolkit-neutral operations and tested safety policies; resolved versions in Cargo.lock |
+| Development | Cargo; Node/pnpm for legacy checks, static website and existing packaging wrapper | Native runtime does not execute JavaScript or need WebView2 |
 
-Exact crate versions are pinned when they are added, checked against their docs (source-driven).
+Exact package versions/features are in the manifests and lockfile. New dependencies, render backends or
+installer tools outside the approved decision still require approval. User-installed FFmpeg/Tesseract
+providers remain optional and unbundled.
 
 ## Commands
 
-```
-pnpm install                         # UI deps (in repo root)
-pnpm tauri dev                       # run app with hot reload
-pnpm tauri build                     # release installers (.msi/.exe, .dmg, .deb/.AppImage)
-cargo test --workspace               # all Rust unit + integration tests
-cargo clippy --workspace --all-targets -- -D warnings
-cargo fmt --all -- --check
-pnpm check                           # svelte-check + TypeScript
-pnpm test                            # vitest (UI logic)
-```
+    cargo run -p oxbox-native --locked
+    cargo test -p oxbox-core -p oxbox-native --locked
+    cargo clippy -p oxbox-core -p oxbox-native --all-targets --locked -- -D warnings
+    cargo fmt --all -- --check
+    node scripts/build-native.mjs --check
+    node scripts/build-native.mjs --bundle
+    pnpm check
+    pnpm test
+    pnpm build
+    node scripts/build-website.mjs
+    node --test scripts/website.test.mjs
 
-## Project Structure
+The pnpm checks retain the legacy UI/catalogue comparison. Use pnpm tauri dev only for an explicit legacy
+comparison. Native packaging selects oxbox-native and verifies its graph excludes browser-host crates;
+the existing bundler is a packaging tool, not the native runtime.
 
-```
-oxbox/
-├─ crates/oxbox-core/        → Pure-Rust tool logic. No Tauri dependency. One module per tool.
-│   ├─ src/tools/<tool>.rs   → e.g. checksum.rs, duplicates.rs, text_transform.rs
-│   ├─ src/platform/         → OS-specific code behind cfg(target_os) (windows.rs, macos.rs, linux.rs)
-│   └─ tests/                → Integration tests using temp dirs
-├─ src-tauri/                → Tauri app: tray, window, thin #[tauri::command] wrappers over oxbox-core
-├─ src/                      → Svelte UI
-│   ├─ lib/registry.ts       → Tool registry (id, name, category, icon, platforms)
-│   ├─ lib/tools/<Tool>.svelte
-│   └─ lib/ui/               → Shared components (ToolCard, FilePicker, ResultPanel)
-├─ docs/adr/                 → Architecture decision records
-├─ .github/workflows/        → CI (test + build matrix win/mac/linux), release
-├─ SPEC.md  README.md  CONTRIBUTING.md  LICENSE-MIT  LICENSE-APACHE  CODE_OF_CONDUCT.md  SECURITY.md
-```
+## Project structure
 
-## Code Style
+- crates/oxbox-core/src/tools/: tool logic and normal/edge/error tests; platform/ holds OS adapters.
+- crates/oxbox-core/src/{launcher,preferences}.rs: shared metadata/search and bounded atomic storage.
+- crates/oxbox-native/src/app.rs: native favorites/search/settings and window lifecycle.
+- crates/oxbox-native/src/{host,jobs,integration,instance}.rs: notifications, tasks, OS integration and activation.
+- crates/oxbox-native/src/tools/{system,media,utilities}/: all 49 concrete native forms and owned controllers.
+- catalog/: canonical category/tool metadata and existing licensed vector assets.
+- src/ and src-tauri/: retained Svelte/Tauri parity reference and typed adapters.
+- website/: static Pages output built from the canonical JSON, without executing app imports.
+- tasks/native-migration.md: per-tool source/automation/manual matrix; docs/VALIDATION.md: dated evidence.
 
-`cargo fmt` defaults; clippy clean with `-D warnings`. Errors are `thiserror` enums in core, mapped to a
-serialisable `ToolError { code, message }` at the Tauri boundary. No `unwrap()` outside tests.
-Long-running work runs on a blocking thread and reports progress through events.
+## Code style and service boundary
 
-```rust
-// crates/oxbox-core/src/tools/checksum.rs
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Algorithm { Sha256, Sha1, Md5, Blake3 }
+Core logic has no UI imports and returns CoreError. Never unwrap()/expect() user input in core. Native
+forms call typed core APIs directly; disk/CPU work uses Task with CancelToken and Progress. For example:
 
-/// Hash a file in streaming fashion; never loads the whole file into memory.
-pub fn hash_file(path: &Path, algo: Algorithm) -> Result<String, CoreError> {
-    let mut reader = BufReader::new(File::open(path)?);
-    let mut hasher = Hasher::new(algo);
-    std::io::copy(&mut reader, &mut hasher)?;
-    Ok(hasher.finalize_hex())
-}
+    self.hash.start(ui.ctx(), move |cancel, progress| {
+        checksum::hash_file_with_progress(&path, algorithm, &cancel, progress)
+    });
 
-// src-tauri/src/commands.rs: thin wrapper only
-#[tauri::command]
-async fn checksum(path: PathBuf, algo: Algorithm) -> Result<String, ToolError> {
-    tauri::async_runtime::spawn_blocking(move || oxbox_core::checksum::hash_file(&path, algo))
-        .await.map_err(ToolError::join)?.map_err(Into::into)
-}
-```
+Jobs preserve streaming, exclusive-output and Trash policies. Navigation abandons stale view jobs;
+hiding preserves in-flight work. Explicit background controllers and reminder clocks run independently
+of UI frames and stop/join on Quit. Host storage imports legacy files into separate native stores without
+rewriting originals; invalid input/storage is an error, not an implicit reset. Passphrases are transient.
 
-Naming: Rust `snake_case` modules, tool ids `kebab-case` (`verify-checksum`), Svelte components `PascalCase`.
+Native grouped form modules are permitted; every stable ID must render real controls and actual results.
+A generic JSON editor, mock completion or placeholder view is not an implementation. Follow AGENTS.md.
 
 ## Testing Strategy
 
@@ -149,31 +146,34 @@ Naming: Rust `snake_case` modules, tool ids `kebab-case` (`verify-checksum`), Sv
 - **Integration tests (core):** `crates/oxbox-core/tests/` with `tempfile`.
 - **OS-effect tools** (lock screen, keep awake, hide desktop, sleep timer, screenshot): logic is behind a small
   trait so command construction is unit-tested; the real effect is checked by hand on Windows and listed in the PR.
-- **UI:** vitest for registry/search/format helpers; `svelte-check` for types; a manual smoke run of every tool on Windows.
-- **CI:** GitHub Actions matrix (windows-latest, macos-latest, ubuntu-latest): fmt, clippy, tests, `tauri build`.
+- **Native UI/services:** headless route/fake-backend tests, consumed texture deltas, task/instance/settings regressions; real keyboard, AccessKit, GPU, dialog and device behavior requires manual testing.
+- **Legacy/catalogue/site:** Vitest and svelte-check remain comparison checks; canonical metadata and website filtering must agree.
+- **CI:** native Rust 1.95 fmt/clippy/tests/build on Windows, macOS and Ubuntu; legacy UI and static-site checks are separate. CI compilation is not cross-platform runtime acceptance.
 - Coverage goal: ≥80% lines in `oxbox-core` pure modules.
 
 ## Boundaries
 
 - **Always:** keep tool logic in `oxbox-core`; confirm before deleting, overwriting or shutting down; delete to
   Recycle Bin/Trash, never permanently, by default; stream large files; run fmt, clippy and tests before every commit;
-  keep the app offline (no telemetry, no network calls in v0.1).
+  keep default runtime work offline, with only the approved opt-in manual currency exception.
 - **Ask first:** adding a crate or npm dependency not listed above; any feature that needs network access, admin/root
   rights, or a background service; changing the license; CI changes that would cost money (public repo Actions are free).
 - **Never:** decompile or copy proprietary code, assets, names or text; use "Parallels" in the product name, icons or
   branding (a neutral "alternative to" mention with a trademark disclaimer in the README is fine); commit secrets;
   ship code that deletes user files without confirmation; disable failing tests to go green.
 
-## Success Criteria (v0.1)
+## Success criteria and open gates
 
-1. `cargo test --workspace`, clippy (`-D warnings`), fmt check and `pnpm check` all pass locally and in CI on all 3 OSes.
-2. `pnpm tauri build` produces a Windows installer under 15 MB, and CI produces macOS and Linux bundles.
-3. The app starts to the tray in under 1 s. The launcher opens from the tray and from a global shortcut (current fresh-install default `Ctrl/Cmd+Alt+O`; previously saved bindings remain).
-4. All 20 tools work end-to-end on Windows 11 (checked by hand, recorded in the release notes); tools unsupported on an OS are shown as such.
-5. No network traffic in the default runtime configuration. The promoted currency tool alone can fetch fixed public ECB
-   data after explicit opt-in; no HTTP client dependency, telemetry, or user-content upload is introduced.
-6. A public GitHub repo `ninad-k/oxbox` with README (features, screenshots, install, trademark disclaimer),
-   CONTRIBUTING (how to add a tool), dual MIT/Apache-2.0 license, issue templates, and green CI.
+1. Native core/host fmt, clippy, tests and builds pass on all three targets with Rust 1.95; canonical legacy/site checks agree.
+2. Native installers, clean-machine behavior and the original Windows installer target of under 15 MB are remeasured;
+   historical Tauri bundles do not satisfy native packaging acceptance.
+3. Tray/shortcut/single-instance/login behavior and the under-one-second startup target are measured for the native build.
+4. All 49 native routes preserve each supported tool's controls, results, safety, provider and platform behavior;
+   full Windows/manual/accessibility and macOS/Linux runtime checks remain recorded gates.
+5. Production native startup/idle/tools/Quit and owned providers receive bounded DNS/TCP/UDP observation, with
+   the manual ECB exception identified. Native rendering does not itself prove a universal zero-network guarantee.
+6. Public source, contribution guidance, licenses, notices and issue templates remain available; release publication
+   waits for the acceptance records and independent reviews.
 
 ## Decisions log
 
@@ -183,3 +183,5 @@ Naming: Rust `snake_case` modules, tool ids `kebab-case` (`verify-checksum`), Sv
   one view per tool), with Oxbox's own visual design.
 - 2026-11-21: UI icons from Lucide (`@lucide/svelte`, ISC license), imported per icon.
 - 2026-11-21: Repo is `ninad-k/oxbox` (public). v0.1 installers ship unsigned; README documents the OS warnings.
+
+- 2026-11-21: User approved the native-renderer migration: eframe 0.37.0, Rust 1.95 and the approved host adapters. Preserve all 49 tools, legacy data and unpublished-release gates; metadata is shared through catalog/tools.json.

@@ -1,6 +1,8 @@
 # Using Oxbox
 
-Run `pnpm tauri dev` for the desktop app. `pnpm dev` is a UI preview: it intentionally cannot run Rust commands.
+Run `cargo run -p oxbox-native --locked` for the selected eframe/egui desktop app. Use `-- --profile <directory>`
+for a disposable fixture profile. The retained `pnpm tauri dev` host and `pnpm dev` browser preview are legacy
+comparison tools, not the native entrypoint.
 Open Oxbox from its tray/menu-bar icon or the default **Ctrl+Alt+O** shortcut (**Cmd+Option+O** on macOS).
 The normal, resizable native window starts at 800 × 800 logical pixels. **Dashboard shows only your favorites**;
 use All tools or a category to browse the 49-tool catalog. The original outlined O/ember mark is shared with the website.
@@ -11,15 +13,38 @@ The star in a tool's title adds it to Favorites. **Alt+1–9** opens the corresp
 editing text (or while the launcher search is empty). Settings changes and favorite tools are stored locally.
 The global shortcut is configurable; an existing saved binding is retained rather than replaced by the new default.
 The promoted Phase 5 tools and their provider/platform requirements are described in [the expanded guide](ROADMAP_TOOLS.md).
-Tool commands work locally by default; currency offers a separate explicit ECB-refresh opt-in. Windows'
-embedded WebView2 runtime may contact Microsoft independently; see [runtime privacy findings](RUNTIME_PRIVACY.md).
+Native tool operations work locally by default; currency alone offers a separate explicit manual ECB-refresh opt-in.
+The selected native host contains no embedded browser. Historical WebView2 observations remain in
+[runtime privacy findings](RUNTIME_PRIVACY.md); new native production privacy and release gates remain open.
+
+## Startup and tray
+
+On the first launch of a fresh installed Windows or macOS copy, Oxbox enables **Launch at login** for the
+current user. Logins use `--autostart`: the app opens quietly in the system tray/menu bar, and the global
+launcher shortcut opens its normal window. If the tray is unavailable, Oxbox stays visible with an error.
+Closing the window keeps the tray running; Quit exits and stops owned work.
+
+Turn login startup off in Settings. Existing native/legacy profiles, saved choices and Windows startup
+records (including OS-disabled choices) are preserved on upgrade instead of being silently re-enabled.
+Development builds and explicit `--profile` QA runs cannot change login registration. Portable Linux archives
+leave startup off; a release build can be explicitly enabled from Settings. Startup never automatically starts
+Mouse Activity, clipboard history, camera/microphone capture or recording.
+
+The installer marker only identifies packaged copies; it does not grant permissions or bypass OS policy.
+Windows commands quote the executable path, including spaces. Disabling affects only Oxbox's current-user
+Run value. Uninstall cleanup must remove only the exact owned startup command; clean-machine verification
+remains in the release checklist. Preferences are retained separately from program uninstall.
 
 ## Settings
 
-The gear button and tray menu open Settings. Choose System, Light, or Dark appearance; toggle launch at login;
+The Settings control and tray menu open Settings. Choose System, Light, or Dark appearance; toggle launch at login;
 or register a launcher shortcut. If another application owns the shortcut, Oxbox reports an error and retains
-the preceding binding. Settings are saved under the OS application-data directory in `settings.json`.
-Old `oxbox.favorites` webview storage is migrated after the new store has been saved successfully.
+the preceding binding. The native host saves separate native-*.json files under the OS application-data directory, or the explicit
+profile directory. Native shell preferences, system/app sets, utility reminders/world clocks and currency cache
+have separate stores. Existing legacy settings/cache files are imported once and preserved byte-for-byte.
+Currency networking starts off on first native import, even if the legacy preference was enabled. Legacy
+webview-local favorites must first exist in the legacy saved preferences; the native host does not open a browser
+to read webview storage. Invalid stores produce an error instead of being overwritten.
 
 ## Tools
 
@@ -46,6 +71,15 @@ Old `oxbox.favorites` webview storage is migrated after the new store has been s
 | Resize Images | Choose images/output folder, percentage/fit/exact dimensions, output format | Fit preserves aspect; Exact uses the supplied dimensions; EXIF orientation applied; JPEG quality control; new output names, progress/cancel |
 | Hide Desktop | Hide/restore icons, or use the tray toggle | Captures and restores the preceding visibility setting on Quit; unavailable on Linux |
 | Encrypt Files | Choose source and new output, enter/confirm a passphrase, encrypt or decrypt | age scrypt format; streams large files; wrong passphrase fails; originals kept; passphrases never intentionally stored/logged |
+
+## Native lifecycle
+
+Timers, alarms, date notifications, break reminders and explicitly enabled background controllers continue
+while the launcher is hidden. Hiding clears unsubmitted passphrase drafts but preserves in-flight file work.
+Navigating away from a file/conversion view cancels and abandons its stale UI job; user Cancel remains visible
+in the view. An explicitly requested currency import/refresh can finish and persist its cache after navigation.
+Stop/expiry/Quit clean up owned workers and leases. Treat current native behavior as awaiting the recorded
+[per-tool manual checks](../tasks/native-migration.md), not as certified by historical Tauri screenshots.
 
 ## File safety
 
@@ -87,7 +121,7 @@ remain open. Read [validation](VALIDATION.md) and [release status](RELEASE.md) b
 
 ## Platform notes and troubleshooting
 
-- **Windows:** WebView2 and the MSVC build tools are required for development. A long `target` path can cause
+- **Windows:** the MSVC build tools are required for development; the selected native host does not need WebView2. A long `target` path can cause
   `LNK1104`; use a short checkout or set `CARGO_TARGET_DIR` to a short path before building.
 - **macOS:** screen recording permission may be needed for capture. Grant permissions yourself in System Settings.
   Lock Screen sleeps the display; set the OS to require a password immediately for actual locking.

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Oxbox",
+  "mainBinaryName": "oxbox-native",
+  "identifier": "dev.oxbox.desktop",
+  "build": {},
+  "app": { "windows": [] },
+  "bundle": {
+    "active": true,
+    "category": "Utility",
+    "createUpdaterArtifacts": false,
+    "shortDescription": "Free, open-source desktop toolkit",
+    "longDescription": "Oxbox is a native tray app with 49 utilities for files, text, time, media and everyday desktop work. Tools run locally by default; currency refresh is a separate explicit opt-in. Optional FFmpeg and Tesseract providers are user-installed and are not bundled.",
+    "license": "MIT OR Apache-2.0",
+    "copyright": "Copyright (c) Oxbox contributors",
+    "resources": {
+      "packaging/native/installed.json": "oxbox-installed.json",
+      "docs/THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt",
+      "LICENSE-MIT": "LICENSE-MIT",
+      "LICENSE-APACHE": "LICENSE-APACHE"
+    },
+    "icon": [
+      "src-tauri/icons/32x32.png",
+      "src-tauri/icons/128x128.png",
+      "src-tauri/icons/128x128@2x.png",
+      "src-tauri/icons/icon.icns",
+      "src-tauri/icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "skip" },
+      "allowDowngrades": false,
+      "wix": {
+        "fragmentPaths": ["packaging/native/uninstall.wxs"],
+        "componentRefs": ["OxboxNativeUninstallCleanupMarker"]
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "src-tauri/icons/icon.ico",
+        "uninstallerIcon": "src-tauri/icons/icon.ico"
+      }
+    },
+    "macOS": { "minimumSystemVersion": "12.0" }
+  }
+}

@@ -6,7 +6,7 @@
 
 <p align="center">
   A free, open-source toolbox of one-click desktop utilities for Windows, macOS and Linux.<br/>
-  Built in Rust with Tauri. Local tools. No ads, no subscriptions, no Oxbox app telemetry.
+  Native Rust interface with egui. Local tools. No ads, no subscriptions, no Oxbox app telemetry.
 </p>
 
 <p align="center">
@@ -23,15 +23,16 @@ The window starts at 800 × 800 logical pixels, with native window controls and 
 
 The default global launcher shortcut is **Ctrl+Alt+O** (**Cmd+Option+O** on macOS). Inside the app,
 **Ctrl/Cmd+K** searches and **Ctrl/Cmd+Q** quits. Existing saved launcher shortcuts are retained;
-conflicts can be resolved in Settings. See the [usage guide](docs/USAGE.md) for keyboard details.
+conflicts can be resolved in Settings. Installed Windows/macOS copies enable login startup on the first fresh launch; later logins open quietly in the tray. You can turn this off, and upgrades preserve existing choices. See the [usage guide](docs/USAGE.md) for keyboard details.
 
-> **Status: implementation, awaiting release acceptance.** The 20-tool v0.1 catalogue and promoted Phase 5 tools have core logic, command adapters,
-> typed APIs and launcher views. Automated checks and manual release gates are recorded in
+> **Status: native implementation, awaiting release acceptance.** All 49 catalogue IDs have Rust core logic and concrete
+> native forms. Debug builds, headless routes and the live Windows launcher have been observed. Automated checks and manual gates are recorded in
 > [VALIDATION.md](docs/VALIDATION.md). “Ready” below means the implementation is available in source;
 > it does not imply a published or independently audited release. Contributions welcome.
 
-> **Windows runtime privacy:** release QA observed background HTTPS from the embedded WebView2 runtime.
-> Strict zero-network acceptance remains open; see the [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
+> **Runtime privacy:** the selected eframe/egui host has no embedded browser. The retained Tauri host previously
+> exhibited WebView2 background HTTPS. Native production privacy observation and release acceptance remain open;
+> see the [migration checklist](tasks/native-migration.md) and [historical privacy findings](docs/RUNTIME_PRIVACY.md).
 
 ## Tools
 
@@ -66,57 +67,60 @@ Mouse Activity always starts stopped; it does not click, type or scroll. Read it
 before starting a session. Its native Windows acceptance remains pending.
 
 The [project website](https://ninad-k.github.io/oxbox/) includes the complete searchable catalog, generated from the same
-registry as the app. See the [website contributor guide](website/README.md). Website deployment is separate from public installer publication.
+[canonical JSON catalogue](catalog/tools.json) as the native and legacy interfaces. See the [website contributor guide](website/README.md). Website deployment is separate from public installer publication.
 
-These native Windows screenshots show the revised dashboard with four favorites selected for the capture.
-A new dashboard starts empty until you star tools. See the [validation record](docs/VALIDATION.md) for the checks performed.
+The screenshots below show the actual native Windows interface with four chosen favorites. A new dashboard
+starts empty until you pin tools. Current manual acceptance is tracked in the [migration matrix](tasks/native-migration.md).
 
-<p align="center"><img src="docs/images/launcher-dark.jpg" width="803" alt="Oxbox native Windows favorites-only dashboard in dark appearance" /></p>
-<p align="center"><img src="docs/images/launcher-light.jpg" width="803" alt="Oxbox native Windows favorites-only dashboard in light appearance" /></p>
+<p align="center"><img src="docs/images/native-dashboard-dark.jpg" width="803" alt="Native Oxbox Windows favorites-only dashboard in dark appearance" /></p>
+<p align="center"><img src="docs/images/native-dashboard-light.jpg" width="803" alt="Native Oxbox Windows favorites-only dashboard in light appearance" /></p>
 
 ## Build from source
 
-Prerequisites: [Rust](https://rustup.rs) 1.93+, [Node.js](https://nodejs.org) 22.17+, [pnpm](https://pnpm.io),
-and the [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/) for your OS.
+Prerequisites: [Rust](https://rustup.rs) **1.95+**, the native C/C++ build toolchain and platform graphics/tray
+libraries. Windows uses the MSVC build tools; macOS uses Xcode command-line tools; Linux needs the packages
+listed in the CI workflow and contributor guide. WebView2 is not a dependency of the selected native runtime.
 
-```bash
-git clone --branch codex/complete-v0-1 https://github.com/ninad-k/oxbox.git
-cd oxbox
-pnpm install --frozen-lockfile
-pnpm tauri dev      # run with hot reload
-pnpm tauri build    # build installers into target/release/bundle
-```
+    git clone --branch codex/native-renderer https://github.com/ninad-k/oxbox.git
+    cd oxbox
+    cargo run -p oxbox-native --locked
+    cargo test -p oxbox-core -p oxbox-native --locked
 
-The current implementation branch is `codex/complete-v0-1`. Windows installers remain in a private draft;
-there is no public download yet. Check the [Releases](https://github.com/ninad-k/oxbox/releases) page for status.
-Draft builds are unsigned; Windows SmartScreen and macOS Gatekeeper can warn. Clean-machine installer acceptance
-and the other [release gates](docs/RELEASE.md) are still open.
+The native host can use a disposable profile with --profile followed by a directory. For packaging, install
+Node 22.17+ and frozen pnpm dependencies, then use the graph-checking native build wrapper:
+
+    pnpm install --frozen-lockfile
+    node scripts/build-native.mjs --check
+    node scripts/build-native.mjs --bundle
+
+The wrapper builds oxbox-native and reuses the existing bundler only as an installer tool. pnpm tauri dev/build
+operate the retained legacy host and are not native release commands. See [AGENTS.md](AGENTS.md) for all checks.
+The current implementation branch is codex/native-renderer. Earlier Windows installers remain an unpublished
+historical draft; new native artifacts, size and clean-machine behavior require separate verification.
+There is no public installer download yet. Check [Releases](https://github.com/ninad-k/oxbox/releases) for status.
+Unsigned builds can produce OS warnings. The [release gates](docs/RELEASE.md) remain open.
 
 ## How it is built
 
-```
-┌──────────────────────── Oxbox app (Tauri 2) ────────────────────────┐
-│  Svelte 5 UI (src/)            Rust shell (src-tauri/)              │
-│  launcher, search, tool views  tray, windows, #[tauri::command]s    │
-│            │   typed IPC (src/lib/api.ts)   ▲                       │
-│            └────────────────────────────────┘                       │
-│                               │                                     │
-│                 oxbox-core (crates/oxbox-core/)                     │
-│      all tool logic, pure Rust, unit-tested, no UI dependencies     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+The current host is crates/oxbox-native: eframe/egui renders native widgets, and owned workers handle
+notifications, tasks and background controllers. It calls crates/oxbox-core directly; no browser or typed IPC
+is required. The same catalog/tools.json supplies native, legacy and static-site metadata. The legacy
+src/ and src-tauri/ trees remain available for parity comparison.
+
 
 - [SPEC.md](SPEC.md): goals, scope, boundaries
 - [tasks/plan.md](tasks/plan.md): phased roadmap with acceptance criteria
 - [AGENTS.md](AGENTS.md): conventions and the step-by-step recipe for adding a tool (for humans and AI agents)
 - [docs/adr](docs/adr): architecture decisions
 - [docs/USAGE.md](docs/USAGE.md): every tool, shortcuts, safety limits and platform notes
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): IPC groups, background services and cancellable jobs
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): native host, background services and cancellable jobs
 - [docs/TESTING.md](docs/TESTING.md): automated commands and manual acceptance matrix
 - [docs/RELEASE.md](docs/RELEASE.md): installer and publication checklist
 - [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md): dependency review and primary references
 - [docs/ROADMAP_TOOLS.md](docs/ROADMAP_TOOLS.md): Phase 5 tools, providers and network opt-in
 - [docs/MOUSE_ACTIVITY.md](docs/MOUSE_ACTIVITY.md): Windows idle-aware pointer sessions and pending native acceptance
+- [catalog/README.md](catalog/README.md): shared metadata, icon/view adapters and consistency checks
+- [tasks/native-migration.md](tasks/native-migration.md): 49-tool route/automation/manual matrix
 - [website/README.md](website/README.md): generated catalog, static site checks and GitHub Pages deployment
 - [CHANGELOG.md](CHANGELOG.md): user-facing changes
 
@@ -130,8 +134,9 @@ and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 Oxbox implements no app telemetry. Tool commands work locally; currency rates are the sole intentional network feature:
 after a separate explicit opt-in, a manual refresh downloads public ECB reference data. Amounts and selected
 currencies stay local. The reviewed exception is [issue #1](https://github.com/ninad-k/oxbox/issues/1).
-The embedded Windows WebView2 runtime can contact Microsoft independently. Investigation and supported controls
-are tracked in the [runtime privacy findings](docs/RUNTIME_PRIVACY.md); strict whole-process offline acceptance remains open.
+The selected native renderer removes the embedded WebView2 dependency. The earlier browser investigation is
+preserved in [runtime privacy findings](docs/RUNTIME_PRIVACY.md). Native startup, idle, tool/provider and Quit
+network observations still require production evidence; replacing the renderer is not a universal zero-network guarantee.
 Clipboard recording starts paused, stays in memory, and is cleared on Quit. Saved settings and tool outputs
 stay on your computer. File cleanup goes to the Recycle Bin/Trash after confirmation; outputs preserve originals.
 See the [usage guide](docs/USAGE.md) for limits and the [security policy](SECURITY.md) for private reports.

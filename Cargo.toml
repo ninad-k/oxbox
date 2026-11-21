@@ -1,11 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["crates/oxbox-core", "src-tauri"]
+members = ["crates/oxbox-core", "crates/oxbox-native", "src-tauri"]
+default-members = ["crates/oxbox-native"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.93"
+rust-version = "1.95"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/ninad-k/oxbox"
 authors = ["Oxbox contributors"]
@@ -16,10 +17,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 
-# Small, fast release binaries. See https://v2.tauri.app/concept/size/
+# Compact native builds. Workers unwind so failures are reported and cleanup can run.
 [profile.release]
 codegen-units = 1
 lto = true
 opt-level = "s"
-panic = "abort"
+panic = "unwind"
 strip = true

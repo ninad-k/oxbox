@@ -200,3 +200,61 @@ This file records observed evidence, not planned results. Release gates remain o
 
 Use [TESTING.md](TESTING.md) and [RELEASE.md](RELEASE.md) to close these gates. Do not infer a pass from the
 presence of code, a ready launcher entry, or an unchecked checklist.
+
+## Native renderer migration — 2026-11-21
+
+- User approved ADR 0004, exact eframe 0.37.0 and minimum Rust 1.95; branch `codex/native-renderer`.
+- All 49 stable tool IDs route to native forms, shared with the Pages/legacy catalogue through JSON.
+- Tests first observed failures for launcher/preferences/atomic storage, stopwatch, clipboard accessor,
+  monitor coordinate selection, abandoned jobs, hidden progress, shortcut transactions and instance activation.
+- Windows native/core clippy with all targets and warnings denied passed. Combined tests passed **179 core +
+  23 native**, none failed/ignored. Utility13 and media14 routes render headlessly without starting devices;
+  system22 routes have compiled source/lifecycle regressions, not 22 manual passes.
+- Real debug GUI opened with native decorations, AccessKit named controls, Segoe UI from the host, local
+  outlined icons, an empty favorites-only Dashboard and the 49-tool library. Live inspection found/fixed
+  inherited horizontal card layout, Enter search losing focus, missing star glyphs and missing navigation highlight.
+- Actual Unit Converter displayed 0.001 km for 1 meter. Pinning four tools showed exactly four on Dashboard;
+  Alt+1 opened the first. Ctrl+Alt+O hid the window; launching the same profile again exited the newcomer and
+  restored the existing PID/window. Quit removed the first debug host and its console child.
+- A bounded first debug privacy observation saw no owned TCP rows/UDP bindings; exact scope and sample gaps
+  are in [runtime privacy](RUNTIME_PRIVACY.md). Production, DNS/OS-broker and other-OS coverage is separate.
+- Native source, compiler, packaging and release verification are still in progress. The previous historical
+  Tauri results above do not transfer to the native binary. Clean-machine, real hardware, screen-reader/IME/HiDPI,
+  human security/license review and complete per-tool manual acceptance remain open. The release remains draft.
+
+- Additional Windows debug UI smoke: a native file picker selected an isolated local fixture; SHA-256
+  exactly matched PowerShell `Get-FileHash` (`5f6dbde1effd671b5daad02f4a2ae049dd7b3e5f6682392484a043dff9445820`).
+  Inspection found unparented dialog focus restoration needing a follow-up fix before final packaging.
+- Mouse Activity smoke used a 3,600-second idle threshold: Start reported Waiting, the independent banner
+  Stop reported Stopped and zero movements. No synthetic pointer movement, clicks, typing or scrolling was
+  triggered by that smoke. Physical idle/resume movement acceptance remains separate.
+
+- Final review reproduced five native failures for exact shortcut modifiers and delayed clipboard Start versus
+  Pause, plus two core failures for post-shutdown starts. Fixes order Pause/Clear/consent withdrawal after
+  pending Start, block reopening under the worker mutex, stop clipboard before recording finalization on Quit,
+  and match each key event exactly. Parented dialogs retain the actual eframe window through accept/cancel;
+  a paired Slash text regression was observed and fixed. Legacy tray toggles and Escape navigation are restored.
+- Exact **Rust 1.95.0** combined run passed **181 core + 33 native tests**, none failed or ignored. The new
+  regressions use fake tasks/windows and never record the real clipboard or invoke native device/power/input effects.
+- The first branded native production package has icon/version resources linked by the existing Windows SDK,
+  with no added Rust dependency. Its extracted MSI executable matched the build hash; PE imports had no
+  WebView2Loader or VC runtime redistribution DLLs. Final post-fix packaging/measurement supersedes these preliminary assets.
+
+## Final native automated and packaging checks — 2026-11-21
+
+- Exact Rust1.95.0 strict Core/native all-target clippy, formatting and locked tests pass: **191 core +52
+  native**, no failures/ignored tests. UI37/37, Svelte0errors/0warnings, legacy comparison build and13
+  packaging/notice regressions pass. The website still derives49tools/7categories and passes3 regressions.
+- Tests first reproduced canceled jobs resuming, missing exact modifiers, clipboard starts after Pause/Quit,
+  blocked-modal recovery, late recording/mouse/power admission, registry growth, and startup transaction/quoting/
+  uninstall ownership errors. Fake workers/windows/backends were used; no live startup registration or effects.
+- Native recovery uses bounded/coalescing independent system/media workers. Callback-entry barriers stop pending
+  admissions and cancellation independently of egui polling during a synchronous file dialog. Quit requests
+  close jobs/reminders/notifications and both cleanup lanes; normal shutdown joins all owned workers.
+- Final Windows native production executable was built with Rust1.95.0, static CRT, original icon/version resource:
+  **13,480,960bytes**, SHA256 `6fb64ef38e8a5725c72ef614cf78fc304775d8ed8310606ac72f45a447ba91b5`.
+  MSI/NSIS builds succeeded, with an installed-copy marker and exact-owned startup uninstall cleanup. No generated
+  installer has been installed on this workstation. Final payload inspection/runtime results follow separately.
+- Startup defaults are tested as policy/fake transactions, including saved/OS-disabled choice preservation,
+  development/isolated-profile guards, quoted Windows paths and preserving a repurposed Run command. Actual
+  install/login/upgrade/uninstall behavior still requires a clean Windows account/VM.

@@ -284,6 +284,11 @@ impl Default for ClipboardService {
 impl ClipboardService {
     pub fn start(&self) -> CoreResult<()> {
         let mut worker = lock(&self.worker)?;
+        // Shutdown sets this before waiting for the same mutex. A Start that
+        // was queued behind cleanup must not create an unowned replacement.
+        if self.stop.load(Ordering::Acquire) {
+            return Err(CoreError::Cancelled);
+        }
         if worker.is_some() {
             return Ok(());
         }
@@ -393,14 +398,19 @@ impl ClipboardService {
         Ok(())
     }
 
-    pub fn copy(&self, id: u64) -> CoreResult<()> {
-        let content = lock(&self.history)?
+    /// Return an independent snapshot of one bounded, in-memory item. Callers
+    /// should clone image contents off the UI thread; no clipboard/OS read occurs.
+    pub fn content(&self, id: u64) -> CoreResult<Content> {
+        lock(&self.history)?
             .items
             .iter()
             .find(|entry| entry.id == id)
             .map(|entry| entry.content.clone())
-            .ok_or_else(|| CoreError::InvalidInput("clipboard item no longer exists".into()))?;
-        self.write_content(content)
+            .ok_or_else(|| CoreError::InvalidInput("clipboard item no longer exists".into()))
+    }
+
+    pub fn copy(&self, id: u64) -> CoreResult<()> {
+        self.write_content(self.content(id)?)
     }
 
     pub fn copy_image(&self, image: &image::RgbaImage) -> CoreResult<()> {
@@ -488,6 +498,70 @@ fn clipboard_sequence() -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shutdown_refuses_a_late_start_without_creating_another_watcher() {
+        let service = ClipboardService::default();
+        service.shutdown();
+        let result = service.start();
+        let created_worker = service.worker.lock().unwrap().is_some();
+        // Always collect a baseline worker before reporting the regression.
+        service.shutdown();
+        assert_eq!(result.unwrap_err().code(), "cancelled");
+        assert!(!created_worker);
+    }
+
+    #[test]
+    fn start_waiting_behind_a_shutdown_observes_the_stop_flag_under_its_lock() {
+        let service = Arc::new(ClipboardService::default());
+        let held = service.worker.lock().unwrap();
+        let stopping = service.clone();
+        let shutdown = std::thread::spawn(move || stopping.shutdown());
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while !service.stop.load(Ordering::Acquire) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "shutdown did not begin"
+            );
+            std::thread::yield_now();
+        }
+        drop(held);
+        let result = service.start();
+        shutdown.join().unwrap();
+        service.shutdown();
+        assert_eq!(result.unwrap_err().code(), "cancelled");
+        assert!(service.worker.lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn readonly_content_snapshot_is_independent_and_rejects_missing_items() {
+        let service = ClipboardService::default();
+        let id = {
+            let mut history = service.history.lock().unwrap();
+            history.set_paused(false);
+            history
+                .push(
+                    Content::Image {
+                        width: 1,
+                        height: 1,
+                        rgba: vec![1, 2, 3, 255],
+                    },
+                    1,
+                )
+                .unwrap();
+            history.items()[0].id
+        };
+        let Content::Image { mut rgba, .. } = service.content(id).unwrap() else {
+            panic!("expected image")
+        };
+        rgba[0] = 200;
+        assert!(
+            matches!(service.content(id).unwrap(), Content::Image {rgba, ..} if rgba == [1,2,3,255])
+        );
+        assert!(service.content(u64::MAX).is_err());
+        service.shutdown();
+        assert!(service.content(id).is_err());
+    }
     #[test]
     fn shutdown_rejects_writes_before_validation_or_clipboard_access() {
         let service = ClipboardService::default();

@@ -1,22 +1,32 @@
 # Testing and acceptance
 
-Use Rust 1.93+ and a supported Node.js release (22.17+ recommended). Install UI dependencies from the lockfile.
+Use Rust **1.95+** and a supported Node.js release (22.17+ recommended). Install UI dependencies from the lockfile.
 All commands run from the repository root. The nested untracked `oxbox/` copy, if present in a local checkout,
 is not part of this workspace; Vitest deliberately includes only `src/**/*.test.ts`.
 
 ```bash
 pnpm install --frozen-lockfile
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo test --workspace --locked
+cargo clippy -p oxbox-core -p oxbox-native --all-targets --locked -- -D warnings
+cargo test -p oxbox-core -p oxbox-native --locked
+node scripts/build-native.mjs --check
 pnpm check
 pnpm test
 pnpm build
-pnpm tauri dev
+cargo run -p oxbox-native --locked
 ```
+
+The native package selects eframe/egui 0.37 with Glow, without a webview. The legacy Svelte checks remain
+comparison/catalogue checks; they do not certify native interaction. Packaging uses the build-native wrapper
+and must be checked separately. See [the 49-row native matrix](../tasks/native-migration.md).
 
 ## Automated coverage
 
+- Native tasks: cancel/abandon/late-result handling, latest-only bounded progress, shutdown and joined workers.
+- Native instance/settings transactions and finite bundled icon vectors.
+- Headless route rendering for 13 utilities and 14 media forms, including legacy import preservation/default-off currency.
+  These tests consume textures_delta without a GPU. They do not click device/destructive controls or prove accessibility.
+  The 22 system forms are source-routed/compiled; no all-system-form headless pass is claimed.
 - Text cases, Unicode boundaries, hash vectors, streaming checksums, progress/cancellation.
 - All conversion categories, temperature offsets/absolute zero, SI/binary bytes, round trips, numeric errors.
 - IANA zones and DST transitions; QR raster decoding and invalid barcode checksums.
@@ -85,7 +95,8 @@ node scripts/build-website.mjs
 node --test scripts/website.test.mjs
 ```
 
-The build validates relative assets, local fragments and the registry-derived catalog. Reset regressions model
+The build validates relative assets, local fragments and the canonical JSON catalogue. Registry tests compare
+metadata/icon derivation against a changed JSON fixture; website data tests compare every canonical tool and platform. Reset regressions model
 the cancelable reset event before native default value restoration. Browser QA must still cover desktop and
 375px mobile layout, keyboard/focus, search/category/platform combinations, empty/reset behavior and FAQ controls.
 Record the actual Pages deployment separately; a local build is not evidence that the public site is live.
