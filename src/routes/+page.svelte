@@ -4,15 +4,24 @@
   import SearchX from '@lucide/svelte/icons/search-x';
   import Star from '@lucide/svelte/icons/star';
   import X from '@lucide/svelte/icons/x';
-  import { api, guessOs, inDesktopApp } from '$lib/api';
-  import { favorites } from '$lib/favorites.svelte';
-  import { categories, categoryById, toolById, tools } from '$lib/registry';
-  import { filterTools, type View } from '$lib/search';
-  import Sidebar from '$lib/ui/Sidebar.svelte';
-  import ToolTile from '$lib/ui/ToolTile.svelte';
-  import ToolView from '$lib/ui/ToolView.svelte';
+  import { api, guessOs, inDesktopApp } from '#lib/api.ts';
+  import { favorites } from '#lib/favorites.svelte.ts';
+  import { categories, categoryById, toolById, tools } from '#lib/registry.ts';
+  import { filterTools, type View } from '#lib/search.ts';
+  import Sidebar from '#lib/ui/Sidebar.svelte';
+  import ToolTile from '#lib/ui/ToolTile.svelte';
+  import ToolView from '#lib/ui/ToolView.svelte';
+  import Settings from '#lib/ui/Settings.svelte';
+  import SleepTimerBanner from '#lib/ui/SleepTimerBanner.svelte';
+  import RecordingBanner from '#lib/ui/RecordingBanner.svelte';
+  import Notice from '#lib/ui/Notice.svelte';
+  import { settings } from '#lib/settings.svelte.ts';
+  import { clocks } from '#lib/clocks.svelte.ts';
+  import { listen } from '@tauri-apps/api/event';
 
   let view = $state<View>('all');
+  let showSettings = $state(false);
+  let systemError = $state('');
   let query = $state('');
   let activeId = $state<string | null>(null);
   let os = $state(guessOs());
@@ -57,7 +66,22 @@
     }
   });
 
+  onMount(() => {
+    void settings.init();
+    const stopClocks = clocks.startTicks();
+    let disposed = false;
+    const stops: (() => void)[] = [];
+    if (inDesktopApp()) {
+      void listen<{message:string}>('tool://system/error', event => {systemError=event.payload.message;}).then(stop=>{if(disposed)stop();else stops.push(stop);});
+      for (const [event, handler] of [['oxbox://settings', () => {showSettings=true;}], ['oxbox://focus-search', () => {showSettings=false; void focusSearch();}]] as const) {
+        void listen(event, handler).then(stop => {if(disposed)stop();else stops.push(stop);});
+      }
+    }
+    return () => { disposed=true; stopClocks?.(); stops.forEach(stop=>stop()); };
+  });
+
   function select(next: View) {
+    showSettings = false;
     view = next;
     query = '';
     activeId = null;
@@ -72,6 +96,7 @@
   }
 
   async function focusSearch() {
+    showSettings = false;
     activeId = null;
     await tick();
     searchInput?.focus();
@@ -103,10 +128,15 @@
 <svelte:window onkeydown={onWindowKey} />
 
 <div class="app">
-  <Sidebar view={searching ? 'all' : view} {counts} {version} onselect={select} />
+  <Sidebar view={searching ? 'all' : view} {counts} {version} onselect={select} onsettings={() => {showSettings=true;activeId=null;}} />
 
   <main class="main">
-    {#if active}
+    <SleepTimerBanner />
+    <RecordingBanner />
+    {#if systemError}<Notice kind="error">{systemError}<button class="btn" onclick={()=>{systemError='';}}>Dismiss</button></Notice>{/if}
+    {#if showSettings}
+      <Settings onback={() => {showSettings=false;}} />
+    {:else if active}
       <ToolView tool={active} {os} onback={closeTool} />
     {:else}
       <header class="topbar">

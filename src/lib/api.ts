@@ -2,33 +2,21 @@
  * Typed bridge to the Rust commands in `src-tauri/src/commands.rs`.
  * Every tool talks to Rust through this file. Never call `invoke` directly from a view.
  */
-import { invoke, isTauri } from '@tauri-apps/api/core';
+import { call } from './ipc';
+export { ToolError, inDesktopApp } from './ipc';
 import type { Os } from './registry';
+import { fileApi } from './file-api';
+import { systemApi } from './system-api';
+import { mediaApi } from './media-api';
+import { currencyApi } from './currency-api';
+import { roadmapTimeApi } from './roadmap-time-api';
+import { roadmapSystemApi } from './roadmap-system-api';
+import { roadmapMediaApi } from './roadmap-media-api';
+export * from './file-api';
+export { systemApi } from './system-api';
+export { mediaApi } from './media-api';
 
 /** Mirrors `ToolError` in `src-tauri/src/error.rs`. */
-export class ToolError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'ToolError';
-  }
-}
-
-export const inDesktopApp = (): boolean => isTauri();
-
-async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  if (!inDesktopApp()) {
-    throw new ToolError('not_desktop', 'Open Oxbox as the desktop app to use this tool.');
-  }
-  try {
-    return await invoke<T>(command, args);
-  } catch (err) {
-    const e = err as Partial<{ code: string; message: string }>;
-    throw new ToolError(e?.code ?? 'internal', e?.message ?? String(err));
-  }
-}
 
 export interface AppInfo {
   version: string;
@@ -49,8 +37,27 @@ export type TextCase =
 
 /** Mirrors `Algorithm` in `crates/oxbox-core/src/tools/checksum.rs`. */
 export type HashAlgorithm = 'sha256' | 'sha1' | 'md5' | 'blake3';
+export interface ConversionUnit {id: string; label: string; category: string}
+export interface WorldClock {zone: string; date: string; time: string; abbreviation: string; offsetSeconds: number; daytime: boolean}
+export type CodeKind = 'qr' | 'code128' | 'ean13';
 
 export const api = {
+  ...fileApi,
+  ...systemApi,
+  ...mediaApi,
+  ...currencyApi,
+  ...roadmapTimeApi,
+  ...roadmapSystemApi,
+  ...roadmapMediaApi,
+  shortcutStatus: () => call<{shortcut: string; error: string | null}>('shortcut_status'),
+  configureShortcut: (shortcut: string) => call<string>('configure_shortcut', {shortcut}),
+  conversionUnits: () => call<ConversionUnit[]>('conversion_units'),
+  convertUnit: (value: number, from: string, to: string) => call<number>('convert_unit', {value, from, to}),
+  timeZones: () => call<string[]>('time_zones'),
+  worldClocks: (zones: string[]) => call<WorldClock[]>('world_clocks', {zones}),
+  generateCode: (text: string, kind: CodeKind, correction: string, size: number) => call<string>('generate_code', {text, kind, correction, size}),
+  saveCode: (text: string, kind: CodeKind, correction: string, size: number, path: string, svg: boolean) => call<void>('save_code', {text, kind, correction, size, path, svg}),
+  copyCode: (text: string, kind: CodeKind, correction: string, size: number) => call<void>('copy_code', {text, kind, correction, size}),
   appInfo: () => call<AppInfo>('app_info'),
   transformText: (text: string, textCase: TextCase) =>
     call<string>('transform_text', { text, case: textCase }),

@@ -7,6 +7,8 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 pub mod error;
+pub mod fs_safe;
+pub mod jobs;
 pub mod platform;
 pub mod tools;
 

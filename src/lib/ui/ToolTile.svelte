@@ -1,6 +1,6 @@
 <script lang="ts">
   import Star from '@lucide/svelte/icons/star';
-  import { categoryById, type ToolDef } from '$lib/registry';
+  import { categoryById, type ToolDef } from '#lib/registry.ts';
 
   interface Props {
     tool: ToolDef;

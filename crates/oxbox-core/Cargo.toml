@@ -16,6 +16,33 @@ sha2 = "0.10"
 sha1 = "0.10"
 md-5 = "0.10"
 blake3 = "1"
+# Phase 1: offline converters, time zones and codes
+chrono = "0.4"
+chrono-tz = "0.10"
+qrcode = "0.14"
+barcoders = "2"
+# Phase 2: streaming file tools and safe trash
+walkdir = "2"
+trash = "5"
+dirs = "6"
+zip = { version = "9.8", default-features = false, features = ["deflate"] }
+tar = "0.4"
+flate2 = "1"
+sevenz-rust2 = "0.25"
+# Phase 3: local system information and power management
+sysinfo = "0.37"
+keepawake = "0.6"
+# Phase 4: capture, image processing and passphrase encryption
+xcap = "0.8"
+arboard = "3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+age = "0.11"
+rqrr = "0.11"
+rxing = { version = "0.9.3", default-features = false, features = ["decoders", "qrcode", "oned", "encoding_rs", "multi_barcode_readers"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Shutdown", "Win32_System_Power", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_DataExchange", "Win32_System_SystemInformation", "Win32_UI_Shell", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Ioctl", "Win32_System_Registry", "Win32_Security", "Win32_System_Memory"] }
+windows = { version = "0.62", features = ["Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_Devices_FunctionDiscovery", "Win32_Foundation", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Globalization", "Graphics_Imaging", "Media_Ocr", "Storage", "Storage_Streams", "Foundation", "Win32_System_WinRT"] }
 
 [dev-dependencies]
 tempfile = "3"

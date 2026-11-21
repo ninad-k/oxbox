@@ -1,16 +1,18 @@
 <script lang="ts">
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
   import Star from '@lucide/svelte/icons/star';
-  import { categories } from '$lib/registry';
-  import type { View } from '$lib/search';
+  import SettingsIcon from '@lucide/svelte/icons/settings';
+  import { categories } from '#lib/registry.ts';
+  import type { View } from '#lib/search.ts';
 
   interface Props {
     view: View;
     counts: Record<string, number>;
     version: string;
     onselect: (view: View) => void;
+    onsettings: () => void;
   }
-  let { view, counts, version, onselect }: Props = $props();
+  let { view, counts, version, onselect, onsettings }: Props = $props();
 </script>
 
 <nav class="sidebar" aria-label="Tool categories">
@@ -60,6 +62,7 @@
   </ul>
 
   <div class="footer">
+    <button class="btn btn-icon" aria-label="Settings" onclick={onsettings}><SettingsIcon size={17}/></button>
     <span>v{version}</span>
     <span aria-hidden="true">·</span>
     <span>Open source</span>
@@ -165,10 +168,11 @@
     }
     .brand-name,
     .count,
-    .section,
-    .footer {
+    .section {
       display: none;
     }
+    .footer { padding: var(--s-3) 0 0; }
+    .footer > span { display: none; }
     /* Visually hidden but still the button's accessible name. */
     .label {
       position: absolute;

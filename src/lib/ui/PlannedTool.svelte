@@ -1,6 +1,6 @@
 <script lang="ts">
   import Hammer from '@lucide/svelte/icons/hammer';
-  import type { ToolDef } from '$lib/registry';
+  import type { ToolDef } from '#lib/registry.ts';
 
   let { tool }: { tool: ToolDef } = $props();
 </script>

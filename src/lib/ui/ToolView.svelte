@@ -1,8 +1,8 @@
 <script lang="ts">
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Star from '@lucide/svelte/icons/star';
-  import { categoryById, type Os, type ToolDef } from '$lib/registry';
-  import { favorites } from '$lib/favorites.svelte';
+  import { categoryById, type Os, type ToolDef } from '#lib/registry.ts';
+  import { favorites } from '#lib/favorites.svelte.ts';
   import Notice from './Notice.svelte';
   import PlannedTool from './PlannedTool.svelte';
 

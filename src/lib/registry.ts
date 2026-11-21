@@ -32,6 +32,7 @@ import Shield from '@lucide/svelte/icons/shield';
 import Sparkles from '@lucide/svelte/icons/sparkles';
 import Sun from '@lucide/svelte/icons/sun';
 import Timer from '@lucide/svelte/icons/timer';
+import {roadmapTools} from './roadmap-registry';
 
 export type Os = 'windows' | 'macos' | 'linux';
 export const ALL_OS: Os[] = ['windows', 'macos', 'linux'];
@@ -82,7 +83,7 @@ export const categories: Category[] = [
   { id: 'privacy', label: 'Privacy & Security', icon: Shield, tone: 'var(--tone-red)' },
 ];
 
-export const tools: ToolDef[] = [
+const baseTools: ToolDef[] = [
   // Productivity
   {
     id: 'transform-text',
@@ -105,7 +106,8 @@ export const tools: ToolDef[] = [
     keywords: ['copy', 'paste', 'clipboard'],
     platforms: ALL_OS,
     phase: 4,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/ClipboardHistory.svelte'),
   },
   {
     id: 'unit-converter',
@@ -116,7 +118,8 @@ export const tools: ToolDef[] = [
     keywords: ['convert', 'units', 'metric', 'imperial', 'celsius', 'fahrenheit', 'bytes'],
     platforms: ALL_OS,
     phase: 1,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/UnitConverter.svelte'),
   },
 
   // Time
@@ -129,7 +132,8 @@ export const tools: ToolDef[] = [
     keywords: ['reminder', 'pomodoro', 'rest', 'health'],
     platforms: ALL_OS,
     phase: 3,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/BreakTime.svelte'),
   },
   {
     id: 'timer-stopwatch',
@@ -140,7 +144,8 @@ export const tools: ToolDef[] = [
     keywords: ['countdown', 'stopwatch', 'lap', 'alarm'],
     platforms: ALL_OS,
     phase: 1,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/TimerStopwatch.svelte'),
   },
   {
     id: 'world-time',
@@ -151,7 +156,8 @@ export const tools: ToolDef[] = [
     keywords: ['timezone', 'clock', 'city', 'utc'],
     platforms: ALL_OS,
     phase: 1,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/WorldTime.svelte'),
   },
 
   // Files
@@ -176,7 +182,8 @@ export const tools: ToolDef[] = [
     keywords: ['duplicate', 'same', 'space', 'cleanup'],
     platforms: ALL_OS,
     phase: 2,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/FindDuplicates.svelte'),
   },
   {
     id: 'archive',
@@ -187,7 +194,8 @@ export const tools: ToolDef[] = [
     keywords: ['zip', 'unzip', 'compress', 'extract', '7z', 'tar'],
     platforms: ALL_OS,
     phase: 2,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/Archive.svelte'),
   },
   {
     id: 'clean-drive',
@@ -198,7 +206,8 @@ export const tools: ToolDef[] = [
     keywords: ['junk', 'cache', 'temp', 'disk', 'space'],
     platforms: ALL_OS,
     phase: 2,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/CleanDrive.svelte'),
   },
 
   // Screen capture
@@ -211,7 +220,8 @@ export const tools: ToolDef[] = [
     keywords: ['capture', 'screen', 'window', 'area', 'snip'],
     platforms: ALL_OS,
     phase: 4,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/Screenshot.svelte'),
   },
 
   // Images & media
@@ -224,7 +234,8 @@ export const tools: ToolDef[] = [
     keywords: ['resize', 'scale', 'png', 'jpg', 'webp', 'convert', 'batch'],
     platforms: ALL_OS,
     phase: 4,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/ResizeImages.svelte'),
   },
   {
     id: 'qr-code',
@@ -235,7 +246,8 @@ export const tools: ToolDef[] = [
     keywords: ['qr', 'barcode', 'code', 'generate'],
     platforms: ALL_OS,
     phase: 1,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/QrCode.svelte'),
   },
 
   // System
@@ -248,7 +260,8 @@ export const tools: ToolDef[] = [
     keywords: ['cpu', 'ram', 'memory', 'disk', 'process', 'performance'],
     platforms: ALL_OS,
     phase: 3,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/SystemMonitor.svelte'),
   },
   {
     id: 'network-usage',
@@ -259,7 +272,8 @@ export const tools: ToolDef[] = [
     keywords: ['bandwidth', 'speed', 'upload', 'download', 'traffic'],
     platforms: ALL_OS,
     phase: 3,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/NetworkUsage.svelte'),
   },
   {
     id: 'do-not-sleep',
@@ -270,7 +284,8 @@ export const tools: ToolDef[] = [
     keywords: ['awake', 'caffeine', 'sleep', 'display', 'power'],
     platforms: ALL_OS,
     phase: 3,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/DoNotSleep.svelte'),
   },
   {
     id: 'sleep-timer',
@@ -281,7 +296,8 @@ export const tools: ToolDef[] = [
     keywords: ['shutdown', 'sleep', 'timer', 'power off'],
     platforms: ALL_OS,
     phase: 3,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/SleepTimer.svelte'),
   },
 
   // Privacy & security
@@ -294,7 +310,8 @@ export const tools: ToolDef[] = [
     keywords: ['lock', 'secure', 'away'],
     platforms: ALL_OS,
     phase: 3,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/LockScreen.svelte'),
   },
   {
     id: 'hide-desktop',
@@ -305,7 +322,8 @@ export const tools: ToolDef[] = [
     keywords: ['icons', 'presentation', 'clean', 'desktop'],
     platforms: ['windows', 'macos'],
     phase: 4,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/HideDesktop.svelte'),
   },
   {
     id: 'encrypt-files',
@@ -316,9 +334,11 @@ export const tools: ToolDef[] = [
     keywords: ['encrypt', 'decrypt', 'password', 'secure', 'age'],
     platforms: ALL_OS,
     phase: 4,
-    status: 'planned',
+    status: 'ready',
+    load: () => import('./tools/EncryptFiles.svelte'),
   },
 ];
 
 export const categoryById = new Map(categories.map((c) => [c.id, c]));
+export const tools:ToolDef[]=[...baseTools,...roadmapTools];
 export const toolById = new Map(tools.map((t) => [t.id, t]));

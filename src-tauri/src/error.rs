@@ -3,7 +3,7 @@ use serde::Serialize;
 
 /// The error shape every command returns to the UI: `{ code, message }`.
 /// Mirrored by `ToolError` in `src/lib/api.ts`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ToolError {
     code: &'static str,
     message: String,

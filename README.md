@@ -6,7 +6,7 @@
 
 <p align="center">
   A free, open-source toolbox of one-click desktop utilities for Windows, macOS and Linux.<br/>
-  Built in Rust with Tauri. Offline. No ads, no subscriptions, no telemetry.
+  Built in Rust with Tauri. Offline by default. No ads, no subscriptions, no telemetry.
 </p>
 
 <p align="center">
@@ -20,45 +20,52 @@
 Oxbox lives in your system tray (menu bar on macOS). Click it, search or browse by category, and run the tool
 you need: keep the PC awake, hash a download, find duplicate files, make a QR code, check what is eating your CPU.
 
-> **Status: early development.** The app framework (tray, launcher, search, favourites, tool views) and the first
-> two tools are done. The rest are planned in phases; see [the roadmap](tasks/plan.md). Contributions welcome.
+> **Status: implementation, awaiting release acceptance.** The 20-tool v0.1 catalogue and promoted Phase 5 tools have core logic, command adapters,
+> typed APIs and launcher views. Automated checks and manual release gates are recorded in
+> [VALIDATION.md](docs/VALIDATION.md). “Ready” below means the implementation is available in source;
+> it does not imply a published or independently audited release. Contributions welcome.
 
 ## Tools
 
 | Category | Tool | What it does | Status |
 |---|---|---|---|
 | Productivity | Transform Text | UPPER, lower, Title, Sentence, camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE | **Ready** |
-| | Unit Converter | Length, mass, temperature, data size, time | Planned (phase 1) |
-| | Clipboard History | Recent copied text and images, paste any again | Planned (phase 4) |
-| Time | Timer & Stopwatch | Countdown and stopwatch with laps | Planned (phase 1) |
-| | World Time | Current time in cities you choose | Planned (phase 1) |
-| | Break Time | Reminders to take regular breaks | Planned (phase 3) |
+| | Unit Converter | Length, mass, temperature, data size, time | **Ready** |
+| | Clipboard History | Recent copied text and images, paste any again | **Ready** |
+| Time | Timer & Stopwatch | Countdown and stopwatch with laps | **Ready** |
+| | World Time | Current time in cities you choose | **Ready** |
+| | Break Time | Reminders to take regular breaks | **Ready** |
 | Files | Verify Checksum | SHA-256, SHA-1, MD5 and BLAKE3; compare with a published hash | **Ready** |
-| | Find Duplicates | Identical files, even with different names | Planned (phase 2) |
-| | Archive & Unarchive | Create zip/tar.gz; extract zip, tar, 7z | Planned (phase 2) |
-| | Clean Drive | Temp and cache files, moved to the Recycle Bin/Trash | Planned (phase 2) |
-| Screen Capture | Screenshot | Full screen, window or area to file and clipboard | Planned (phase 4) |
-| Images & Media | QR & Barcode | Text or link to QR code / barcode image | Planned (phase 1) |
-| | Resize Images | Batch resize and format conversion | Planned (phase 4) |
-| System | System Monitor | CPU, memory, disk and top processes | Planned (phase 3) |
-| | Network Usage | Live upload/download speed and totals | Planned (phase 3) |
-| | Do Not Sleep | Keep the computer and display awake | Planned (phase 3) |
-| | Sleep Timer | Sleep or shut down after a countdown | Planned (phase 3) |
-| Privacy & Security | Lock Screen | Lock the computer instantly | Planned (phase 3) |
-| | Hide Desktop | Hide desktop icons for presentations | Planned (phase 4) |
-| | Encrypt Files | Passphrase encryption with [age](https://age-encryption.org) | Planned (phase 4) |
+| | Find Duplicates | Identical files, even with different names | **Ready** |
+| | Archive & Unarchive | Create zip/tar.gz; extract zip, tar, 7z | **Ready** |
+| | Clean Drive | Temp and cache files, moved to the Recycle Bin/Trash | **Ready** |
+| Screen Capture | Screenshot | Full screen, window or area to file and clipboard | **Ready** |
+| Images & Media | QR & Barcode | Text or link to QR code / barcode image | **Ready** |
+| | Resize Images | Batch resize and format conversion | **Ready** |
+| System | System Monitor | CPU, memory, disk and top processes | **Ready** |
+| | Network Usage | Live upload/download speed and totals | **Ready** |
+| | Do Not Sleep | Keep the computer and display awake | **Ready** |
+| | Sleep Timer | Sleep or shut down after a countdown | **Ready** |
+| Privacy & Security | Lock Screen | Lock the computer instantly | **Ready** |
+| | Hide Desktop | Hide desktop icons for presentations | **Ready** |
+| | Encrypt Files | Passphrase encryption with [age](https://age-encryption.org) | **Ready** |
 
-More tools (window manager, OCR, screen recording, colour picker, and others) are listed in the roadmap.
+The user-promoted Phase 5 implementation expands the launcher to **48 tools**, including window/app controls,
+presentation tools, alarms, media recording/conversion, OCR, barcode reading, color sampling, and currency.
+See [the expanded tool guide](docs/ROADMAP_TOOLS.md) for platform support and local-provider requirements.
+
+<p align="center"><img src="docs/images/launcher-dark.png" width="900" alt="Oxbox native Windows launcher in dark appearance with 48 tools" /></p>
+<p align="center"><img src="docs/images/launcher-light.png" width="900" alt="Oxbox native Windows launcher in light appearance with 48 tools" /></p>
 
 ## Build from source
 
-Prerequisites: [Rust](https://rustup.rs) (stable), [Node.js](https://nodejs.org) 20+, [pnpm](https://pnpm.io),
+Prerequisites: [Rust](https://rustup.rs) 1.93+, [Node.js](https://nodejs.org) 22.17+, [pnpm](https://pnpm.io),
 and the [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/) for your OS.
 
 ```bash
 git clone https://github.com/ninad-k/oxbox.git
 cd oxbox
-pnpm install
+pnpm install --frozen-lockfile
 pnpm tauri dev      # run with hot reload
 pnpm tauri build    # build installers into target/release/bundle
 ```
@@ -84,6 +91,13 @@ Early builds are not code-signed, so Windows SmartScreen and macOS Gatekeeper wi
 - [tasks/plan.md](tasks/plan.md): phased roadmap with acceptance criteria
 - [AGENTS.md](AGENTS.md): conventions and the step-by-step recipe for adding a tool (for humans and AI agents)
 - [docs/adr](docs/adr): architecture decisions
+- [docs/USAGE.md](docs/USAGE.md): every tool, shortcuts, safety limits and platform notes
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): IPC groups, background services and cancellable jobs
+- [docs/TESTING.md](docs/TESTING.md): automated commands and manual acceptance matrix
+- [docs/RELEASE.md](docs/RELEASE.md): installer and publication checklist
+- [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md): dependency review and primary references
+- [docs/ROADMAP_TOOLS.md](docs/ROADMAP_TOOLS.md): Phase 5 tools, providers and network opt-in
+- [CHANGELOG.md](CHANGELOG.md): user-facing changes
 
 ## Contributing
 
@@ -92,7 +106,12 @@ and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Privacy
 
-Oxbox works offline and collects nothing. It does not make network requests.
+Oxbox works offline by default and sends no telemetry. Currency rates are the sole optional network feature:
+after a separate explicit opt-in, a manual refresh downloads public ECB reference data. Amounts and selected
+currencies stay local. The reviewed exception is [issue #1](https://github.com/ninad-k/oxbox/issues/1).
+Clipboard recording starts paused, stays in memory, and is cleared on Quit. Saved settings and tool outputs
+stay on your computer. File cleanup goes to the Recycle Bin/Trash after confirmation; outputs preserve originals.
+See the [usage guide](docs/USAGE.md) for limits and the [security policy](SECURITY.md) for private reports.
 
 ## License
 

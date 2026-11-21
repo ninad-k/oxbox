@@ -48,17 +48,22 @@ Build order: `shell` → `text`, `files` (pure logic, easiest to test) → `syst
   implementation or is shown as "not available on this OS". It is never shown broken.
   Known gaps: Hide Desktop on Linux varies by desktop environment; window capture on Wayland is limited.
 
-### Roadmap after v0.1 (not in scope now)
+### Roadmap after v0.1 (subsequently promoted)
 Window Manager / Window on Top, Presentation Mode, Do Not Disturb, Mute Microphone, Eject Volumes, Recognize Text (OCR),
 Barcode Reader, Measure Color, Switch Resolution, Record Screen/Audio (ffmpeg), Make GIF, Convert Audio/Video,
 Uninstall Apps, Launch (app sets), Energy Saver, Airplane Mode, Date Countdown, Alarm, Currency rates.
 (Download Video/Audio is deliberately deferred: it raises site terms-of-service issues.)
 
+On 2026-11-21 the user explicitly promoted the planned Phase 5 rows as well as Phases 1–4. Detailed promoted
+task files are linked from `tasks/todo.md`; source now exposes 48 tools. The excluded/deferred tools remain excluded.
+Network behavior remains default-offline, with only explicit opt-in ECB currency refresh allowed after the
+user-authorized [network issue #1](https://github.com/ninad-k/oxbox/issues/1). No user amounts or files are uploaded.
+
 ## Tech Stack
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | Rust (stable, edition 2024, MSRV 1.90) | Speed, safety, tiny binaries, great OS crates |
+| Language | Rust (stable, edition 2024, MSRV 1.93) | Speed, safety, tiny binaries, great OS crates; safe bounded 7z reader requires 1.93 |
 | Desktop shell | **Tauri 2** (`tray-icon`, `global-shortcut`, `notification`, `dialog`, `autostart` plugins) | Native installers for all 3 OSes; small; Rust backend |
 | UI | **Svelte 5 + TypeScript + Vite**, plain CSS with design tokens (light/dark) | Small bundle, little boilerplate for ~20 views |
 | Core crates | `sysinfo`, `xcap`, `arboard`, `keepawake`, `image`, `qrcode`, `age`, `zip`, `tar` + `flate2`, `sevenz-rust`, `blake3`, `sha2`, `sha1`, `md-5`, `walkdir`, `trash`, `chrono` + `chrono-tz`, `serde`, `thiserror`, `tracing` | Mature and widely used; each one is pinned in Cargo.lock |
@@ -156,7 +161,8 @@ Naming: Rust `snake_case` modules, tool ids `kebab-case` (`verify-checksum`), Sv
 2. `pnpm tauri build` produces a Windows installer under 15 MB, and CI produces macOS and Linux bundles.
 3. The app starts to the tray in under 1 s. The launcher opens from the tray and from a global shortcut (default `Ctrl/Cmd+Alt+Space`).
 4. All 20 tools work end-to-end on Windows 11 (checked by hand, recorded in the release notes); tools unsupported on an OS are shown as such.
-5. No network traffic at runtime (verified by code review: no HTTP client dependency).
+5. No network traffic in the default runtime configuration. The promoted currency tool alone can fetch fixed public ECB
+   data after explicit opt-in; no HTTP client dependency, telemetry, or user-content upload is introduced.
 6. A public GitHub repo `ninad-k/oxbox` with README (features, screenshots, install, trademark disclaimer),
    CONTRIBUTING (how to add a tool), dual MIT/Apache-2.0 license, issue templates, and green CI.
 

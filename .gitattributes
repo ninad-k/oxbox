@@ -2,3 +2,6 @@
 *.png binary
 *.ico binary
 *.icns binary
+# Preserve upstream legal texts byte-for-byte, including their original whitespace.
+/docs/THIRD_PARTY_NOTICES.txt -text -whitespace
+/docs/third-party-licenses/** -text -whitespace

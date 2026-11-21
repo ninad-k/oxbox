@@ -6,6 +6,46 @@
 
 use serde::Serialize;
 
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "windows")]
+mod windows;
+
+#[cfg(target_os = "linux")]
+pub use linux::{
+    DesktopRestore, activity_paused, execute_power, hide_desktop, lock_session, restore_desktop,
+};
+#[cfg(target_os = "macos")]
+pub use macos::{
+    DesktopRestore, activity_paused, execute_power, hide_desktop, lock_session, restore_desktop,
+};
+#[cfg(target_os = "windows")]
+pub use windows::{
+    DesktopRestore, activity_paused, execute_power, hide_desktop, lock_session, restore_desktop,
+};
+
+/// An explicit executable and argument vector; never interpreted by a shell.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandSpec {
+    pub program: &'static str,
+    pub args: Vec<&'static str>,
+}
+
+pub(crate) fn run_command(spec: &CommandSpec) -> crate::CoreResult<()> {
+    let result = std::process::Command::new(spec.program)
+        .args(&spec.args)
+        .output()?;
+    if !result.status.success() {
+        return Err(crate::CoreError::InvalidInput(format!(
+            "{} was refused by the operating system ({}).",
+            spec.program, result.status
+        )));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Os {
@@ -54,3 +94,4 @@ mod tests {
         assert!(!os.display_name().is_empty());
     }
 }
+pub mod desktop;

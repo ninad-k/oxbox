@@ -3,10 +3,10 @@
   Reference for a simple tool: input → Rust command → output, recomputed as the user types.
 -->
 <script lang="ts">
-  import { api, ToolError, type TextCase } from '$lib/api';
-  import CopyButton from '$lib/ui/CopyButton.svelte';
-  import Notice from '$lib/ui/Notice.svelte';
-  import Segmented from '$lib/ui/Segmented.svelte';
+  import { api, ToolError, type TextCase } from '#lib/api.ts';
+  import CopyButton from '#lib/ui/CopyButton.svelte';
+  import Notice from '#lib/ui/Notice.svelte';
+  import Segmented from '#lib/ui/Segmented.svelte';
 
   const cases: { value: TextCase; label: string; hint: string }[] = [
     { value: 'title', label: 'Title Case', hint: 'Hello World' },

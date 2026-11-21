@@ -41,6 +41,50 @@ pub fn hash_file(path: &Path, algo: Algorithm) -> CoreResult<String> {
     hash_reader(BufReader::new(file), algo)
 }
 
+/// Streaming variant used by the job runner, checking cancellation every 64 KiB.
+pub fn hash_file_with_progress(
+    path: &Path,
+    algo: Algorithm,
+    cancel: &crate::jobs::CancelToken,
+    progress: &mut dyn FnMut(crate::jobs::Progress),
+) -> CoreResult<String> {
+    cancel.check()?;
+    let file = File::open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(CoreError::InvalidInput("choose a regular file".into()));
+    }
+    let total = file.metadata()?.len();
+    let mut reader = BufReader::new(file);
+    let mut hasher = Hasher::new(algo);
+    let mut buffer = [0_u8; 64 * 1024];
+    let mut done = 0;
+    loop {
+        cancel.check()?;
+        let count = match reader.read(&mut buffer) {
+            Ok(count) => count,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e.into()),
+        };
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+        done += count as u64;
+        progress(crate::jobs::Progress {
+            done,
+            total,
+            message: "Calculating checksum".into(),
+        });
+    }
+    cancel.check()?;
+    progress(crate::jobs::Progress {
+        done,
+        total,
+        message: "Checksum complete".into(),
+    });
+    Ok(hasher.finalize_hex())
+}
+
 /// Compare a computed digest with one the user pasted (case- and whitespace-insensitive).
 pub fn digests_match(computed: &str, expected: &str) -> bool {
     let normalize = |s: &str| -> String {
@@ -111,6 +155,23 @@ mod tests {
 
     // Known-answer vectors for "abc" (FIPS 180-2, RFC 1321, BLAKE3 spec).
     const ABC: &[u8] = b"abc";
+
+    #[test]
+    fn progress_is_monotonic_and_can_cancel_during_hashing() {
+        let mut f = tempfile::NamedTempFile::new().unwrap();
+        f.write_all(&vec![42; 200_000]).unwrap();
+        let token = crate::jobs::CancelToken::default();
+        let mut done = 0;
+        let result = hash_file_with_progress(f.path(), Algorithm::Blake3, &token, &mut |p| {
+            assert!(p.done >= done);
+            done = p.done;
+            if done >= 65_536 {
+                token.cancel();
+            }
+        });
+        assert_eq!(result.unwrap_err().code(), "cancelled");
+        assert!(done < 200_000);
+    }
 
     #[test]
     fn known_vectors() {

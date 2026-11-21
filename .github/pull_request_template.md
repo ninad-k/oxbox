@@ -8,7 +8,7 @@
 - [ ] `cargo fmt`, `cargo clippy -D warnings`, `cargo test`, `pnpm check`, `pnpm test` pass
 - [ ] Tested by hand on: <!-- Windows / macOS / Linux -->
 - [ ] Empty, busy, success and error states handled; works with keyboard only
-- [ ] No network access, no permanent deletion, no unlisted dependencies
+- [ ] Offline by default; any network exception has a prior issue; no permanent deletion or unlisted dependencies
 - [ ] `tasks/todo.md` and `README.md` updated
 
 ## Screenshot

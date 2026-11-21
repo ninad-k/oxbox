@@ -7,6 +7,14 @@ Oxbox is a tray launcher with one-click utilities, built as Rust (`oxbox-core` +
 design system, CI, and two reference tools (Transform Text, Verify Checksum).
 Phases 1–4 deliver the remaining 18 tools of v0.1. Phase 5+ is the longer roadmap towards ~60 tools.
 
+**Implementation update (2026-11-21):** the detailed Phase 1–4 source tasks are integrated; use
+[todo.md](todo.md) for the distinction between implementation and remaining acceptance gates. The release is
+not published. The workspace now requires Rust 1.93 for bounded 7z decoding ([ADR 0003](../docs/adr/0003-bounded-7z.md)).
+The user subsequently promoted both the detailed phases and Phase 5+. The 48-tool source catalogue now includes
+[system/apps](phase5-system.md), [media/vision](phase5-media.md), [presentation/time](phase5-time.md), and
+[currency](phase5-currency.md) specifications. Deferred/excluded rows remain excluded. Opt-in currency networking
+was explicitly approved and raised as [issue #1](https://github.com/ninad-k/oxbox/issues/1).
+
 Every tool task below is sized for **one focused session of a coding agent** (a local LLM is fine).
 Each one touches ≤ 5–6 files and follows the recipe in [`AGENTS.md`](../AGENTS.md#5-recipe-add-a-tool).
 The checklist version of this plan is [`todo.md`](todo.md).

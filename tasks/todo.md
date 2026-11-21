@@ -4,6 +4,28 @@ Details, acceptance criteria and dependencies for each task are in [plan.md](pla
 Work top to bottom; one task per branch/PR. Tick a box only when its acceptance criteria and AGENTS.md
 "Definition of done" are met.
 
+## Implementation status — 2026-11-21
+
+The detailed v0.1 and user-promoted Phase 5 source is integrated on `codex/complete-v0-1`. All 48 catalogue entries load
+their views; core tests, typed command groups, background lifecycle, and documentation are present.
+The original acceptance boxes below deliberately remain open where Windows manual checks, independent review,
+public CI, or release publication have not been observed. They are not a list of missing source implementations.
+
+| Tasks | Source status | Acceptance still required |
+|---|---|---|
+| 1.1–1.6 | Implemented; automated coverage added | Full native interaction, restart/login/shortcut and hidden-notification smoke checks |
+| 2.1–2.5 | Implemented; hostile-archive/path/cancellation tests added | Large-file UI/drop/Trash recovery checks; human security checkpoint |
+| 3.1–3.6 | Implemented; lifecycle and fake-clock tests added | Real Windows power/break effects and Quit verification on a consenting test machine |
+| 4.1–4.6 | Implemented; media/privacy tests added | Multi-monitor/scaling/capture/clipboard and OS-specific runtime checks |
+| 4.7 | Expanded Windows MSI/NSIS built below 15 MB; screenshots/release docs/workflow prepared | Clean-machine/four-platform acceptance, startup/network measurements, publication |
+| Phase 5 system/apps | Twelve tools implemented | Real Windows window/display/eject/uninstall effects in a consenting test account |
+| Phase 5 media/vision | Ten tools implemented | Device/provider/session-specific recording, OCR and color sampling checks |
+| Phase 5 presentation/time | Five tools implemented | External-display presentation and native alarm/OS-control checks |
+| Phase 5 currency | Offline import and opt-in ECB refresh implemented; issue #1 posted with approval | UI opt-in/cache/error verification and default-offline runtime observation |
+
+See [validation evidence](../docs/VALIDATION.md), [test matrix](../docs/TESTING.md), and
+[release checklist](../docs/RELEASE.md) before closing a gate.
+
 ## Phase 0: Framework
 - [x] 0.1 Workspace, Tauri 2 + SvelteKit, icons
 - [x] 0.2 Tray icon and close-to-tray
@@ -49,4 +71,13 @@ Work top to bottom; one task per branch/PR. Tick a box only when its acceptance 
 - [ ] **Checkpoint 4:** v0.1.0 published
 
 ## Phase 5+: Roadmap
-See the table in [plan.md](plan.md#phase-5-roadmap-after-v01-towards-60-tools). Promote a row to a task here when you start it.
+The user promoted the planned rows on 2026-11-21. Source implementations are complete; acceptance remains tracked below.
+
+- [x] Promote and implement [twelve system/app tools](phase5-system.md)
+- [x] Promote and implement [ten media/vision tools](phase5-media.md)
+- [x] Promote and implement [five presentation/time tools](phase5-time.md)
+- [x] Implement [currency reference conversion](phase5-currency.md); raise [network issue #1](https://github.com/ninad-k/oxbox/issues/1)
+- [ ] Full Phase 5 Windows/provider/hardware smoke matrix and cross-platform acceptance
+- [ ] Human review and public release signoff
+
+Download Video/Audio and Free Memory remain explicitly deferred/excluded by the plan.

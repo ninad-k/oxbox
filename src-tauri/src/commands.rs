@@ -48,7 +48,7 @@ pub async fn checksum_file(
 }
 
 /// Run CPU- or disk-heavy work on Tauri's blocking pool so the UI stays responsive.
-async fn run_blocking<T, F>(work: F) -> Result<T, ToolError>
+pub(crate) async fn run_blocking<T, F>(work: F) -> Result<T, ToolError>
 where
     F: FnOnce() -> CoreResult<T> + Send + 'static,
     T: Send + 'static,
