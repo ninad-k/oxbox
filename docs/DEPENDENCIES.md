@@ -25,7 +25,8 @@ No HTTP library is added. The opted-in currency provider invokes system curl wit
 configuration file, no redirects, a timeout and a response-size ceiling. Other tools do not access remote services.
 FFmpeg/Tesseract are user-managed optional local providers; their versions, codecs, device support and licenses
 belong to those installations. No provider binary is copied into Oxbox bundles. Transitive desktop/build tooling
-may contain network support; source review and an observed default-offline runtime check remain release gates.
+may contain network support. Windows release QA observed WebView2 public HTTPS with no currency request;
+the exact purpose is unresolved. [Runtime privacy findings](RUNTIME_PRIVACY.md) keep strict offline acceptance open.
 
 Useful primary references: [Tauri plugins](https://v2.tauri.app/plugin/), [image](https://docs.rs/image/),
 [age](https://docs.rs/age/), [sysinfo](https://docs.rs/sysinfo/), [xcap](https://docs.rs/xcap/),

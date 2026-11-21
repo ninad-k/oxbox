@@ -72,21 +72,56 @@ This file records observed evidence, not planned results. Release gates remain o
   revision-pinned supplements, and 3 explicitly unresolved upstream attribution reviews. The notices and
   project licenses are configured as installer resources. Source scans found no credential-pattern matches,
   broken local documentation links or project files above 5 MB; the pre-existing nested copy was excluded.
-- Actionlint and `git diff --check` passed. Final packaging, native smoke evidence, pushed commit/CI and draft
-  asset verification are recorded below when observed; earlier installer sizes above describe prior builds.
+- Actionlint and `git diff --check` passed. Final packaging, native smoke evidence and public CI are recorded
+  below; earlier installer sizes above describe prior builds.
 - First public CI run [44908023075](https://github.com/ninad-k/oxbox/actions/runs/44908023075) passed UI,
   Windows clippy/tests/notices and the Rust 1.93 check. It exposed a non-Windows `needless_bool` lint and
   Ubuntu 22.04's incompatible stock SPA headers for `libspa 0.9.2`. The link guard was simplified and Linux
   CI/packaging moved to Ubuntu 24.04. A current-source Rust 1.93 clippy pass also prompted an equivalent
   boolean simplification in the cache-age guard; locked workspace/all-target clippy then passed on 1.93.
-  The corrected matrix requires a fresh CI run; the initial failures are not counted as acceptance passes.
+  The initial failures are not counted as acceptance passes; the final run below supersedes them.
+
+## Verified Windows draft artifacts and CI
+
+- Functional source commit: `5117e6d53943f050b6120e6abfddae17d51d5a9e`, pushed on `codex/complete-v0-1`.
+  Subsequent release/privacy documentation changes do not change Rust, frontend or bundle configuration.
+- [CI run 44909470452](https://github.com/ninad-k/oxbox/actions/runs/44909470452) completed **successfully**:
+  UI check/test/build, Rust 1.93 locked workspace/all-target check, and Windows/macOS/Ubuntu 24.04 clippy,
+  tests and native application builds. Windows also reproduced the notices under Node 22.
+- `pnpm tauri build` completed successfully from that source. Both x64 installers are unsigned:
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `Oxbox_0.1.0_x64_en-US.msi` | 4,272,128 | `49c717fa5eee20a0ee62b049d36ea3da65a304fc454c26f9646a3a8ccbf50049` |
+| `Oxbox_0.1.0_x64-setup.exe` | 2,965,568 | `fa970ed0a6d23d68da38d7d17eadd498b2b4340652ddd0a206ab8052ca95e78c` |
+
+- Read-only MSI database inspection confirmed product/version `Oxbox`/`0.1.0`, x64 template and exactly the
+  application plus MIT/Apache-2.0 licenses and `THIRD_PARTY_NOTICES.txt`. Authenticode reported NotSigned for
+  both installers and the application. No installer execution/install/uninstall was performed on this host.
+- Final `pnpm tauri dev` launched successfully. Its native file picker selected a generated 22-byte fixture;
+  SHA-256 matched `e2c43e235038b53c8df6cbf12b47277e2efa25ee3ef86e0887bc8f1a0f0f8f2d` from the independent
+  file hash, and matching/mismatching comparison messages were observed. Keyboard search/Enter and live
+  UTC/Dubai/London/New York clocks worked. Rust output was excluded from Vite watching after a concurrent
+  Windows linker exposed EBUSY warnings; the corrected concurrent run stayed free of those watcher errors.
+  Development runs were intentionally stopped with Ctrl+C, which is not a manual tray-Quit acceptance test.
+- A separate copy of the final production binary displayed 48 tools and lazy-loaded Unit Converter. Native
+  IPC returned 0.001 km for 1 m and 1000 m after swapping to 1 km. The default Ctrl+Alt+Space was occupied by
+  another application; the conflict was reported. A temporary Ctrl+Alt+Shift+O saved and hid the launcher.
+  Relaunching the same executable reopened the original process, and the title-bar close hid it to the tray
+  while that process remained alive. The original shortcut preference was restored afterward.
+- The production QA app was restarted at the 48-tool launcher with the original System appearance. No
+  physical recording, mic/cache/uninstall/eject/display/power effect was invoked by these native checks.
+- Runtime network acceptance did **not** pass: WebView2 public HTTPS was observed without a currency request.
+  A second bounded sample normalized mapped addresses and confirmed a Microsoft public peer, with no Rust-host
+  socket observed. Purpose/payload remain unresolved; [RUNTIME_PRIVACY.md](RUNTIME_PRIVACY.md) records the scope.
+  A successful CI run or unsigned draft asset is not a substitute for resolving that privacy acceptance gap.
 
 ## Open acceptance gates
 
 - Full Windows manual tool matrix, including multi-monitor 100%/150% capture and destructive/power effects in a test account/VM.
 - Independent human security checkpoint for the file tools and the documented attribution/license review.
-- Public CI results and macOS/Linux runtime acceptance.
-- Clean-machine installer smoke test, cold startup measurement, and default-offline runtime observation.
+- macOS/Linux supported-tool runtime acceptance and macOS Intel packaging acceptance.
+- Clean-machine installer smoke test, cold startup measurement, and resolution of observed WebView2 runtime traffic.
 - Published release assets and complete tool-by-tool OS acceptance. Light/dark launcher screenshots are now present.
 
 Use [TESTING.md](TESTING.md) and [RELEASE.md](RELEASE.md) to close these gates. Do not infer a pass from the

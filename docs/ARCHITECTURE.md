@@ -57,8 +57,10 @@ evidence; originals are preserved.
 
 All shell commands use an executable and argument array. Native Windows calls are contained in platform modules
 or the tool's native adapter, with safety comments. A missing OS capability returns an error or an unavailable
-registry state. Runtime features are offline by default. The sole optional network exception is the fixed ECB
+registry state. Core tool commands work locally by default. The sole intentional network feature is the fixed ECB
 currency download after explicit opt-in ([issue #1](https://github.com/ninad-k/oxbox/issues/1)); local amounts and
-user content are never uploaded. Development downloads and CI are separate from runtime behavior.
+user content are not uploaded by those commands. The Windows webview has independent runtime behavior:
+[release QA observed public HTTPS](RUNTIME_PRIVACY.md), so whole-process offline acceptance is still open.
+Development downloads and CI are separate from runtime behavior.
 
 See the [ADRs](adr/), [testing guide](TESTING.md), and [tool recipe](../AGENTS.md) before extending the project.

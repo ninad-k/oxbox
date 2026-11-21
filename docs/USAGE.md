@@ -7,7 +7,8 @@ Closing the launcher hides it; **Quit Oxbox** in the tray exits the app and stop
 Search with **Ctrl/Cmd+K** or **/**, press **Enter** to open the first result, and **Escape** to return.
 The star in a tool's title adds it to Favorites. Settings changes and favorite tools are stored locally.
 The promoted Phase 5 tools and their provider/platform requirements are described in [the expanded guide](ROADMAP_TOOLS.md).
-All tools are offline by default; currency offers a separate explicit ECB-refresh opt-in.
+Tool commands work locally by default; currency offers a separate explicit ECB-refresh opt-in. Windows'
+embedded WebView2 runtime may contact Microsoft independently; see [runtime privacy findings](RUNTIME_PRIVACY.md).
 
 ## Settings
 

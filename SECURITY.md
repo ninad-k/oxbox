@@ -16,13 +16,13 @@ weaknesses in Encrypt Files.
 
 ## Design commitments
 
-- Offline by default and no telemetry. Currency refresh is a separately opted-in, fixed-URL HTTPS download
+- Tool commands are local by default and implement no Oxbox app telemetry. Currency refresh is a separately opted-in, fixed-URL HTTPS download
   of public ECB rates, tracked in [issue #1](https://github.com/ninad-k/oxbox/issues/1). No amounts, selected
-  currencies, clipboard data, recordings, passphrases, or files are uploaded.
+  currencies, clipboard data, recordings, passphrases, or files are uploaded by Oxbox commands.
 - Strict Content Security Policy and minimal Tauri capabilities (`src-tauri/capabilities/`).
 - Destructive actions require confirmation and use the Recycle Bin/Trash by default.
 - Outputs use exclusive creation; archive entries cannot escape a newly-created destination.
-- Extraction enforces byte/entry/metadata limits; 7z decoding has an independent memory ceiling.
+- Extraction enforces byte/entry/metadata limits; 7z has bounded metadata and conservative per-block model budgets.
 - Cleanup uses internal location allow-lists and revalidates reviewed budgets before moving files.
 - Clipboard recording requires an explicit start, is bounded in memory, and is cleared on Quit.
 - Passphrases are not intentionally logged or stored; Rust uses zeroizing secret storage. JavaScript strings
@@ -34,3 +34,6 @@ weaknesses in Encrypt Files.
 
 These are implementation commitments, not a claim of an external audit. Human file-tool review and platform
 release validation remain tracked in [docs/VALIDATION.md](docs/VALIDATION.md).
+Windows release QA observed independent WebView2 HTTPS traffic. Its purpose was not identified, and the strict
+whole-process offline requirement remains unmet; [runtime privacy findings](docs/RUNTIME_PRIVACY.md) distinguish
+observations, SDK documentation and the public-release acceptance gap.

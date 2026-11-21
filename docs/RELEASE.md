@@ -6,14 +6,15 @@ release target; a draft is a review artifact and does not mean public acceptance
 ## Before public publication
 
 - [ ] Review the full source diff and resolved dependency/license changes.
-- [x] Complete all local automated checks in [TESTING.md](TESTING.md) with the lockfiles unchanged; public CI still needs review.
+- [x] Complete local automated checks and [public CI at 5117e6d](https://github.com/ninad-k/oxbox/actions/runs/44909470452).
 - [ ] Complete and record Windows manual acceptance, including power-tool cancellation and Quit cleanup.
 - [ ] Review file-tool path/deletion/extraction security with a human reviewer.
 - [ ] Verify macOS Apple Silicon + Intel and Linux builds and supported-tool behavior.
 - [x] Capture final expanded launcher screenshots in light/dark and a native tool example, without private data.
-- [ ] Check default runtime network inactivity, explicit ECB opt-in behavior, and cold tray startup.
+- [ ] Resolve observed [WebView2 runtime traffic](RUNTIME_PRIVACY.md), complete ECB opt-in UI acceptance, and measure cold tray startup.
 - [ ] Smoke-test Windows installers on a clean machine/VM and confirm uninstall behavior.
-- [x] Measure final expanded installers: MSI 3.79 MiB and NSIS 2.71 MiB, both below 15 MB.
+- [x] Measure final Windows installers from 5117e6d: MSI 4.07 MiB and NSIS 2.83 MiB, both below 15 MB.
+- [x] Inspect MSI x64/version/payload, verify unsigned status, and prepare SHA-256 checksums for both installers.
 - [x] Confirm version agreement in workspace Cargo.toml, package.json, and tauri.conf.json (`0.1.0`).
 - [x] Move the reviewed Unreleased changelog into the versioned draft release section.
 

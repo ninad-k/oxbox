@@ -6,7 +6,7 @@
 
 <p align="center">
   A free, open-source toolbox of one-click desktop utilities for Windows, macOS and Linux.<br/>
-  Built in Rust with Tauri. Offline by default. No ads, no subscriptions, no telemetry.
+  Built in Rust with Tauri. Local tools. No ads, no subscriptions, no Oxbox app telemetry.
 </p>
 
 <p align="center">
@@ -24,6 +24,9 @@ you need: keep the PC awake, hash a download, find duplicate files, make a QR co
 > typed APIs and launcher views. Automated checks and manual release gates are recorded in
 > [VALIDATION.md](docs/VALIDATION.md). “Ready” below means the implementation is available in source;
 > it does not imply a published or independently audited release. Contributions welcome.
+
+> **Windows runtime privacy:** release QA observed background HTTPS from the embedded WebView2 runtime.
+> Strict zero-network acceptance remains open; see the [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
 
 ## Tools
 
@@ -106,9 +109,11 @@ and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Privacy
 
-Oxbox works offline by default and sends no telemetry. Currency rates are the sole optional network feature:
+Oxbox implements no app telemetry. Tool commands work locally; currency rates are the sole intentional network feature:
 after a separate explicit opt-in, a manual refresh downloads public ECB reference data. Amounts and selected
 currencies stay local. The reviewed exception is [issue #1](https://github.com/ninad-k/oxbox/issues/1).
+The embedded Windows WebView2 runtime was observed contacting Microsoft independently. Its request purpose
+was not identified; strict whole-process offline acceptance remains open. See [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
 Clipboard recording starts paused, stays in memory, and is cleared on Quit. Saved settings and tool outputs
 stay on your computer. File cleanup goes to the Recycle Bin/Trash after confirmation; outputs preserve originals.
 See the [usage guide](docs/USAGE.md) for limits and the [security policy](SECURITY.md) for private reports.

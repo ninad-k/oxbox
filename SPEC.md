@@ -56,8 +56,10 @@ Uninstall Apps, Launch (app sets), Energy Saver, Airplane Mode, Date Countdown, 
 
 On 2026-11-21 the user explicitly promoted the planned Phase 5 rows as well as Phases 1–4. Detailed promoted
 task files are linked from `tasks/todo.md`; source now exposes 48 tools. The excluded/deferred tools remain excluded.
-Network behavior remains default-offline, with only explicit opt-in ECB currency refresh allowed after the
-user-authorized [network issue #1](https://github.com/ninad-k/oxbox/issues/1). No user amounts or files are uploaded.
+Core commands remain local by default, with explicit opt-in ECB currency refresh allowed after the
+user-authorized [network issue #1](https://github.com/ninad-k/oxbox/issues/1). Those requests send no user amounts or files.
+The strict whole-process offline goal in user story 3 is not yet accepted on Windows: release QA observed
+background WebView2 HTTPS traffic. Its purpose remains unresolved; see [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
 
 ## Tech Stack
 

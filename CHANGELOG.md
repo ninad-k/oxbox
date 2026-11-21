@@ -41,3 +41,6 @@ the presence of this changelog does not mean installers have been published.
   `#lib/*` package subpath imports. Node.js 22.17+ is required.
 - Updated ZIP to 9.8 and rqrr to 0.11 to remove the ZIP and LRU audit findings. Upstream maintenance and
   Linux GLib warnings are recorded with their scope in [dependency notes](docs/DEPENDENCIES.md).
+- Public CI now passes Windows, macOS and Ubuntu 24.04 native builds, UI checks and the Rust 1.93 check.
+- Windows runtime QA observed independent WebView2 HTTPS traffic. App telemetry claims are explicitly scoped,
+  and strict whole-process offline acceptance remains open; see [runtime privacy findings](docs/RUNTIME_PRIVACY.md).

@@ -8,8 +8,9 @@ Work top to bottom; one task per branch/PR. Tick a box only when its acceptance 
 
 The detailed v0.1 and user-promoted Phase 5 source is integrated on `codex/complete-v0-1`. All 48 catalogue entries load
 their views; core tests, typed command groups, background lifecycle, and documentation are present.
-The original acceptance boxes below deliberately remain open where Windows manual checks, independent review,
-public CI, or release publication have not been observed. They are not a list of missing source implementations.
+The original acceptance boxes below remain open where Windows manual checks, independent review, runtime privacy
+or public release signoff are outstanding. [Public CI passed at 5117e6d](https://github.com/ninad-k/oxbox/actions/runs/44909470452).
+These boxes are not a list of missing source implementations.
 
 | Tasks | Source status | Acceptance still required |
 |---|---|---|
@@ -17,7 +18,7 @@ public CI, or release publication have not been observed. They are not a list of
 | 2.1–2.5 | Implemented; hostile-archive/path/cancellation tests added | Large-file UI/drop/Trash recovery checks; human security checkpoint |
 | 3.1–3.6 | Implemented; lifecycle and fake-clock tests added | Real Windows power/break effects and Quit verification on a consenting test machine |
 | 4.1–4.6 | Implemented; media/privacy tests added | Multi-monitor/scaling/capture/clipboard and OS-specific runtime checks |
-| 4.7 | Expanded Windows MSI/NSIS built below 15 MB; screenshots/release docs/workflow prepared | Clean-machine/four-platform acceptance, startup/network measurements, publication |
+| 4.7 | Windows MSI 4.07 MiB / NSIS 2.83 MiB and checksums prepared; native builds pass on three OSes | Clean-machine/tool runtime acceptance, cold startup, WebView2 privacy gap, publication |
 | Phase 5 system/apps | Twelve tools implemented | Real Windows window/display/eject/uninstall effects in a consenting test account |
 | Phase 5 media/vision | Ten tools implemented | Device/provider/session-specific recording, OCR and color sampling checks |
 | Phase 5 presentation/time | Five tools implemented | External-display presentation and native alarm/OS-control checks |
