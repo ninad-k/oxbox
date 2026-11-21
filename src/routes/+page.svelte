@@ -117,7 +117,7 @@
   }
 
   function onWindowKey(e: KeyboardEvent) {
-    const favorite = favoriteShortcut(e.code,{alt:e.altKey,ctrl:e.ctrlKey,meta:e.metaKey,shift:e.shiftKey},favoriteIds);
+    const favorite = favoriteShortcut(e.code,{alt:e.altKey,ctrl:e.ctrlKey,meta:e.metaKey,shift:e.shiftKey},favoriteIds,e.key);
     if (favorite && (!isTyping(e.target) || (e.target===searchInput && !query))) {
       e.preventDefault(); showSettings=false; activeId=favorite;
     } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'q' && inDesktopApp()) {
@@ -181,7 +181,7 @@
       <div class="browse">
         <div class="heading">
           <div><p class="eyebrow">{view==='favorites'&&!searching?'YOUR WORKSPACE':'EXPLORE OXBOX'}</p><h1>{title}</h1>
-          <p class="sub" aria-live="polite">{view==='favorites'&&!searching?'Just the tools you choose. Always within reach.':results.length+' tools for the everyday details.'}</p></div>
+          <p class="sub" aria-live="polite">{view==='favorites'&&!searching?'Just the tools you choose. Always within reach.':results.length+(results.length===1?' tool':' tools')+' for the everyday details.'}</p></div>
           {#if view==='favorites'&&!searching}<button class="btn" onclick={()=>select('all')}>Manage favorites</button>{/if}
         </div>
 
