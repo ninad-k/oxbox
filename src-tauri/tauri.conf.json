@@ -13,11 +13,12 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Oxbox",
-        "width": 1080,
-        "height": 720,
-        "minWidth": 720,
-        "minHeight": 520,
+        "width": 800,
+        "height": 800,
+        "minWidth": 640,
+        "minHeight": 640,
         "center": true,
         "backgroundThrottling": "disabled"
       }
@@ -31,7 +32,7 @@
     "targets": "all",
     "category": "Utility",
     "shortDescription": "Free, open-source toolbox of one-click desktop utilities",
-    "longDescription": "Oxbox is a tray app with a collection of small, fast utilities: keep awake, screenshots, checksums, duplicate finder, QR codes, system monitor and more. Offline, no telemetry.",
+    "longDescription": "Oxbox is a tray app with small, fast utilities: keep awake, screenshots, checksums, duplicate finder, QR codes, system monitor and more. Tools run locally by default, with an optional manual currency refresh and no app telemetry. See the runtime privacy documentation for embedded WebView2 behavior.",
     "license": "MIT OR Apache-2.0",
     "resources": {
       "../docs/THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt",

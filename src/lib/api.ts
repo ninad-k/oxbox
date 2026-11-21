@@ -12,6 +12,7 @@ import { currencyApi } from './currency-api';
 import { roadmapTimeApi } from './roadmap-time-api';
 import { roadmapSystemApi } from './roadmap-system-api';
 import { roadmapMediaApi } from './roadmap-media-api';
+import { mouseActivityApi } from './mouse-activity-api';
 export * from './file-api';
 export { systemApi } from './system-api';
 export { mediaApi } from './media-api';
@@ -42,6 +43,9 @@ export interface WorldClock {zone: string; date: string; time: string; abbreviat
 export type CodeKind = 'qr' | 'code128' | 'ean13';
 
 export const api = {
+  runtimePrivacyStatus: () => call<{supported:boolean;configured:boolean;blockedWebResources:number;localWebResources:number}>('runtime_privacy_status'),
+  mouseActivity: mouseActivityApi,
+  quitApp: () => call<void>('quit_app'),
   ...fileApi,
   ...systemApi,
   ...mediaApi,

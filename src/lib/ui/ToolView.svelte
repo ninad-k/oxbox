@@ -28,10 +28,10 @@
 
 <section class="view" aria-labelledby="tool-title">
   <header class="header">
-    <button class="btn btn-ghost btn-icon" onclick={onback} aria-label="Back to all tools">
+    <button class="btn btn-ghost btn-icon" onclick={onback} aria-label="Back to tools">
       <ArrowLeft size={18} />
     </button>
-    <span class="chip" style:--tone={category?.tone} aria-hidden="true">
+    <span class="chip" aria-hidden="true">
       <tool.icon size={20} strokeWidth={1.8} />
     </span>
     <div class="titles">
@@ -91,8 +91,9 @@
     width: 36px;
     height: 36px;
     border-radius: var(--r-md);
-    color: var(--tone);
-    background: color-mix(in srgb, var(--tone) 13%, transparent);
+    color: var(--text-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
   }
   .titles {
     flex: 1;

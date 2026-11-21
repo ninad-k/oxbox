@@ -4052,6 +4052,8 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
+ "webview2-com",
+ "windows 0.62.2",
 ]
 
 [[package]]

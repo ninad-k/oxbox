@@ -17,8 +17,13 @@
 
 ---
 
-Oxbox lives in your system tray (menu bar on macOS). Click it, search or browse by category, and run the tool
-you need: keep the PC awake, hash a download, find duplicate files, make a QR code, check what is eating your CPU.
+Oxbox lives in your system tray (menu bar on macOS). Open its normal, resizable window to a dashboard containing
+only your favorites. Search all **49 tools**, browse a category, or open a pinned tool with **Alt+1–9**.
+The window starts at 800 × 800 logical pixels, with native window controls and an original outlined O brand.
+
+The default global launcher shortcut is **Ctrl+Alt+O** (**Cmd+Option+O** on macOS). Inside the app,
+**Ctrl/Cmd+K** searches and **Ctrl/Cmd+Q** quits. Existing saved launcher shortcuts are retained;
+conflicts can be resolved in Settings. See the [usage guide](docs/USAGE.md) for keyboard details.
 
 > **Status: implementation, awaiting release acceptance.** The 20-tool v0.1 catalogue and promoted Phase 5 tools have core logic, command adapters,
 > typed APIs and launcher views. Automated checks and manual release gates are recorded in
@@ -49,13 +54,22 @@ you need: keep the PC awake, hash a download, find duplicate files, make a QR co
 | | Network Usage | Live upload/download speed and totals | **Ready** |
 | | Do Not Sleep | Keep the computer and display awake | **Ready** |
 | | Sleep Timer | Sleep or shut down after a countdown | **Ready** |
+| | Mouse Activity | Windows-only, explicitly started pointer movement while idle; pauses when input resumes | **Ready** |
 | Privacy & Security | Lock Screen | Lock the computer instantly | **Ready** |
 | | Hide Desktop | Hide desktop icons for presentations | **Ready** |
 | | Encrypt Files | Passphrase encryption with [age](https://age-encryption.org) | **Ready** |
 
-The user-promoted Phase 5 implementation expands the launcher to **48 tools**, including window/app controls,
+The original 20 tools, 28 user-promoted Phase 5 entries, and Windows-only Mouse Activity make **49 tools**, including window/app controls,
 presentation tools, alarms, media recording/conversion, OCR, barcode reading, color sampling, and currency.
 See [the expanded tool guide](docs/ROADMAP_TOOLS.md) for platform support and local-provider requirements.
+Mouse Activity always starts stopped; it does not click, type or scroll. Read its [behavior and limits](docs/MOUSE_ACTIVITY.md)
+before starting a session. Its native Windows acceptance remains pending.
+
+The [GitHub Pages website](website/README.md) includes the complete searchable catalog, generated from the same
+registry as the app. Website deployment is separate from public installer publication.
+
+The screenshots below show the earlier 48-tool Windows interface, before the current branding and favorites-dashboard
+revision. They do not establish native acceptance of the new interface or Mouse Activity.
 
 <p align="center"><img src="docs/images/launcher-dark.png" width="900" alt="Oxbox native Windows launcher in dark appearance with 48 tools" /></p>
 <p align="center"><img src="docs/images/launcher-light.png" width="900" alt="Oxbox native Windows launcher in light appearance with 48 tools" /></p>
@@ -66,15 +80,17 @@ Prerequisites: [Rust](https://rustup.rs) 1.93+, [Node.js](https://nodejs.org) 22
 and the [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/) for your OS.
 
 ```bash
-git clone https://github.com/ninad-k/oxbox.git
+git clone --branch codex/complete-v0-1 https://github.com/ninad-k/oxbox.git
 cd oxbox
 pnpm install --frozen-lockfile
 pnpm tauri dev      # run with hot reload
 pnpm tauri build    # build installers into target/release/bundle
 ```
 
-Prebuilt installers will be published on the [Releases](https://github.com/ninad-k/oxbox/releases) page from v0.1.
-Early builds are not code-signed, so Windows SmartScreen and macOS Gatekeeper will warn on first launch.
+The current implementation branch is `codex/complete-v0-1`. Windows installers remain in a private draft;
+there is no public download yet. Check the [Releases](https://github.com/ninad-k/oxbox/releases) page for status.
+Draft builds are unsigned; Windows SmartScreen and macOS Gatekeeper can warn. Clean-machine installer acceptance
+and the other [release gates](docs/RELEASE.md) are still open.
 
 ## How it is built
 
@@ -100,6 +116,8 @@ Early builds are not code-signed, so Windows SmartScreen and macOS Gatekeeper wi
 - [docs/RELEASE.md](docs/RELEASE.md): installer and publication checklist
 - [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md): dependency review and primary references
 - [docs/ROADMAP_TOOLS.md](docs/ROADMAP_TOOLS.md): Phase 5 tools, providers and network opt-in
+- [docs/MOUSE_ACTIVITY.md](docs/MOUSE_ACTIVITY.md): Windows idle-aware pointer sessions and pending native acceptance
+- [website/README.md](website/README.md): generated catalog, static site checks and GitHub Pages deployment
 - [CHANGELOG.md](CHANGELOG.md): user-facing changes
 
 ## Contributing
@@ -112,8 +130,8 @@ and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 Oxbox implements no app telemetry. Tool commands work locally; currency rates are the sole intentional network feature:
 after a separate explicit opt-in, a manual refresh downloads public ECB reference data. Amounts and selected
 currencies stay local. The reviewed exception is [issue #1](https://github.com/ninad-k/oxbox/issues/1).
-The embedded Windows WebView2 runtime was observed contacting Microsoft independently. Its request purpose
-was not identified; strict whole-process offline acceptance remains open. See [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
+The embedded Windows WebView2 runtime can contact Microsoft independently. Investigation and supported controls
+are tracked in the [runtime privacy findings](docs/RUNTIME_PRIVACY.md); strict whole-process offline acceptance remains open.
 Clipboard recording starts paused, stays in memory, and is cleared on Quit. Saved settings and tool outputs
 stay on your computer. File cleanup goes to the Recycle Bin/Trash after confirmation; outputs preserve originals.
 See the [usage guide](docs/USAGE.md) for limits and the [security policy](SECURITY.md) for private reports.

@@ -1,11 +1,15 @@
 # Using Oxbox
 
 Run `pnpm tauri dev` for the desktop app. `pnpm dev` is a UI preview: it intentionally cannot run Rust commands.
-Open Oxbox from its tray/menu-bar icon or the default **Ctrl+Alt+Space** shortcut (**Cmd+Option+Space** on macOS).
-Closing the launcher hides it; **Quit Oxbox** in the tray exits the app and stops its background work.
+Open Oxbox from its tray/menu-bar icon or the default **Ctrl+Alt+O** shortcut (**Cmd+Option+O** on macOS).
+The normal, resizable native window starts at 800 × 800 logical pixels. **Dashboard shows only your favorites**;
+use All tools or a category to browse the 49-tool catalog. The original outlined O/ember mark is shared with the website.
+Closing the launcher hides it; **Quit Oxbox** in the sidebar/tray or **Ctrl/Cmd+Q** inside the app exits and stops background work.
 
 Search with **Ctrl/Cmd+K** or **/**, press **Enter** to open the first result, and **Escape** to return.
-The star in a tool's title adds it to Favorites. Settings changes and favorite tools are stored locally.
+The star in a tool's title adds it to Favorites. **Alt+1–9** opens the corresponding favorite when you are not
+editing text (or while the launcher search is empty). Settings changes and favorite tools are stored locally.
+The global shortcut is configurable; an existing saved binding is retained rather than replaced by the new default.
 The promoted Phase 5 tools and their provider/platform requirements are described in [the expanded guide](ROADMAP_TOOLS.md).
 Tool commands work locally by default; currency offers a separate explicit ECB-refresh opt-in. Windows'
 embedded WebView2 runtime may contact Microsoft independently; see [runtime privacy findings](RUNTIME_PRIVACY.md).
@@ -22,7 +26,7 @@ Old `oxbox.favorites` webview storage is migrated after the new store has been s
 | Tool | How to use it | Behavior and limits |
 |---|---|---|
 | Transform Text | Paste text and choose a case | Original text stays in the input; copy the result |
-| Unit Converter | Pick a category, units, and value; Swap reverses units | Length, mass, temperature, data size, time, speed, area, volume; no currency or network requests |
+| Unit Converter | Pick a category, units, and value; Swap reverses units | Eight measurement categories; the separate Currency mode uses the same dated reference-rate tool described in the expanded guide, with local import and optional explicit ECB refresh |
 | Timer & Stopwatch | Choose a countdown preset/custom duration, or start the stopwatch and record laps | Space starts/pauses and R resets when not typing; clocks survive navigation and a hidden launcher; notifications require OS permission |
 | World Time | Search an IANA zone, add a clock, use Up/Down/Remove | Bundled rules handle DST; offsets are shown from UTC and local time |
 | QR & Barcode | Enter text or digits, choose a code, save or copy the preview | EAN-13 requires all 13 digits and a valid check digit; Code 128 accepts printable ASCII; outputs never replace existing files |
@@ -32,6 +36,7 @@ Old `oxbox.favorites` webview storage is migrated after the new store has been s
 | Clean Drive | Scan known cache locations, select categories, review totals, confirm | Accepts category IDs, never arbitrary cleanup roots; skips redirected paths; old temporary files only; contents go to Trash |
 | System Monitor | Open the tool to start sampling | CPU, per-core CPU, RAM/swap, disks, top processes, and a 60-sample CPU trace; sampling stops on leaving the view |
 | Network Usage | Open the tool, optionally include virtual interfaces | Reads local OS interface counters; measures rates and session deltas; does not contact network services |
+| Mouse Activity | On Windows, choose idle delay/interval and optional duration, then explicitly Start | Starts stopped; pointer-only movements while idle, pauses when input resumes; Stop from tool/banner/tray; unsupported on macOS/Linux; [full behavior and limits](MOUSE_ACTIVITY.md) |
 | Do Not Sleep | Choose system/display behavior and optional duration/end time | Managed awake lock is released on stop, expiry, and Quit; tray toggle and tooltip reflect state |
 | Lock Screen | Select Lock Screen | Locks immediately on Windows/Linux; macOS display sleep requires the OS password-on-wake setting |
 | Sleep Timer | Choose action and countdown, review, then confirm arming | Persistent banner and tray cancellation; warning notification within the final minute; Quit cancels pending actions |
@@ -59,6 +64,26 @@ limits are not a ceiling on total process memory. Archive passwords and archive 
 Clipboard history can contain sensitive information copied from other apps. Recording requires an explicit start
 and does not survive Quit. On Windows, content carrying supported exclusion/concealment markers is ignored;
 other platforms do not expose equivalent protection through the current backend. Pause before copying secrets.
+
+## Mouse Activity sessions
+
+Mouse Activity does nothing until you explicitly start a session. It waits a full idle delay after Start or
+new input, then alternates bounded pointer-only movements at your interval. It never clicks, types or scrolls;
+held input and unavailable desktop access prevent movement. It does not restore an old cursor position.
+Sessions can continue while the launcher is hidden. Stop, optional duration expiry, a native error or Quit ends
+the session and releases its input observers. Active state is never restored on restart.
+
+Input timing stays in memory; keys, text and pointer trails are not recorded. Detection is subject to Windows
+session permissions, and uncertain accessibility/remote-control input can conservatively restart waiting.
+This is not a guarantee about sleep, locking or an application's presence policy. Native pointer checks require
+a consenting Windows test session and remain separate from fake-backend tests; see [Mouse Activity](MOUSE_ACTIVITY.md).
+
+## Website and release status
+
+The [GitHub Pages website](../website/README.md) provides a searchable catalog and platform/provider notes.
+It is an informational site, not a browser version of the native tools. Windows installers remain in a private
+draft, and the new interface, hardware, clean-machine installer and strict runtime privacy acceptance gates
+remain open. Read [validation](VALIDATION.md) and [release status](RELEASE.md) before inferring support from a tool tile.
 
 ## Platform notes and troubleshooting
 

@@ -14,6 +14,8 @@ The user subsequently promoted both the detailed phases and Phase 5+. The 48-too
 [system/apps](phase5-system.md), [media/vision](phase5-media.md), [presentation/time](phase5-time.md), and
 [currency](phase5-currency.md) specifications. Deferred/excluded rows remain excluded. Opt-in currency networking
 was explicitly approved and raised as [issue #1](https://github.com/ninad-k/oxbox/issues/1).
+The Windows release privacy gate now has a separate [runtime privacy follow-up](runtime-privacy.md),
+including user-approved existing SDK bindings and production network verification.
 
 Every tool task below is sized for **one focused session of a coding agent** (a local LLM is fine).
 Each one touches ≤ 5–6 files and follows the recipe in [`AGENTS.md`](../AGENTS.md#5-recipe-add-a-tool).

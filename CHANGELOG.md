@@ -5,6 +5,26 @@ the presence of this changelog does not mean installers have been published.
 
 ## 0.1.0 — draft, 2026-11-21
 
+### Launcher, Mouse Activity and website revision
+
+- Added Windows-only **Mouse Activity**, bringing the catalog to 49 tools. Sessions require explicit Start,
+  wait for a configurable idle delay, pause on resumed input, and offer Stop in the tool, banner and tray.
+  Optional duration, Stop, error and Quit release the worker. No clicks, typing or scrolling are generated.
+  Tests use fake backends; native pointer/hardware acceptance is still pending.
+- Made Dashboard a favorites-only view, with All tools and category browsing available separately. The normal
+  resizable native window starts at 800 × 800 logical pixels and uses the original outlined O/ember brand.
+- Changed the default global launcher binding to Ctrl+Alt+O, or Cmd+Option+O on macOS. Existing saved bindings
+  remain in effect. Alt+1–9 opens favorites, Ctrl/Cmd+K searches, and Ctrl/Cmd+Q quits inside the app.
+- Added a responsive, static GitHub Pages website with a 49-tool catalog generated from the TypeScript
+  registries, search/category/platform filters, provider notes and contribution guidance. It uses the same
+  SVG brand asset as the app, without external fonts, analytics or CDN scripts.
+- Fixed website Reset so the search fields, visible cards and result status update together; regression coverage
+  models form-reset default-action ordering.
+- Added app-scoped WebView2 SDK controls: an isolated profile, custom crash reporting, OS-account SSO disabled,
+  and external web-resource blocking before local navigation. Browser-owned background traffic remains an open release gate.
+- This revision does not close native UI/hardware, clean-machine installer, human security/license or strict
+  WebView2 offline acceptance gates. Draft installer and publication status remain separate from source changes.
+
 ### Added
 
 - Persistent appearance and favorites, migration of legacy favorites, launch at login, configurable global

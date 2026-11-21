@@ -1,7 +1,8 @@
 # Expanded tool guide
 
 The user promoted the Phase 5+ roadmap into implementation on 2026-11-21. The launcher now has the original
-20 tools plus 28 additional entries. Source availability is distinct from platform/manual release acceptance.
+20 tools plus 28 Phase 5 entries and the separately authorized Windows-only Mouse Activity tool: **49 tools**.
+Source availability is distinct from platform/manual release acceptance.
 Download Video/Audio and Free Memory remain explicitly excluded by the plan.
 
 ## Windows, system and application tools
@@ -20,6 +21,7 @@ Download Video/Audio and Free Memory remain explicitly excluded by the plan.
 | CPU Temperature | Read OS-exposed sensors. Some hardware exposes none; no driver/admin service is installed. |
 | Launch App Sets | Save named local application/file groups with literal argument arrays. Review before launch. No shell strings or URL targets. |
 | Uninstall Apps | Inspect registered Windows uninstall entries, review the command and confirm. The registry is rechecked before launch. Separately inspect exact-name AppData leftovers and confirm Trash; no silent removal. |
+| Mouse Activity | Windows-only explicit Start; wait for idle and move the pointer gently at a chosen interval, yielding when input resumes. Optional duration and tool/banner/tray Stop; always stopped on launch. No clicks, typing or scrolling. See [full limits and pending acceptance](MOUSE_ACTIVITY.md). |
 
 Window effects, display modes, eject, power profiles and uninstall inspection primarily target Windows. Other
 platforms are marked unavailable where an adapter is absent. Temperature and local app/file sets are portable;
@@ -70,7 +72,7 @@ Currency appears as its own tool and inside Unit Converter. Import daily ECB XML
 The dated cache remains usable after refresh failure; calculations stay local. Its isolated `currency.json`
 store uses serialized access and restores the preceding in-memory value if persistence fails.
 
-The only runtime network exception is [issue #1](https://github.com/ninad-k/oxbox/issues/1), posted with explicit
+The only intentional tool-command network exception is [issue #1](https://github.com/ninad-k/oxbox/issues/1), posted with explicit
 user approval. Network access is off by default. A separate checkbox allows manual HTTPS refresh from the fixed
 ECB daily XML endpoint using system curl. The provider sees the ordinary connection/IP; amounts and currency
 selections never leave Oxbox. No arbitrary URLs, redirects, curl configuration, credentials, uploads or telemetry.
@@ -80,7 +82,8 @@ shown; see the [ECB provider](https://www.ecb.europa.eu/stats/policy_and_exchang
 ## Contributor checks
 
 Promoted scope and acceptance: [system](../tasks/phase5-system.md), [media](../tasks/phase5-media.md),
-[time](../tasks/phase5-time.md), [currency](../tasks/phase5-currency.md). Observed results: [VALIDATION.md](VALIDATION.md).
+[time](../tasks/phase5-time.md), [currency](../tasks/phase5-currency.md), [Mouse Activity](../tasks/mouse-activity.md).
+Observed results: [VALIDATION.md](VALIDATION.md).
 Optional provider checks are explicit and never run in the ordinary test suite:
 
 ```bash

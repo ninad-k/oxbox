@@ -32,6 +32,7 @@ pub mod launch_apps;
 pub mod lock;
 pub mod make_gif;
 pub mod media_provider;
+pub mod mouse_activity;
 pub mod mute_microphone;
 pub mod network;
 pub mod ocr;

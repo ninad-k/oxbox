@@ -116,6 +116,35 @@ This file records observed evidence, not planned results. Release gates remain o
   socket observed. Purpose/payload remain unresolved; [RUNTIME_PRIVACY.md](RUNTIME_PRIVACY.md) records the scope.
   A successful CI run or unsigned draft asset is not a substitute for resolving that privacy acceptance gap.
 
+## Launcher, Mouse Activity and website revision — 2026-11-21
+
+- Current source has **49 tools**, including the explicitly started Windows-only Mouse Activity MVP.
+  Tests-first regressions cover idle scheduling, synthetic input, Stop/Quit cleanup, blocking-pool ordering,
+  the asynchronous IPC dispatch boundary, and issued single-use action-bound request tokens.
+- Current locked workspace checks passed: **165 core + 12 desktop tests**, no failures or ignored tests;
+  workspace/all-target clippy with warnings denied and Rust formatting passed.
+- Svelte check passed with 0 errors/0 warnings; **33 UI tests across 10 files** passed. The production frontend
+  build passed. The dashboard defaults to favorites only, and Alt+1–9 opens favorite slots.
+- Browser preview at 800 × 800 verified empty-dashboard onboarding, library pinning, exactly three selected
+  favorite cards, Alt+1 opening Unit Converter, and favorite persistence after reload. This is browser UI
+  evidence, not native IPC or pointer acceptance.
+- Website build verified all 49 registry-derived tools, seven categories, local resources and fragment targets.
+  Desktop and 375px mobile browser QA found no horizontal overflow or console errors. Search/platform filters,
+  empty state, Reset and FAQ disclosure worked after fixing the observed reset-default-action regression.
+  Both focused website regression tests passed; actionlint and staged whitespace checks passed.
+- Rust 1.93 locked workspace/all-target checking passed with the new SDK bindings and native input features.
+  Current audits found 0 Cargo vulnerability findings and 0 pnpm advisories; the same eight maintenance and
+  one Linux dependency soundness informational warning remain. The regenerated 497-package notices verify;
+  three upstream attribution reviews remain open.
+- Native startup testing caught an uninitialized COM apartment after disabling automatic main-window creation.
+  An owned STA guard and ordering/failure regressions fix that prerequisite. Local default-route normalization
+  now matches Tauri's handling of `App("index.html")`; final native checks must use the subsequent frozen build.
+- An intermediate production SDK probe confirmed configured request filtering and a locally blocked external
+  document, while recording remaining Microsoft configuration and SmartScreen requests. This does **not**
+  satisfy strict whole-process offline acceptance. See [RUNTIME_PRIVACY.md](RUNTIME_PRIVACY.md).
+- GitHub Pages is configured for workflow deployment, including the implementation branch's environment policy.
+  Public deployment, current native screenshots and rebuilt draft asset hashes are recorded after verification.
+
 ## Open acceptance gates
 
 - Full Windows manual tool matrix, including multi-monitor 100%/150% capture and destructive/power effects in a test account/VM.

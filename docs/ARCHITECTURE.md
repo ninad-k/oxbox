@@ -4,6 +4,18 @@ The launcher is a SvelteKit SPA embedded by Tauri 2. `crates/oxbox-core` owns co
 native platform behavior, and testable scheduler models. It has no Tauri dependency. `src-tauri` adapts core
 results to serializable IPC, manages app-lifetime services, notifications, tray controls, and capture windows.
 
+## Launcher and brand
+
+The catalog contains 49 source entries across `registry.ts` and `roadmap-registry.ts`. The default launcher view
+is `favorites`, presented as Dashboard; it contains only the user's pinned tools. All tools, categories and search
+provide access to the full catalog. `launcher.ts` owns the default view and Alt+1–9 favorite-slot mapping.
+The launcher handles Ctrl/Cmd+K search and Ctrl/Cmd+Q Quit; `app_commands.rs` registers the configurable global
+launcher binding, defaulting to CommandOrControl+Alt+O when no saved binding exists.
+
+The primary Tauri window retains native decorations and a resizable 800 × 800 logical-pixel starting size.
+`static/oxbox.svg` is the original outlined O/ember brand source shared by the app and website. These source
+choices are distinct from current-revision native accessibility, shortcut and platform acceptance.
+
 ## Tool path
 
 1. A `ToolDef` in `src/lib/registry.ts` supplies the stable ID, search terms, platform list, and lazy view import.
@@ -13,7 +25,8 @@ results to serializable IPC, manages app-lifetime services, notifications, tray 
 4. The handler registered in `src-tauri/src/lib.rs` performs boundary validation and delegates to core.
    `commands.rs` holds the original adapters; `app_commands.rs`, `file_commands.rs`, `system_commands.rs`,
    and `media_commands.rs` keep the larger catalogue readable. Promoted roadmap tools use `roadmap_*_commands.rs`
-   and matching typed API groups; `currency_commands.rs` adapts the isolated rate cache.
+   and matching typed API groups; `currency_commands.rs` adapts the isolated rate cache. Mouse Activity uses
+   `mouse_activity_commands.rs` and `mouse-activity-api.ts` for its start/stop/status boundary.
 5. Core returns `CoreResult<T>` and stable error codes. Disk/CPU work runs on Tauri's blocking pool.
 
 Tool views never call `invoke` directly. Add wrappers to the appropriate group and expose them through `api`.
@@ -35,6 +48,26 @@ timers on unmount and avoid overlapping native calls.
 | Roadmap time state | Persisted alarms/countdowns; independent presentation leases and display auto-start |
 | Roadmap media state | One idle-by-default recording process; explicit start, stop/finalization and Quit cleanup |
 | Currency cache | Separate `currency.json`, serialized access, manual-save rollback, default-offline opt-in |
+| Mouse Activity controller | Idle-by-default Windows worker owns hooks/message queue; explicit Start only; observers drop on expiry/error, and Stop/Quit joins the worker |
+
+Mouse Activity separates its Start idle baseline from the latest observed input token used for the final
+pre-injection race check. Native hooks retain timing only and continue the hook chain; a session-input timer
+conservatively pauses on uncertain external activity. Candidate movement stays inside the current monitor before
+normalization against virtual-desktop bounds, including negative origins. Fake backends verify scheduling,
+startup-token separation and lifecycle without moving the test runner's pointer. A stopped-on-Quit flag inside
+the managed controller rejects a queued Start after cleanup.
+
+## Static website
+
+`website/` contains plain HTML/CSS/JavaScript. `scripts/build-website.mjs` uses the existing TypeScript AST
+to extract static catalog data without importing the app, omitting icon/load expressions. It renders all tools
+for no-JavaScript browsing, then progressively adds category/platform/search filters. Provider caveats are in
+`website/tool-notes.json`; unknown note IDs fail the build. The app's SVG is copied from its single source asset.
+
+The output is ignored `website/dist/`, with relative URLs suitable for the `/oxbox/` Pages project path.
+The Pages workflow builds, runs focused website regressions, uploads that output and deploys with scoped Pages
+permissions. It does not publish draft installers. See the [website guide](../website/README.md) for setup,
+branch-trigger rules and separate browser/deployment acceptance.
 
 ## Long-running jobs
 

@@ -11,10 +11,12 @@ mod file_commands;
 mod focus_overlay;
 mod jobs;
 mod media_commands;
+mod mouse_activity_commands;
 mod overlay;
 mod roadmap_media_commands;
 mod roadmap_system_commands;
 mod roadmap_time_commands;
+mod runtime_privacy;
 mod system_commands;
 mod tray;
 
@@ -48,7 +50,9 @@ pub fn run() {
         .manage(media_commands::MediaState::default())
         .manage(overlay::AreaCaptureState::default())
         .manage(roadmap_media_commands::RoadmapMediaState::default())
+        .manage(mouse_activity_commands::MouseActivityState::default())
         .setup(|app| {
+            runtime_privacy::initialize(app)?;
             tray::create(app)?;
             app_commands::initialize(app.handle())?;
             system_commands::initialize(app.handle())?;
@@ -76,6 +80,12 @@ pub fn run() {
             commands::transform_text,
             commands::checksum_file,
             app_commands::shortcut_status,
+            app_commands::quit_app,
+            runtime_privacy::runtime_privacy_status,
+            mouse_activity_commands::mouse_activity_reserve,
+            mouse_activity_commands::mouse_activity_start,
+            mouse_activity_commands::mouse_activity_stop,
+            mouse_activity_commands::mouse_activity_status,
             app_commands::configure_shortcut,
             app_commands::conversion_units,
             app_commands::convert_unit,
@@ -191,6 +201,7 @@ pub fn run() {
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
                 app.state::<jobs::JobState>().cancel_all();
+                mouse_activity_commands::shutdown(app);
                 overlay::shutdown(app);
                 media_commands::shutdown(app);
                 roadmap_media_commands::shutdown(app);

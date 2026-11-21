@@ -31,6 +31,9 @@ pnpm tauri dev
 - HiDPI crop geometry, clipboard byte/count/pin budgets, resize dimensions/output preservation, age round trip
   and wrong-passphrase/partial-output behavior.
 - UI search, catalogue importability, checksum comparison, preference sanitization, monotonic clock behavior.
+- Favorites-only launcher default and Alt+1–9 favorite-slot mapping.
+- Mouse Activity fake-clock/input scheduling, observed-token versus Start baseline, monitor-edge/gap geometry,
+  errors, expiry, Stop/backend-drop acknowledgement and refusal of queued Start after Quit. No test moves the pointer.
 - Promoted window geometry/ownership, rollback timing, volume/app-command validation, reminder DST/restart behavior,
   FFmpeg argument/output safety, QR/EAN-13/Code128 decoding, and bounded dated currency XML conversion.
 
@@ -44,7 +47,7 @@ and result in [VALIDATION.md](VALIDATION.md). A source implementation and passin
 
 | Area | Check |
 |---|---|
-| Launcher | Tray open/close, close-to-tray, keyboard search/Enter/Escape, favorites, single instance, configurable shortcut conflict |
+| Launcher | Native decorated 800 × 800 starting window, favorites-only Dashboard, All tools/categories, Ctrl+Alt+O/Cmd+Option+O, Ctrl/Cmd+K, Alt+1–9, Ctrl/Cmd+Q, tray/close-to-tray, single instance and shortcut conflicts |
 | Settings | All three themes, restart persistence/migration, actual login registration, save failure surfaced |
 | Text/time/codes | Conversion swap and invalid input, timer pause/resume/laps/hidden completion, DST clocks/reorder persistence, QR PNG/SVG/copy |
 | Checksum | Drop/pick, published-hash match/mismatch, large generated file, progress, cancellation |
@@ -52,6 +55,7 @@ and result in [VALIDATION.md](VALIDATION.md). A source implementation and passin
 | Archives | ZIP/tar.gz fixture round trip, 7z fixture extraction, invalid archives, existing destinations, cancellation |
 | Cleanup | Scan only first; inspect allow-listed paths and counts; cleanup only in a disposable test account/VM |
 | Monitor/network | Values update only while open, CPU trace, physical/virtual interface filter, session totals |
+| Mouse Activity | Consenting Windows test session only: explicit Start/full idle delay, real input pause, held input, optional duration, monitor edges/gaps, banner/tray Stop, Quit and restart stopped; macOS/Linux unavailable |
 | Awake | Indefinite/timed/end-time modes, display option, tray toggle, release after stop/expiry/Quit |
 | Lock/power | Use a test machine; lock, short sleep timer warning, cancellation from another view/tray, actual actions only after saving work |
 | Break Time | Reminder while launcher hidden, snooze/skip, eye-rest, restart settings, idle/fullscreen best effort |
@@ -73,3 +77,15 @@ the developer's firewall configuration. Test installer behavior and final size s
 Expanded tool/provider/manual checks are in [ROADMAP_TOOLS.md](ROADMAP_TOOLS.md) and the Phase 5 task files.
 Explicit developer provider smoke commands are documented there; ordinary tests never make network calls or open devices.
 Do not tick a phase checkpoint or publish a release until its recorded acceptance checks are complete.
+
+## Website checks
+
+```bash
+node scripts/build-website.mjs
+node --test scripts/website.test.mjs
+```
+
+The build validates relative assets, local fragments and the registry-derived catalog. Reset regressions model
+the cancelable reset event before native default value restoration. Browser QA must still cover desktop and
+375px mobile layout, keyboard/focus, search/category/platform combinations, empty/reset behavior and FAQ controls.
+Record the actual Pages deployment separately; a local build is not evidence that the public site is live.

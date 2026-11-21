@@ -1,9 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="224" fill="#1C2026"/>
-  <g stroke-linejoin="round">
-    <path d="M512 214 770 363 512 512 254 363Z" fill="#F4A06B"/>
-    <path d="M254 363 512 512V810L254 661Z" fill="#E2662A"/>
-    <path d="M770 363 512 512V810L770 661Z" fill="#B54A18"/>
-    <path d="M383 288.5 641 437.5" stroke="#1C2026" stroke-width="34" stroke-linecap="round"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Oxbox</title>
+  <rect x="48" y="48" width="928" height="928" rx="208" fill="#17212e"/>
+  <rect x="64" y="64" width="896" height="896" rx="192" fill="none" stroke="#2a3748" stroke-width="4"/>
+  <rect x="288" y="288" width="448" height="448" rx="112" fill="none" stroke="#f5f7fa" stroke-width="88"/>
+  <path d="M512 288H624a112 112 0 0 1 112 112V512" fill="none" stroke="#ef7b3e" stroke-width="88" stroke-linecap="round"/>
 </svg>

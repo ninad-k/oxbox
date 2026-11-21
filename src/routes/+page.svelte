@@ -18,14 +18,20 @@
   import { settings } from '#lib/settings.svelte.ts';
   import { clocks } from '#lib/clocks.svelte.ts';
   import { listen } from '@tauri-apps/api/event';
+  import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+  import Keyboard from '@lucide/svelte/icons/keyboard';
+  import { defaultView, favoriteShortcut } from '#lib/launcher.ts';
+  import MouseActivityBanner from '#lib/ui/MouseActivityBanner.svelte';
 
-  let view = $state<View>('all');
+  let view = $state<View>(defaultView);
   let showSettings = $state(false);
   let systemError = $state('');
   let query = $state('');
   let activeId = $state<string | null>(null);
   let os = $state(guessOs());
   let version = $state('0.1.0');
+  let launcherHotkey = $state('Ctrl + Alt + O');
+  let shortcutError = $state('');
   let searchInput: HTMLInputElement | undefined = $state();
 
   const active = $derived(activeId ? toolById.get(activeId) : undefined);
@@ -43,14 +49,14 @@
     favorites: favorites.ids.filter((id) => toolById.has(id)).length,
     ...Object.fromEntries(categories.map((c) => [c.id, tools.filter((t) => t.category === c.id).length])),
   });
-  const readyCount = tools.filter((t) => t.status === 'ready').length;
+  const favoriteIds = $derived(favorites.ids.filter(id=>toolById.has(id)));
   const title = $derived(
     searching
       ? 'Search results'
       : view === 'all'
-        ? 'All tools'
+        ? 'Tool library'
         : view === 'favorites'
-          ? 'Favorites'
+          ? 'Dashboard'
           : (categoryById.get(view)?.label ?? ''),
   );
   const shortcut = $derived(os === 'macos' ? '⌘K' : 'Ctrl K');
@@ -61,6 +67,9 @@
       const info = await api.appInfo();
       os = info.os;
       version = info.version;
+      const shortcutInfo=await api.shortcutStatus();
+      launcherHotkey=shortcutInfo.shortcut.replace('CommandOrControl',info.os==='macos'?'⌘':'Ctrl').replaceAll('+',' + ');
+      shortcutError=shortcutInfo.error ?? '';
     } catch {
       // Keep the guesses; the launcher still works.
     }
@@ -108,7 +117,12 @@
   }
 
   function onWindowKey(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    const favorite = favoriteShortcut(e.code,{alt:e.altKey,ctrl:e.ctrlKey,meta:e.metaKey,shift:e.shiftKey},favoriteIds);
+    if (favorite && (!isTyping(e.target) || (e.target===searchInput && !query))) {
+      e.preventDefault(); showSettings=false; activeId=favorite;
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'q' && inDesktopApp()) {
+      e.preventDefault(); void quit();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       focusSearch();
     } else if (e.key === '/' && !isTyping(e.target)) {
@@ -123,30 +137,34 @@
   function onSearchKey(e: KeyboardEvent) {
     if (e.key === 'Enter' && results.length > 0) activeId = results[0].id;
   }
+  async function quit() {try {await api.quitApp();}catch(error){systemError=String(error);}}
 </script>
 
 <svelte:window onkeydown={onWindowKey} />
 
 <div class="app">
-  <Sidebar view={searching ? 'all' : view} {counts} {version} onselect={select} onsettings={() => {showSettings=true;activeId=null;}} />
+  <Sidebar view={searching ? 'all' : view} {counts} {version} settingsOpen={showSettings} desktop={inDesktopApp()} onselect={select} onsettings={() => {showSettings=true;activeId=null;}} onquit={()=>{void quit();}} />
 
   <main class="main">
     <SleepTimerBanner />
     <RecordingBanner />
+    <MouseActivityBanner />
+    {#if shortcutError}<Notice kind="error">Launcher shortcut unavailable. Choose another in Settings.<button class="btn" onclick={()=>{showSettings=true;activeId=null;}}>Settings</button></Notice>{/if}
+    {#if settings.error}<Notice kind="error">{settings.error}</Notice>{/if}
     {#if systemError}<Notice kind="error">{systemError}<button class="btn" onclick={()=>{systemError='';}}>Dismiss</button></Notice>{/if}
     {#if showSettings}
-      <Settings onback={() => {showSettings=false;}} />
+      <Settings onback={() => {showSettings=false;}} onshortcut={value => {launcherHotkey=value.replace('CommandOrControl',os==='macos'?'⌘':'Ctrl').replaceAll('+',' + ');shortcutError='';}} />
     {:else if active}
       <ToolView tool={active} {os} onback={closeTool} />
     {:else}
       <header class="topbar">
         <div class="search">
-          <Search size={16} aria-hidden="true" />
+          <Search size={18} aria-hidden="true" />
           <input
             bind:this={searchInput}
             bind:value={query}
             type="search"
-            placeholder="Search tools"
+            placeholder="Find a tool…"
             aria-label="Search tools"
             autocomplete="off"
             spellcheck="false"
@@ -162,12 +180,9 @@
 
       <div class="browse">
         <div class="heading">
-          <h1>{title}</h1>
-          <p class="sub" aria-live="polite">
-            {results.length}
-            {results.length === 1 ? 'tool' : 'tools'}{#if view === 'all' && !searching}&nbsp;· {readyCount} ready, more
-              arriving each release{/if}
-          </p>
+          <div><p class="eyebrow">{view==='favorites'&&!searching?'YOUR WORKSPACE':'EXPLORE OXBOX'}</p><h1>{title}</h1>
+          <p class="sub" aria-live="polite">{view==='favorites'&&!searching?'Just the tools you choose. Always within reach.':results.length+' tools for the everyday details.'}</p></div>
+          {#if view==='favorites'&&!searching}<button class="btn" onclick={()=>select('all')}>Manage favorites</button>{/if}
         </div>
 
         {#if results.length === 0}
@@ -177,9 +192,10 @@
               <h2>No tools match “{query.trim()}”</h2>
               <p>Try another word, such as “hash”, “zip” or “screenshot”.</p>
             {:else}
-              <Star size={28} aria-hidden="true" />
-              <h2>No favorites yet</h2>
-              <p>Open a tool and select the star to pin it here.</p>
+              <span class="empty-mark"><LayoutGrid size={30} strokeWidth={1.5} aria-hidden="true" /></span>
+              <h2>Make room for your essentials</h2>
+              <p>Star a tool in the library to add it to your dashboard.<br/>Everything else stays neatly out of the way.</p>
+              <button class="btn btn-primary" onclick={()=>select('all')}>Explore the tools</button>
             {/if}
           </div>
         {:else if view === 'all' && !searching}
@@ -189,18 +205,19 @@
               <h2 id="group-{cat.id}">{cat.label}</h2>
               <div class="grid">
                 {#each inCat as tool (tool.id)}
-                  <ToolTile {tool} favorite={favorites.has(tool.id)} onopen={(id) => (activeId = id)} />
+                  <ToolTile {tool} favorite={favorites.has(tool.id)} onfavorite={id=>favorites.toggle(id)} onopen={(id) => (activeId = id)} />
                 {/each}
               </div>
             </section>
           {/each}
         {:else}
           <div class="grid">
-            {#each results as tool (tool.id)}
-              <ToolTile {tool} favorite={favorites.has(tool.id)} onopen={(id) => (activeId = id)} />
+            {#each results as tool, index (tool.id)}
+              <ToolTile {tool} slot={view==='favorites'&&!searching?index+1:undefined} favorite={favorites.has(tool.id)} onfavorite={id=>favorites.toggle(id)} onopen={(id) => (activeId = id)} />
             {/each}
           </div>
         {/if}
+        {#if view==='favorites'&&!searching}<div class="keyboard-note"><Keyboard size={16}/><span><kbd>{shortcut}</kbd> search · <kbd>Alt 1–9</kbd> favorites</span></div><button class="launcher-key" onclick={()=>{showSettings=true;activeId=null;}}><span>Open Oxbox from anywhere</span><kbd>{launcherHotkey}</kbd></button>{/if}
       </div>
     {/if}
   </main>
@@ -283,12 +300,12 @@
     padding: var(--s-6);
   }
   .heading h1 {
-    font-size: 22px;
+    font-size: var(--text-2xl);
     font-weight: 650;
     letter-spacing: -0.015em;
   }
   .sub {
-    margin-top: 2px;
+    margin-top: var(--s-2);
     font-size: var(--text-sm);
     color: var(--text-3);
   }
@@ -303,14 +320,18 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(220px,100%), 1fr));
     gap: var(--s-3);
   }
   .empty {
     display: grid;
     justify-items: center;
-    gap: var(--s-2);
+    gap: var(--s-4);
     padding: var(--s-8) var(--s-4);
+    min-height:360px;
+    align-content:center;
+    border:1px dashed var(--border-strong);
+    border-radius:var(--r-lg);
     color: var(--text-3);
     text-align: center;
   }
@@ -318,4 +339,10 @@
     font-size: var(--text-lg);
     color: var(--text);
   }
+  .heading{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4)}
+  .eyebrow{font-size:var(--text-xs);font-weight:650;letter-spacing:.08em;color:var(--text-3);margin-bottom:var(--s-2)}
+  .empty-mark{display:grid;place-items:center;width:64px;height:64px;background:var(--accent-soft);color:var(--accent-text);border-radius:var(--r-lg)}
+  .keyboard-note{display:flex;align-items:center;justify-content:center;gap:var(--s-2);color:var(--text-3);font-size:var(--text-xs);padding:var(--s-3)}
+  .launcher-key{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--s-3);padding:var(--s-3);border:0;background:transparent;color:var(--text-3);font-size:var(--text-xs);cursor:pointer}.launcher-key:hover{color:var(--text)}
+  @media(max-width:820px){.heading{align-items:flex-start;flex-wrap:wrap}.heading .btn{font-size:var(--text-xs)}.browse{padding:var(--s-5)}.topbar{padding:var(--s-4) var(--s-5)}}
 </style>

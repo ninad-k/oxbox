@@ -23,23 +23,24 @@
   --r-md: 8px;
   --r-lg: 12px;
 
-  --text-xs: 11.5px;
-  --text-sm: 12.5px;
+  --text-xs: 12px;
+  --text-sm: 13px;
   --text-md: 14px;
   --text-lg: 16px;
-  --text-xl: 20px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
 
   /* Light */
-  --bg: #f5f6f8;
-  --sidebar: #eceef1;
+  --bg: #f5f7fa;
+  --sidebar: #edf1f6;
   --surface: #ffffff;
   --surface-hover: #f4f5f7;
   --surface-sunken: #f7f8fa;
-  --border: #e1e4e8;
-  --border-strong: #cbd0d7;
-  --text: #1a1d21;
-  --text-2: #4f5661;
-  --text-3: #7d8591;
+  --border: #dce3ec;
+  --border-strong: #bdc9d8;
+  --text: #17212e;
+  --text-2: #4c5c70;
+  --text-3: #64748b;
   --accent: #d4581f;
   --accent-hover: #bd4d1a;
   --accent-text: #b04714;
@@ -65,16 +66,16 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #15171b;
-    --sidebar: #1a1d21;
-    --surface: #1f2227;
-    --surface-hover: #272b31;
-    --surface-sunken: #191c20;
-    --border: #2d3138;
-    --border-strong: #3c424b;
+    --bg: #111720;
+    --sidebar: #151d28;
+    --surface: #1a2431;
+    --surface-hover: #202d3d;
+    --surface-sunken: #141d28;
+    --border: #2a3748;
+    --border-strong: #43546b;
     --text: #e8eaed;
-    --text-2: #a9b0ba;
-    --text-3: #7a828d;
+    --text-2: #b5c1d1;
+    --text-3: #91a1b7;
     --accent: #ee7a3f;
     --accent-hover: #f48b55;
     --accent-text: #f4955f;
@@ -232,16 +233,16 @@ p {
 }
 :root[data-theme='dark'] {
     color-scheme: dark;
-    --bg: #15171b;
-    --sidebar: #1a1d21;
-    --surface: #1f2227;
-    --surface-hover: #272b31;
-    --surface-sunken: #191c20;
-    --border: #2d3138;
-    --border-strong: #3c424b;
+    --bg: #111720;
+    --sidebar: #151d28;
+    --surface: #1a2431;
+    --surface-hover: #202d3d;
+    --surface-sunken: #141d28;
+    --border: #2a3748;
+    --border-strong: #43546b;
     --text: #e8eaed;
-    --text-2: #a9b0ba;
-    --text-3: #7a828d;
+    --text-2: #b5c1d1;
+    --text-3: #91a1b7;
     --accent: #ee7a3f;
     --accent-hover: #f48b55;
     --accent-text: #f4955f;
@@ -262,4 +263,9 @@ p {
     --tone-violet: #a28cf0;
     --tone-green: #5cc27a;
     --tone-red: #ee7c70;
+}
+
+@media (forced-colors: active) {
+  .card, .input, .btn { border-color: CanvasText; }
+  :focus-visible { outline-color: Highlight; }
 }

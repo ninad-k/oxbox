@@ -10,6 +10,13 @@ pub const MAIN_WINDOW: &str = "main";
 pub fn create(app: &App) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open Oxbox", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
+    let stop_mouse = MenuItem::with_id(
+        app,
+        "stop-mouse",
+        "Stop Mouse Activity",
+        cfg!(target_os = "windows"),
+        None::<&str>,
+    )?;
     let awake = MenuItem::with_id(app, "awake", "Toggle Do Not Sleep", true, None::<&str>)?;
     let lock = MenuItem::with_id(app, "lock", "Lock Screen", true, None::<&str>)?;
     let stop_recording =
@@ -38,6 +45,7 @@ pub fn create(app: &App) -> tauri::Result<()> {
             &awake,
             &lock,
             &stop_recording,
+            &stop_mouse,
             &cancel_sleep,
             &desktop,
             &separator,
@@ -58,6 +66,7 @@ pub fn create(app: &App) -> tauri::Result<()> {
             "awake" => crate::system_commands::toggle_awake(app),
             "lock" => crate::system_commands::lock_now(app),
             "stop-recording" => crate::roadmap_media_commands::stop_from_tray(app),
+            "stop-mouse" => crate::mouse_activity_commands::stop_from_tray(app),
             "cancel-sleep" => {
                 let _ = crate::system_commands::sleep_cancel(app.clone());
             }

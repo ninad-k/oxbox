@@ -5,7 +5,7 @@
   import { settings } from '#lib/settings.svelte.ts';
   import type { Theme } from '#lib/settings.ts';
   import Notice from './Notice.svelte';
-  let { onback }: {onback: () => void} = $props();
+  let { onback, onshortcut }: {onback: () => void; onshortcut: (shortcut: string) => void} = $props();
   let login = $state(false), busy = $state(false), shortcut = $state(''), message = $state(''), error = $state('');
   onMount(() => {
     let disposed = false;
@@ -27,7 +27,7 @@
   }
   async function saveShortcut() {
     busy = true; error = ''; message = '';
-    try { shortcut = await api.configureShortcut(shortcut); message = 'Global shortcut saved.'; }
+    try { shortcut = await api.configureShortcut(shortcut); onshortcut(shortcut); message = 'Global shortcut saved.'; }
     catch (e) { error = String(e); }
     finally { busy = false; }
   }
@@ -41,11 +41,11 @@
   </label>
   <label><input type="checkbox" checked={login} disabled={busy || !inDesktopApp()} onchange={e => changeLogin(e.currentTarget.checked)} /> Launch Oxbox at login</label>
   <form class="field" onsubmit={e => {e.preventDefault(); void saveShortcut();}}>
-    <label class="field"><span class="field-label">Global launcher shortcut</span><input class="input" bind:value={shortcut} placeholder="CommandOrControl+Alt+Space" disabled={!inDesktopApp()} /></label>
-    <p>Use modifier names and a key, for example Control+Alt+Space or Super+Alt+Space on macOS.</p>
+    <label class="field"><span class="field-label">Global launcher shortcut</span><input class="input" bind:value={shortcut} placeholder="CommandOrControl+Alt+O" disabled={!inDesktopApp()} /></label>
+    <p>Use modifier names and a key, for example Control+Alt+O or Super+Alt+O on macOS.</p>
     <button class="btn" disabled={busy || !shortcut.trim() || !inDesktopApp()}>Save shortcut</button>
   </form>
-  <Notice kind="info">Settings and favorites stay on this computer. Clipboard history is kept in memory. Oxbox sends no telemetry.</Notice>
+  <Notice kind="info">Settings and favorites stay on this computer. Clipboard history is kept in memory. Oxbox implements no app telemetry; embedded runtime privacy is tracked in the project documentation.</Notice>
   {#if !inDesktopApp()}<Notice kind="info">Launch at login and global shortcuts are available in the desktop app.</Notice>{/if}
   {#if message}<Notice kind="success">{message}</Notice>{/if}
   {#if error || settings.error}<Notice kind="error">{error || settings.error}</Notice>{/if}

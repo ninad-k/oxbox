@@ -42,8 +42,8 @@ and gets the result in one or two clicks, on all three OSes.
 
 Build order: `shell` → `text`, `files` (pure logic, easiest to test) → `system`, `power`, `time` → `media`, `capture`, `clipboard`, `privacy`.
 
-### Platform support (v0.1)
-- **Windows 10/11:** every tool. This is the primary development target, verified on a real machine.
+### Platform support targets (v0.1)
+- **Windows 10/11:** primary development target. Native spot checks are recorded, while full tool-by-tool acceptance remains open.
 - **macOS 12+ and Linux (X11/Wayland, GNOME/KDE):** builds in CI. Where an OS API differs, the tool either has an
   implementation or is shown as "not available on this OS". It is never shown broken.
   Known gaps: Hide Desktop on Linux varies by desktop environment; window capture on Wayland is limited.
@@ -55,11 +55,17 @@ Uninstall Apps, Launch (app sets), Energy Saver, Airplane Mode, Date Countdown, 
 (Download Video/Audio is deliberately deferred: it raises site terms-of-service issues.)
 
 On 2026-11-21 the user explicitly promoted the planned Phase 5 rows as well as Phases 1–4. Detailed promoted
-task files are linked from `tasks/todo.md`; source now exposes 48 tools. The excluded/deferred tools remain excluded.
+task files are linked from `tasks/todo.md`. A later explicitly authorized Windows-only Mouse Activity tool brings
+the source catalog to **49 tools**; its idle-aware sessions require explicit Start and native acceptance is pending.
+The launcher revision uses a favorites-only Dashboard, an original outlined O/ember brand, and a normal
+800 × 800 starting window. The excluded/deferred tools remain excluded.
 Core commands remain local by default, with explicit opt-in ECB currency refresh allowed after the
 user-authorized [network issue #1](https://github.com/ninad-k/oxbox/issues/1). Those requests send no user amounts or files.
 The strict whole-process offline goal in user story 3 is not yet accepted on Windows: release QA observed
 background WebView2 HTTPS traffic. Its purpose remains unresolved; see [runtime privacy findings](docs/RUNTIME_PRIVACY.md).
+An isolated-profile diagnosis subsequently identified vendor configuration and component-update requests.
+The user approved supported app-scoped SDK controls and existing bindings; strict offline acceptance remains
+open until production verification of [the runtime privacy follow-up](tasks/runtime-privacy.md).
 
 ## Tech Stack
 
@@ -161,7 +167,7 @@ Naming: Rust `snake_case` modules, tool ids `kebab-case` (`verify-checksum`), Sv
 
 1. `cargo test --workspace`, clippy (`-D warnings`), fmt check and `pnpm check` all pass locally and in CI on all 3 OSes.
 2. `pnpm tauri build` produces a Windows installer under 15 MB, and CI produces macOS and Linux bundles.
-3. The app starts to the tray in under 1 s. The launcher opens from the tray and from a global shortcut (default `Ctrl/Cmd+Alt+Space`).
+3. The app starts to the tray in under 1 s. The launcher opens from the tray and from a global shortcut (current fresh-install default `Ctrl/Cmd+Alt+O`; previously saved bindings remain).
 4. All 20 tools work end-to-end on Windows 11 (checked by hand, recorded in the release notes); tools unsupported on an OS are shown as such.
 5. No network traffic in the default runtime configuration. The promoted currency tool alone can fetch fixed public ECB
    data after explicit opt-in; no HTTP client dependency, telemetry, or user-content upload is introduced.

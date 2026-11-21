@@ -17,10 +17,7 @@ use std::{
     },
     thread::JoinHandle,
 };
-use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder,
-};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewWindow};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct FocusFrame {
@@ -192,22 +189,26 @@ pub async fn roadmap_focus_start(
                     .ok_or_else(state_error)?;
                 (monitor.bounds, monitor.scale)
             };
-            let builder =
-                WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("focus-overlay".into()))
-                    .title("Oxbox Focus Shade")
-                    .decorations(false)
-                    .always_on_top(true)
-                    .skip_taskbar(true)
-                    .focused(false)
-                    .focusable(false)
-                    .resizable(false)
-                    .visible(false)
-                    .inner_size(bounds.width as f64 / scale, bounds.height as f64 / scale);
-            #[cfg(not(target_os = "macos"))]
-            let builder = builder.transparent(true);
-            let window = builder
-                .build()
-                .map_err(|e| ToolError::internal(e.to_string()))?;
+            let window = crate::runtime_privacy::create_window(
+                &app,
+                label.clone(),
+                "focus-overlay".into(),
+                move |builder| {
+                    let builder = builder
+                        .title("Oxbox Focus Shade")
+                        .decorations(false)
+                        .always_on_top(true)
+                        .skip_taskbar(true)
+                        .focused(false)
+                        .focusable(false)
+                        .resizable(false)
+                        .visible(false)
+                        .inner_size(bounds.width as f64 / scale, bounds.height as f64 / scale);
+                    #[cfg(not(target_os = "macos"))]
+                    let builder = builder.transparent(true);
+                    builder
+                },
+            )?;
             // Stop can race native construction. Never leave a newly-created
             // window behind after ownership of its session has been removed.
             let still_current = state

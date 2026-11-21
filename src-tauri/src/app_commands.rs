@@ -33,7 +33,7 @@ pub fn initialize(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .ok()
         .and_then(|s| s.get("shortcut"))
         .and_then(|v| v.as_str().map(str::to_owned))
-        .unwrap_or_else(|| "CommandOrControl+Alt+Space".into());
+        .unwrap_or_else(|| "CommandOrControl+Alt+O".into());
     let result = shortcut
         .parse::<Shortcut>()
         .map_err(|e| e.to_string())
@@ -55,6 +55,11 @@ pub fn shortcut_status(state: State<'_, ShortcutState>) -> Result<ShortcutStatus
         .lock()
         .map(|s| s.status.clone())
         .map_err(|_| ToolError::internal("Shortcut state unavailable".into()))
+}
+
+#[tauri::command]
+pub fn quit_app(app: AppHandle) {
+    app.exit(0);
 }
 #[tauri::command]
 pub fn configure_shortcut(

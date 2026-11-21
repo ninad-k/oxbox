@@ -10,7 +10,7 @@ use std::sync::{
 use oxbox_core::tools::screenshot::{self, CaptureKind, CaptureTarget, RgbaImage, Selection};
 use oxbox_core::{CoreError, CoreResult};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 #[cfg(target_os = "macos")]
 use tauri::{LogicalPosition, LogicalSize};
 #[cfg(not(target_os = "macos"))]
@@ -213,19 +213,24 @@ async fn start_inner(
         if is_quitting(app) {
             return Err(CoreError::Cancelled.into());
         }
-        let builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("overlay".into()))
-            .title("Oxbox area selection")
-            .decorations(false)
-            .always_on_top(true)
-            .skip_taskbar(true)
-            .resizable(false)
-            .visible(false);
-        // macOS transparency requires private APIs; the frozen frame is an opaque fallback.
-        #[cfg(not(target_os = "macos"))]
-        let builder = builder.transparent(true);
-        let window = builder
-            .build()
-            .map_err(|error| ToolError::internal(error.to_string()))?;
+        let window = crate::runtime_privacy::create_window(
+            app,
+            label.clone(),
+            "overlay".into(),
+            |builder| {
+                let builder = builder
+                    .title("Oxbox area selection")
+                    .decorations(false)
+                    .always_on_top(true)
+                    .skip_taskbar(true)
+                    .resizable(false)
+                    .visible(false);
+                // macOS transparency requires private APIs; retain the opaque fallback.
+                #[cfg(not(target_os = "macos"))]
+                let builder = builder.transparent(true);
+                builder
+            },
+        )?;
         // Xcap uses CoreGraphics logical points on macOS, physical pixels elsewhere.
         // Giving Retina points to PhysicalSize would cover only part of the display.
         #[cfg(target_os = "macos")]
