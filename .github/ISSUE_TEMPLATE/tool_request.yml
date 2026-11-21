@@ -1,0 +1,29 @@
+name: Tool request
+description: Suggest a new tool for Oxbox
+labels: [tool-request]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Tool name
+      placeholder: Color Picker
+    validations:
+      required: true
+  - type: textarea
+    id: job
+    attributes:
+      label: What should it do, in one or two sentences?
+    validations:
+      required: true
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Which OSes do you need it on?
+      options:
+        - label: Windows
+        - label: macOS
+        - label: Linux
+  - type: textarea
+    id: notes
+    attributes:
+      label: Implementation ideas (crates, OS APIs), if any

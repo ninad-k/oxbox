@@ -1,0 +1,35 @@
+name: Bug report
+description: Something in Oxbox doesn't work as expected
+labels: [bug]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool
+      description: Which tool (or "launcher"/"tray")?
+      placeholder: verify-checksum
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open …\n2. Click …"
+  - type: input
+    id: os
+    attributes:
+      label: OS and version
+      placeholder: Windows 11 24H2 / macOS 15.2 / Ubuntu 24.04 (GNOME)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Oxbox version
+      placeholder: 0.1.0

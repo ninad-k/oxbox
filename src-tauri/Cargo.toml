@@ -1,0 +1,25 @@
+[package]
+name = "oxbox"
+description = "Oxbox: a free, open-source toolbox of one-click desktop utilities"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+# The `_lib` suffix avoids a name clash with the binary on Windows (cargo#8519).
+name = "oxbox_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+oxbox-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"

@@ -1,0 +1,231 @@
+/*
+ * Oxbox design tokens. Use these variables; never hard-code colours or spacing in components.
+ * Spacing scale: 4px steps (--s-1 … --s-8). Radii: --r-sm (controls), --r-md (cards), --r-lg (panels).
+ */
+:root {
+  color-scheme: light;
+
+  --font-ui: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Inter', 'Cantarell', 'Ubuntu', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', 'SF Mono', 'JetBrains Mono', 'Consolas', 'Menlo', monospace;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 48px;
+
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  --text-xs: 11.5px;
+  --text-sm: 12.5px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+
+  /* Light */
+  --bg: #f5f6f8;
+  --sidebar: #eceef1;
+  --surface: #ffffff;
+  --surface-hover: #f4f5f7;
+  --surface-sunken: #f7f8fa;
+  --border: #e1e4e8;
+  --border-strong: #cbd0d7;
+  --text: #1a1d21;
+  --text-2: #4f5661;
+  --text-3: #7d8591;
+  --accent: #d4581f;
+  --accent-hover: #bd4d1a;
+  --accent-text: #b04714;
+  --accent-soft: #fcede5;
+  --on-accent: #ffffff;
+  --focus: #d4581f;
+  --success: #1f7a3d;
+  --success-soft: #e6f4ea;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --info-soft: #eef2f7;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+
+  --tone-blue: #2563d9;
+  --tone-teal: #0c8a7c;
+  --tone-amber: #b7791f;
+  --tone-rose: #c43a63;
+  --tone-violet: #6d4fd0;
+  --tone-green: #23863f;
+  --tone-red: #c0392b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #15171b;
+    --sidebar: #1a1d21;
+    --surface: #1f2227;
+    --surface-hover: #272b31;
+    --surface-sunken: #191c20;
+    --border: #2d3138;
+    --border-strong: #3c424b;
+    --text: #e8eaed;
+    --text-2: #a9b0ba;
+    --text-3: #7a828d;
+    --accent: #ee7a3f;
+    --accent-hover: #f48b55;
+    --accent-text: #f4955f;
+    --accent-soft: rgb(238 122 63 / 0.14);
+    --on-accent: #1a1d21;
+    --focus: #f4955f;
+    --success: #4fbf72;
+    --success-soft: rgb(79 191 114 / 0.14);
+    --danger: #f07167;
+    --danger-soft: rgb(240 113 103 / 0.14);
+    --info-soft: #23272d;
+    --shadow-sm: none;
+
+    --tone-blue: #6b9cf2;
+    --tone-teal: #3cc2b1;
+    --tone-amber: #e0a541;
+    --tone-rose: #ec7799;
+    --tone-violet: #a28cf0;
+    --tone-green: #5cc27a;
+    --tone-red: #ee7c70;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Shared controls ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 32px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.btn-icon {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.field {
+  display: grid;
+  gap: var(--s-1);
+}
+.field-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+.input,
+.textarea {
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

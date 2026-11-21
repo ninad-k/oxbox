@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Oxbox",
+  "version": "0.1.0",
+  "identifier": "dev.oxbox.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Oxbox",
+        "width": 1080,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 520,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Utility",
+    "shortDescription": "Free, open-source toolbox of one-click desktop utilities",
+    "longDescription": "Oxbox is a tray app with a collection of small, fast utilities: keep awake, screenshots, checksums, duplicate finder, QR codes, system monitor and more. Offline, no telemetry.",
+    "license": "MIT OR Apache-2.0",
+    "copyright": "Copyright (c) Oxbox contributors",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
