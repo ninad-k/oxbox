@@ -33,7 +33,8 @@ the presence of this changelog does not mean installers have been published.
 - Added Windows-only **Mouse Activity**, bringing the catalog to 49 tools. Sessions require explicit Start,
   wait for a configurable idle delay, pause on resumed input, and offer Stop in the tool, banner and tray.
   Optional duration, Stop, error and Quit release the worker. No clicks, typing or scrolling are generated.
-  Tests use fake backends; native pointer/hardware acceptance is still pending.
+  Tests use fake backends. A bounded Windows production check observed two idle pointer movements,
+  pause on controlled input and Stop; full physical-input/hardware acceptance remains open.
 - Made Dashboard a favorites-only view, with All tools and category browsing available separately. The normal
   resizable native window starts at 800 × 800 logical pixels and uses the original outlined O/ember brand.
 - Changed the default global launcher binding to Ctrl+Alt+O, or Cmd+Option+O on macOS. Existing saved bindings
@@ -43,10 +44,14 @@ the presence of this changelog does not mean installers have been published.
   SVG brand asset as the app, without external fonts, analytics or CDN scripts.
 - Fixed website Reset so the search fields, visible cards and result status update together; regression coverage
   models form-reset default-action ordering.
-- Added app-scoped WebView2 SDK controls: an isolated profile, custom crash reporting, OS-account SSO disabled,
-  and external web-resource blocking before local navigation. Browser-owned background traffic remains an open release gate.
-- This revision does not close native UI/hardware, clean-machine installer, human security/license or strict
-  WebView2 offline acceptance gates. Draft installer and publication status remain separate from source changes.
+- The retained legacy host includes app-scoped WebView2 SDK controls: an isolated profile, custom crash reporting,
+  OS-account SSO disabled and external web-resource blocking. Its browser-owned background requests motivated
+  the native migration; it is not the host in the new native installers.
+- Native Windows MSI/NSIS packages were built, inspected and uploaded to the existing unpublished draft;
+  downloaded hashes match. Windows/macOS ARM/Linux native CI and Rust 1.95 checks passed. Bounded Windows
+  production endpoint observations found no owned TCP/UDP endpoints within their stated intervals.
+- Full native tool/hardware/accessibility, clean-machine installer, DNS/other-OS runtime and human security/license
+  acceptance remain open. Draft installer and publication status remain separate from source changes.
 
 ### Added
 

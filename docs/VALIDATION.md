@@ -251,10 +251,70 @@ presence of code, a ready launcher entry, or an unchecked checklist.
 - Native recovery uses bounded/coalescing independent system/media workers. Callback-entry barriers stop pending
   admissions and cancellation independently of egui polling during a synchronous file dialog. Quit requests
   close jobs/reminders/notifications and both cleanup lanes; normal shutdown joins all owned workers.
-- Final Windows native production executable was built with Rust1.95.0, static CRT, original icon/version resource:
+- Preceding source-A Windows native production executable was built with Rust1.95.0, static CRT, original icon/version resource:
   **13,480,960bytes**, SHA256 `6fb64ef38e8a5725c72ef614cf78fc304775d8ed8310606ac72f45a447ba91b5`.
   MSI/NSIS builds succeeded, with an installed-copy marker and exact-owned startup uninstall cleanup. No generated
   installer has been installed on this workstation. Final payload inspection/runtime results follow separately.
 - Startup defaults are tested as policy/fake transactions, including saved/OS-disabled choice preservation,
   development/isolated-profile guards, quoted Windows paths and preserving a repurposed Run command. Actual
   install/login/upgrade/uninstall behavior still requires a clean Windows account/VM.
+
+## Native production candidate and installer inspection — 2026-11-21
+
+The final functional source is `7132daa231627925359410132e754673f68905cc`. Its only change after
+`efdab7435bfe6d89b93ff6198779d031ab7f8826` is a non-Windows duplicate-file clippy correction; the Windows
+branch remains unchanged. A fresh exact-Rust-1.95.0 production build changed 24 PE timestamp/CodeView GUID
+bytes; executable code, data, unwind tables and resources matched the preceding Windows build byte-for-byte.
+The final installers were repackaged from this exact executable without another Rust compilation.
+
+[CI run 44941250679](https://github.com/ninad-k/oxbox/actions/runs/44941250679) completed successfully for
+that source: Windows, macOS ARM and Linux native strict clippy/tests/production builds, Windows Rust 1.95
+minimum-toolchain check, and legacy UI/packaging regressions. macOS Intel runtime/package acceptance remains open.
+
+| Final Windows artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `oxbox-native.exe` | 13,480,960 | `257b5b20f92724cc18dcf4e2167917d4d53385974f1521c87940ee1d72f9840c` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 5,689,344 | `21da99c977675a47ae1862688e2ca842da08f53be788778e7a6d532863221498` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,024,779 | `81e5f5ed1ebfcc9d1c3e54e1774bac1e64f49e053714ad164c53178f2eabc781` |
+
+- Independently extracted MSI executable hash matches the final executable. Its installed marker, MIT/Apache
+  licenses and checked-in Windows notices match their inputs. Windows notice inventory: 355 packages,
+  zero missing texts, three outstanding human attribution reviews. The notices SHA-256 is
+  `c9edae1d9895ce866549691a9c5209976e81328a65d363b49a46a4a25701a7d0`.
+- PE imports contain only Windows system DLLs, with no WebView2 loader or VC redistributable dependency.
+  Icon resources match the original Oxbox icon; app/installer versions are 0.1.0. All artifacts are unsigned.
+- MSI invokes ownership-checked native startup cleanup before RemoveFiles, only for full uninstall outside
+  an upgrade. Generated NSIS source and successful compiler output verify branded install/uninstall icons,
+  no WebView installation, guarded native cleanup before executable removal, and no unconditional Run deletion.
+  NSIS was not independently extracted or installed; clean-machine acceptance remains open for both installers.
+- Actual native Windows GUI checks on the preceding byte-equivalent-code build covered empty/four-favorite
+  dashboards, light/dark appearance, Alt+1, search, conversion/swap, local QR preview and parented file-picker
+  Cancel/Accept with foreground restoration. Fixture checksum matched
+  `5f6dbde1effd671b5daad02f4a2ae049dd7b3e5f6682392484a043dff9445820`.
+- Mouse Activity produced two pointer-only movements with 30-second idle/interval settings, paused on Tab
+  input and stopped from its banner. Quiet `--autostart` produced a tray-only process; second launch restored
+  the original window and direct Quit removed all owned processes. No installed startup registration was changed.
+- The final executable independently opened an empty Dashboard and 49-tool library, displayed 0.001 km for
+  1 meter, and exited through its Quit button. A manual negative Ctrl+Shift+Q check (extra Shift should reject
+  the Ctrl+Q binding) was inconclusive after UI automation reported an unusable window. Exact-modifier unit
+  tests pass; this negative check and full manual keyboard-Quit acceptance remain open.
+- A separate exact-final-executable endpoint observation completed normally over 360.154 s / 7,201 samples,
+  before launch through normal startup, brief idle, Unit Converter and direct Quit, ending with zero owned
+  processes. No owned TCP rows (including listeners/loopback) or UDP bindings were observed; aggregate checks
+  of all rows confirmed zero endpoint sums/maxima, and query/marker errors were zero.
+  p95/maximum sample gaps were 62.62/81.82 ms; approximately 283.1 s followed the last owned sample.
+  These are bounded Windows snapshots, not DNS/packet/provider or all-platform acceptance.
+- Cross-target notices were generated without overwriting Windows output: macOS ARM 372 packages / 0 missing /
+  29 reviews; macOS Intel 374 / 0 / 29; Linux x64 541 / 0 / 4. Pinned supplements have verified source/text hashes.
+  Reproducible notices do not close the human attribution or installer-toolchain review.
+- GitHub Pages desktop and 375-pixel mobile checks passed: actual native hero image, no horizontal overflow,
+  Mouse search, platform empty state, reset to 49 tools and startup FAQ. The site does not offer public draft downloads.
+- The [existing release draft](https://github.com/ninad-k/oxbox/releases) (release ID `453727915`)
+  targets functional source `7132daa`; its native MSI/NSIS, checksum manifest, notices and two Oxbox license
+  files were downloaded after upload and all six hashes matched their local inputs. Superseded Tauri installer
+  assets were removed. Remote postcondition: draft true, prerelease true, six native review assets, no version
+  tag pushed and no release published. The checksum manifest SHA-256 is
+  `a18f6c149d95897bca7c7dcaf349b1b276efc504682f152af7b8764aaea6a428`.
+
+Full per-tool/hardware/monitor/accessibility acceptance, real install/login/upgrade/uninstall, independent
+security/license review, DNS coverage and other-OS runtime observation remain open. See [RELEASE.md](RELEASE.md).

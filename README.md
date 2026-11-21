@@ -31,8 +31,9 @@ conflicts can be resolved in Settings. Installed Windows/macOS copies enable log
 > it does not imply a published or independently audited release. Contributions welcome.
 
 > **Runtime privacy:** the selected eframe/egui host has no embedded browser. The retained Tauri host previously
-> exhibited WebView2 background HTTPS. Native production privacy observation and release acceptance remain open;
-> see the [migration checklist](tasks/native-migration.md) and [historical privacy findings](docs/RUNTIME_PRIVACY.md).
+> exhibited WebView2 background HTTPS. Bounded Windows production observations found no owned TCP/UDP endpoints
+> in the recorded startup, idle, tool and tray/Quit windows; DNS, provider, other-OS and release gates remain open. See the
+> [migration checklist](tasks/native-migration.md) and [scoped privacy record](docs/RUNTIME_PRIVACY.md).
 
 ## Tools
 
@@ -64,7 +65,9 @@ The original 20 tools, 28 user-promoted Phase 5 entries, and Windows-only Mouse 
 presentation tools, alarms, media recording/conversion, OCR, barcode reading, color sampling, and currency.
 See [the expanded tool guide](docs/ROADMAP_TOOLS.md) for platform support and local-provider requirements.
 Mouse Activity always starts stopped; it does not click, type or scroll. Read its [behavior and limits](docs/MOUSE_ACTIVITY.md)
-before starting a session. Its native Windows acceptance remains pending.
+before starting a session. A bounded Windows production GUI check reported two idle pointer movements, pause
+on controlled Tab input and Stop. Physical input, held keys/buttons, locked desktops, multi-monitor/DPI and
+full native acceptance remain pending; the guide identifies the tested executable and exact settings.
 
 The [project website](https://ninad-k.github.io/oxbox/) includes the complete searchable catalog, generated from the same
 [canonical JSON catalogue](catalog/tools.json) as the native and legacy interfaces. See the [website contributor guide](website/README.md). Website deployment is separate from public installer publication.
@@ -95,8 +98,10 @@ Node 22.17+ and frozen pnpm dependencies, then use the graph-checking native bui
 
 The wrapper builds oxbox-native and reuses the existing bundler only as an installer tool. pnpm tauri dev/build
 operate the retained legacy host and are not native release commands. See [AGENTS.md](AGENTS.md) for all checks.
-The current implementation branch is codex/native-renderer. Earlier Windows installers remain an unpublished
-historical draft; new native artifacts, size and clean-machine behavior require separate verification.
+The current implementation branch is codex/native-renderer. Native Windows MSI/NSIS installers and checksums
+are attached to an unpublished review draft. Their downloaded hashes were verified; clean-machine behavior
+and the other release gates remain open. [Functional-source CI passed](https://github.com/ninad-k/oxbox/actions/runs/44941250679)
+on Windows, macOS ARM and Linux with exact Rust 1.95.0.
 There is no public installer download yet. Check [Releases](https://github.com/ninad-k/oxbox/releases) for status.
 Unsigned builds can produce OS warnings. The [release gates](docs/RELEASE.md) remain open.
 
@@ -118,7 +123,7 @@ src/ and src-tauri/ trees remain available for parity comparison.
 - [docs/RELEASE.md](docs/RELEASE.md): installer and publication checklist
 - [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md): dependency review and primary references
 - [docs/ROADMAP_TOOLS.md](docs/ROADMAP_TOOLS.md): Phase 5 tools, providers and network opt-in
-- [docs/MOUSE_ACTIVITY.md](docs/MOUSE_ACTIVITY.md): Windows idle-aware pointer sessions and pending native acceptance
+- [docs/MOUSE_ACTIVITY.md](docs/MOUSE_ACTIVITY.md): Windows pointer sessions, bounded GUI evidence and remaining acceptance
 - [catalog/README.md](catalog/README.md): shared metadata, icon/view adapters and consistency checks
 - [tasks/native-migration.md](tasks/native-migration.md): 49-tool route/automation/manual matrix
 - [website/README.md](website/README.md): generated catalog, static site checks and GitHub Pages deployment
@@ -135,8 +140,10 @@ Oxbox implements no app telemetry. Tool commands work locally; currency rates ar
 after a separate explicit opt-in, a manual refresh downloads public ECB reference data. Amounts and selected
 currencies stay local. The reviewed exception is [issue #1](https://github.com/ninad-k/oxbox/issues/1).
 The selected native renderer removes the embedded WebView2 dependency. The earlier browser investigation is
-preserved in [runtime privacy findings](docs/RUNTIME_PRIVACY.md). Native startup, idle, tool/provider and Quit
-network observations still require production evidence; replacing the renderer is not a universal zero-network guarantee.
+preserved in [runtime privacy findings](docs/RUNTIME_PRIVACY.md), alongside bounded native Windows production
+observations with no owned TCP/UDP endpoints seen. The record specifies executable hashes, separate intervals,
+sample gaps and exclusions. DNS/OS-broker attribution, other tool/providers and other operating systems require
+their own evidence; finite observations are not a universal zero-network guarantee.
 Clipboard recording starts paused, stays in memory, and is cleared on Quit. Saved settings and tool outputs
 stay on your computer. File cleanup goes to the Recycle Bin/Trash after confirmation; outputs preserve originals.
 See the [usage guide](docs/USAGE.md) for limits and the [security policy](SECURITY.md) for private reports.

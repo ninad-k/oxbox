@@ -26,8 +26,46 @@ Only aggregate counts are retained; no addresses, ports, command lines or unrela
 Requested interval was 50 ms, actual p95 start-to-start gap **62.96 ms**, maximum **551.38 ms**. Sockets wholly
 between samples can be missed. UDP tables show bindings rather than destinations or traffic. Windows DNS
 Client/cache, other OS brokers, drivers and explicitly opened external apps are outside this attribution;
-no ETW/DNS or packet trace is claimed. This is preliminary evidence, not production or other-OS acceptance.
-Production binary measurements, per-tool providers, DNS coverage and all-platform acceptance remain open.
+no ETW/DNS or packet trace is claimed. This first run is debug evidence only.
+
+### Bounded Windows production observations
+
+The Rust 1.95.0 release executable from source `efdab7435bfe6d89b93ff6198779d031ab7f8826`
+was checked by SHA-256 before each observation:
+`6fb64ef38e8a5725c72ef614cf78fc304775d8ed8310606ac72f45a447ba91b5` (13,480,960 bytes).
+These are separate windows, not one continuous trace.
+
+| Window | Duration / samples | Observed scope | p95 / maximum sample gap |
+| --- | --- | --- | --- |
+| Production tools | 600.141 s / 12,000 | Before launch, startup, idle, Unit Converter, two finite Mouse Activity pointer moves and single-instance activation. The app was still alive at the last sample; Quit is outside this window. | 62.95 / 85.70 ms |
+| Quiet-tray lifecycle | 201.768 s / 4,033 | Before launch, `--autostart` without a main window, activation of the existing instance, direct Quit, and approximately 95.8 s after the last owned process sample. | 62.83 / 79.28 ms |
+
+Both windows completed normally with **zero owned TCP rows or UDP bindings observed**, zero query/phase-marker
+failures and no browser/provider child. At most two native instances appeared during deliberate activation;
+the quiet-tray window ended with no owned processes. UI behavior was observed separately from endpoint queries.
+An earlier 73.593 s attempt ended on a phase-marker sharing error and is excluded from complete-run evidence.
+The observer was corrected to tolerate atomic marker replacement and require normal completion.
+
+This supports only the stated Windows executable, tools and intervals. The snapshot/DNS/OS-broker limits above
+also apply to these production runs. Camera, microphone, recording, capture, clipboard history and ECB refresh
+were not activated. Per-tool/provider, DNS and macOS/Linux runtime acceptance remain open; no universal
+zero-network claim is made. Exact final-installer source/hash evidence is recorded in [VALIDATION.md](VALIDATION.md).
+
+### Exact final executable lifecycle
+
+The final source `7132daa231627925359410132e754673f68905cc` executable, SHA-256
+`257b5b20f92724cc18dcf4e2167917d4d53385974f1521c87940ee1d72f9840c`, was pinned before a separate
+**360.154 s / 7,201 sample** observation. It began before normal startup with a fresh isolated profile,
+covered the empty Dashboard/49-tool library, brief idle, Unit Converter and direct Quit, and ended with
+zero owned processes. First/last sampled ownership was at 22.662/77.051 s, leaving approximately 283.1 s
+after the last owned sample. It completed normally with zero query/marker errors, no observed owned
+TCP rows (including listeners/loopback) or UDP bindings and no descendants. Aggregate checks of all
+7,201 rows confirmed zero sums and maxima for both endpoint counts. Actual p95/maximum sample gaps were
+62.62/81.82 ms. This is the exact executable independently extracted from the final MSI.
+
+An earlier 180.044 s / 3,600 sample final-executable window observed startup/brief read-only use but ended
+with the process still alive. It does not cover Quit and is not combined with the complete lifecycle window.
+All sampling/DNS/OS-broker/provider limitations above remain applicable.
 
 No Windows/Edge policy, firewall, privacy or security setting was changed. The draft must remain unpublished.
 

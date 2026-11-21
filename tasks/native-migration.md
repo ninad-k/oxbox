@@ -19,6 +19,34 @@ platform availability, streaming/data safety, settings, background behavior and 
 - [ ] Build and inspect native installers, test on clean machines, update the existing unpublished draft.
 - [ ] Complete real hardware/power/input, monitor/DPI, accessibility and independent human security/license gates.
 
+## Bounded Windows observations
+
+These checked subsets record finite evidence, not completion of a full tool row or the release gates above.
+The controlled production Mouse Activity run used build **A**, executable SHA-256
+`6fb64ef38e8a5725c72ef614cf78fc304775d8ed8310606ac72f45a447ba91b5`.
+
+- [x] Actual native Windows screenshots are available for the [dark dashboard](../docs/images/native-dashboard-dark.jpg),
+  [light dashboard](../docs/images/native-dashboard-light.jpg), [Unit Converter](../docs/images/native-unit-converter.jpg)
+  and [stopped Mouse Activity controls](../docs/images/native-mouse-activity.jpg).
+- [x] Build A Mouse Activity: idle threshold 30 seconds, interval 30 seconds; after 71 seconds the GUI
+  reported Simulating and two pointer movements. Controlled Tab input reported Paused with idle 0 seconds;
+  Stop reported Stopped. [Exact scope and remaining checks](../docs/MOUSE_ACTIVITY.md#contributor-checks).
+- [x] A separate bounded **debug** Windows owner-PID TCP/UDP observation is documented with its sampling
+  gaps and exclusions in [the privacy record](../docs/RUNTIME_PRIVACY.md#native-migration--2026-11-21).
+- [x] Functional source `7132daa` passed Windows/macOS ARM/Linux clippy, tests and native production builds,
+  plus the Rust 1.95 check and legacy UI/packaging regressions in [CI](https://github.com/ninad-k/oxbox/actions/runs/44941250679).
+- [x] Final Windows MSI was extracted/hash-matched; NSIS source/compiler output was inspected. Both native
+  installers and checksums were uploaded to the existing draft and downloaded/hash-verified. Actual install/uninstall remains open.
+- [x] Separate build A production endpoint windows cover tools and a complete quiet-tray/activation/Quit loop,
+  with no owned TCP/UDP endpoints observed. [Scope and limits](../docs/RUNTIME_PRIVACY.md#bounded-windows-production-observations).
+- [x] Exact final build `7132daa` executable completed a separate 360.154-second/7,201-sample normal
+  startup/idle/Unit Converter/Quit observation, with zero owned processes at the end and no owned
+  TCP rows or UDP bindings observed. [Exact hash and limits](../docs/RUNTIME_PRIVACY.md#exact-final-executable-lifecycle).
+- [ ] Complete physical keyboard/mouse, held input, duration, lock/protected-desktop, monitor/DPI and every
+  Stop/Quit/restart path on the applicable final production build.
+- [ ] Complete current production/per-tool/provider network coverage, DNS/OS-broker attribution and other-OS
+  acceptance. The build A GUI run does not establish results for a later executable or a network probe.
+
 ## Parallel ownership
 
 - System/window/app group: 22 tools in `crates/oxbox-native/src/tools/system/`.
@@ -48,8 +76,9 @@ exercise each tool, device, OS effect, confirmation, GPU path or screen-reader i
 - The 22 system routes have compiled source and separate native lifecycle/configuration regressions;
   no headless all-system-form rendering test is claimed. The native suite also covers tasks, settings,
   instance handling and bundled icon bindings. Counts/results belong to the integrator's dated records.
-- **Pending**: actual per-tool native interaction/manual acceptance is still open here. Update a row only
-  with dated revision/platform/scaling/provider evidence in docs/VALIDATION.md; legacy results do not transfer.
+- **Pending**: complete per-tool native manual acceptance is still open here, including rows with bounded
+  observations above. Update a row only with dated revision/platform/scaling/provider evidence in
+  docs/VALIDATION.md; legacy results do not transfer.
 
 | Stable tool ID | Native routing module | Source | Automated scope | Native manual |
 |---|---|---|---|---|

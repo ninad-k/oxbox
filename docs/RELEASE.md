@@ -10,19 +10,25 @@ Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the
 - [x] Pass local core/native tests, all-target clippy with warnings denied, and formatting.
 - [x] Observe the actual decorated Windows native launcher, favorites, search, a conversion, favorite hotkey,
   global shortcut hide, single-instance restoration and Quit. This is a bounded subset of manual acceptance.
-- [ ] Complete current-commit Windows/macOS/Linux native CI and Rust 1.95 locked checks.
+- [x] Complete functional-source Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks:
+  [run 44941250679](https://github.com/ninad-k/oxbox/actions/runs/44941250679), source `7132daa`.
 - [ ] Complete native per-tool manual acceptance, including progress, cancellation, destructive confirmations,
   provider failures, power/desktop/recording restoration and hidden notifications.
 - [ ] Complete production runtime observations including owned providers and DNS coverage on all three OSes;
   record observation bounds, rather than claim universal zero traffic from finite samples.
-- [ ] Inspect actual native MSI/NSIS payloads, version, icon, PE imports, size and hashes; test clean install/uninstall.
+- [x] Record bounded Windows native production endpoint observations, including a quiet-tray/activation/Quit loop.
+  See [runtime privacy](RUNTIME_PRIVACY.md) for exact intervals and snapshot/DNS limitations.
+- [x] Extract/hash-match the MSI payload; inspect version, original icon, PE imports, sizes and hashes.
+  Verify generated NSIS source and successful compiler output; independent NSIS extraction is still open.
+- [ ] Test actual native MSI/NSIS clean install/uninstall and independently inspect NSIS payloads.
 - [ ] Verify first-installed-launch startup default, quiet login-to-tray, opt-out/upgrade preservation, paths with spaces,
   OS-disabled choices and ownership-checked uninstall cleanup on a clean Windows account.
 - [ ] Verify macOS Intel/Apple Silicon and Linux packages and supported hardware/session behavior.
 - [ ] Verify keyboard/screen-reader/IME/Unicode, DPI/monitor changes, high contrast and remote/GPU sessions.
 - [ ] Resolve/review dependency findings and outstanding attribution reviews with a human reviewer.
 - [ ] Complete independent file-tool path/deletion/archive and media-provider security review.
-- [ ] Record final source commit, installer checksums and remote draft-only postcondition.
+- [x] Record final source `7132daa`, installer checksums and downloaded remote asset hash matches in
+  [VALIDATION.md](VALIDATION.md); the release remains draft/prerelease with no published version tag.
 
 ## Native packaging
 
@@ -42,7 +48,8 @@ See [packaging/native/README.md](../packaging/native/README.md) for platform com
 Optional FFmpeg/Tesseract providers are user-installed and never bundled or downloaded at app startup.
 Bundler tooling downloads, when needed at build time, are separate from application runtime behavior.
 Generate notices for the selected target; resolve missing upstream texts with revision-pinned supplements.
-The checked-in notices inventory is Windows-specific; other-target supplements are separate acceptance gates.
+The checked-in notices inventory is Windows-specific. macOS ARM/Intel and Linux generation has zero missing
+texts, with target-specific human attribution reviews still open; see [provenance](third-party-licenses/README.md).
 
 ## Draft workflow
 
