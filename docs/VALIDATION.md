@@ -74,6 +74,12 @@ This file records observed evidence, not planned results. Release gates remain o
   broken local documentation links or project files above 5 MB; the pre-existing nested copy was excluded.
 - Actionlint and `git diff --check` passed. Final packaging, native smoke evidence, pushed commit/CI and draft
   asset verification are recorded below when observed; earlier installer sizes above describe prior builds.
+- First public CI run [44908023075](https://github.com/ninad-k/oxbox/actions/runs/44908023075) passed UI,
+  Windows clippy/tests/notices and the Rust 1.93 check. It exposed a non-Windows `needless_bool` lint and
+  Ubuntu 22.04's incompatible stock SPA headers for `libspa 0.9.2`. The link guard was simplified and Linux
+  CI/packaging moved to Ubuntu 24.04. A current-source Rust 1.93 clippy pass also prompted an equivalent
+  boolean simplification in the cache-age guard; locked workspace/all-target clippy then passed on 1.93.
+  The corrected matrix requires a fresh CI run; the initial failures are not counted as acceptance passes.
 
 ## Open acceptance gates
 

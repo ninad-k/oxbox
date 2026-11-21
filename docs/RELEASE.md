@@ -36,6 +36,8 @@ GitHub release. The manual workflow accepts an existing version tag. Verify that
 download and smoke-test the actual assets, then publish the draft deliberately.
 Each matrix job regenerates notices for its target; omitted upstream notices must be resolved with attributed,
 revision-pinned supplements before that target's packaging can pass. Windows CI verifies its checked-in inventory.
+Linux packaging uses Ubuntu 24.04 for compatible PipeWire/SPA headers. Test its runtime-library baseline on
+the target distribution; an AppImage does not establish compatibility with older glibc installations.
 
 A maintainer may also prepare a Windows-only draft before platform/manual signoff. Build from the pushed,
 reviewed commit, compute SHA-256 checksums, and attach the MSI, NSIS installer and checksum file using

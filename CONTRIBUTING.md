@@ -30,7 +30,8 @@ focused on one tool or one shared concern. Submit original code, tests, document
 ### Native prerequisites
 
 Use Rust 1.93+ and Node 22.17+; `package.json` pins pnpm. Windows needs MSVC C++ tools and WebView2.
-macOS needs Xcode command-line tools. Ubuntu/Debian development packages include:
+macOS needs Xcode command-line tools. Linux CI and packaging use Ubuntu 24.04; the capture backend needs
+PipeWire/SPA headers newer than Ubuntu 22.04's stock packages. Ubuntu/Debian development packages include:
 
 ```bash
 sudo apt-get install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf libpipewire-0.3-dev libspa-0.2-dev libwayland-dev libxcb1-dev libxcb-randr0-dev libgbm-dev libegl1-mesa-dev libclang-dev clang

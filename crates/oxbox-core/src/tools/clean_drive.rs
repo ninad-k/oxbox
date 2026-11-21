@@ -216,11 +216,11 @@ pub fn scan_roots(
                 }
             };
             if root.older_than_day
-                && !metadata
+                && metadata
                     .modified()
                     .ok()
                     .and_then(|m| now.duration_since(m).ok())
-                    .is_some_and(|age| age >= Duration::from_secs(24 * 60 * 60))
+                    .is_none_or(|age| age < Duration::from_secs(24 * 60 * 60))
             {
                 continue;
             }
