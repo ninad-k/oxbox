@@ -32,8 +32,8 @@ export default defineConfig(() => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // Cargo owns Rust source reloads; linker output may be locked on Windows.
+      ignored: ["**/src-tauri/**", "**/target/**"],
     },
   },
 }));
