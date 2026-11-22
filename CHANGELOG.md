@@ -30,6 +30,9 @@ the presence of this changelog does not mean installers have been published.
   are pinned to verified upstream commits, with weekly Dependabot updates for GitHub Actions.
 - The release remains a draft. Clean-machine, DNS/provider/platform, screen-reader/hardware and human review
   gates remain explicit; the Linux GLib finding has no compatible published 0.18 patch.
+- Cross-platform CI exposed Darwin cleanup of already-exited provider groups. A bounded typed census accepts
+  only stable zombie-only groups while preserving the unreaped leader and rejecting unknown/live members.
+  The fake Mouse Activity test now waits for worker acknowledgement instead of assuming a fixed sleep.
 
 ### Installed startup default
 

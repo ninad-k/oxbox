@@ -441,3 +441,29 @@ This section records source/test evidence. Replacement production artifacts, all
 runtime observation must identify their own source/hash before replacing the draft. The earlier `d8d1d1e`
 artifacts and endpoint windows remain historical. Clean-machine testing remains pending at the user's request;
 full manual/hardware/provider/DNS/accessibility and independent human acceptance remain release gates.
+
+### Cross-platform correction after `1ae368c`
+
+[CI run 44986859533](https://github.com/ninad-k/oxbox/actions/runs/44986859533) passed Windows
+(221 core / 81 native), Linux (214 / 82), minimum Rust and UI/packaging. macOS ARM passed strict Clippy,
+the encryption receipts/real age round trip, World Time and inherited-pipe cleanup cases, but failed two
+core tests: a fast provider's cleanup returned EPERM, and a Mouse Activity fixture assumed a worker had
+published its paused state after a fixed 75 ms sleep. The overall run failed and its artifacts were not
+promoted to the draft. Pages deployment 44986859480 succeeded for that source (49 tools, 7 categories).
+
+The mouse fixture now waits for the published phase with a bounded deadline. Darwin cleanup now includes
+a narrow exited-group check: Apple's pinned kernel source filters zombies in the group signal path and
+can return EPERM when no signalable member is found. The process list API includes live and zombie members
+under its list lock. See [XNU signal implementation](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_sig.c#L1612)
+and [process census](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/proc_info.c#L377).
+The interpretation matches the observed failure; actual macOS CI must verify the correction. Live,
+unreadable, truncated, changing or mismatched groups must still fail closed while the leader remains unreaped.
+
+The four portable census-proof tests first produced three passes and the expected zombie-only failure,
+then passed after implementation. The scoped Windows follow-up passed **24 provider tests** and the mouse
+worker acknowledgement regression, plus strict all-target Clippy and formatting. macOS additionally has an
+eight-fast-exit regression, retaining the original raw-byte fixture without delay or suppression. Final
+cross-platform results must be recorded against the follow-up source rather than calling the failed run green.
+
+GitHub's private vulnerability reporting was found disabled during the community check. It was enabled and
+the repository API returned `enabled: true` on 2026-11-22, making the existing private-report policy actionable.

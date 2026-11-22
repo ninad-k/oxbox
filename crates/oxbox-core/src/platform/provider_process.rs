@@ -136,6 +136,16 @@ impl ManagedChild {
                 if error.kind() == io::ErrorKind::Interrupted {
                     continue;
                 }
+                #[cfg(target_os = "macos")]
+                if error.raw_os_error() == Some(libc::EPERM)
+                    && darwin_group::verify_completed_group(
+                        group as u32,
+                        || darwin_group::list(group),
+                        darwin_group::inspect,
+                    )?
+                {
+                    break;
+                }
                 if error.raw_os_error() != Some(libc::ESRCH) {
                     return Err(error);
                 }
@@ -150,6 +160,249 @@ impl ManagedChild {
             let _ = self.inner.kill();
         }
         let _ = self.inner.wait();
+    }
+}
+
+#[cfg(any(target_os = "macos", test))]
+mod darwin_group {
+    use std::io;
+    const MAX_MEMBERS: usize = 4096;
+    #[derive(Clone, Copy)]
+    pub(super) struct Member {
+        pid: u32,
+        group: u32,
+        zombie: bool,
+    }
+
+    pub(super) fn verify_completed_group(
+        group: u32,
+        mut list: impl FnMut() -> io::Result<Vec<u32>>,
+        mut inspect: impl FnMut(u32) -> io::Result<Member>,
+    ) -> io::Result<bool> {
+        fn complete(pids: &mut [u32], group: u32) -> bool {
+            if group <= 1
+                || group > i32::MAX as u32
+                || pids.is_empty()
+                || pids.len() >= MAX_MEMBERS
+                || pids.iter().any(|pid| *pid <= 1 || *pid > i32::MAX as u32)
+            {
+                return false;
+            }
+            pids.sort_unstable();
+            pids.binary_search(&group).is_ok() && !pids.windows(2).any(|pair| pair[0] == pair[1])
+        }
+        let mut before = list()?;
+        if !complete(&mut before, group) {
+            return Ok(false);
+        }
+        for &pid in &before {
+            let member = inspect(pid)?;
+            if member.pid != pid || member.group != group || !member.zombie {
+                return Ok(false);
+            }
+        }
+        // A member might fork after the first census but before becoming a
+        // zombie. Requiring an identical complete second set closes that gap.
+        // Every member of this final set was already proved irreversibly exited;
+        // the leader remains unreaped throughout, retaining the PGID identity.
+        let mut after = list()?;
+        Ok(complete(&mut after, group) && before == after)
+    }
+
+    #[cfg(target_os = "macos")]
+    pub(super) fn list(group: libc::pid_t) -> io::Result<Vec<u32>> {
+        let mut pids = vec![0 as libc::pid_t; MAX_MEMBERS];
+        // SAFETY: buffer is initialized typed PID storage; its byte size is bounded.
+        let count = unsafe {
+            libc::proc_listpgrppids(
+                group,
+                pids.as_mut_ptr().cast(),
+                std::mem::size_of_val(pids.as_slice()) as libc::c_int,
+            )
+        };
+        if count <= 0 || count as usize >= pids.len() {
+            return Err(io::Error::other(
+                "the owned provider group census failed or exceeded its limit",
+            ));
+        }
+        pids.truncate(count as usize);
+        pids.into_iter()
+            .map(|pid| {
+                u32::try_from(pid)
+                    .map_err(|_| io::Error::other("invalid provider process identity"))
+            })
+            .collect()
+    }
+
+    #[cfg(target_os = "macos")]
+    pub(super) fn inspect(pid: u32) -> io::Result<Member> {
+        // SAFETY: proc_bsdinfo is a C output value accepting zero initialization.
+        let mut info: libc::proc_bsdinfo = unsafe { std::mem::zeroed() };
+        let size = std::mem::size_of::<libc::proc_bsdinfo>();
+        // Nonzero arg explicitly includes zombies in Apple's PIDINFO lookup.
+        // SAFETY: typed output storage remains alive; no pointer is retained.
+        let count = unsafe {
+            libc::proc_pidinfo(
+                pid as libc::pid_t,
+                libc::PROC_PIDTBSDINFO,
+                1,
+                std::ptr::from_mut(&mut info).cast(),
+                size as libc::c_int,
+            )
+        };
+        if count != size as libc::c_int {
+            return Err(io::Error::other(
+                "the provider group member could not be inspected",
+            ));
+        }
+        Ok(Member {
+            pid: info.pbi_pid,
+            group: info.pbi_pgid,
+            zombie: info.pbi_status == libc::SZOMB,
+        })
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        fn member(pid: u32) -> io::Result<Member> {
+            Ok(Member {
+                pid,
+                group: 42,
+                zombie: true,
+            })
+        }
+        #[test]
+        fn completed_group_accepts_only_two_identical_zombie_snapshots_with_the_leader() {
+            let mut calls = 0;
+            assert!(
+                verify_completed_group(
+                    42,
+                    || {
+                        calls += 1;
+                        Ok(vec![43, 42])
+                    },
+                    member
+                )
+                .unwrap()
+            );
+            assert_eq!(calls, 2);
+        }
+        #[test]
+        fn completed_group_rejects_live_wrong_group_and_wrong_pid_members() {
+            for bad in [
+                Member {
+                    pid: 43,
+                    group: 42,
+                    zombie: false,
+                },
+                Member {
+                    pid: 43,
+                    group: 99,
+                    zombie: true,
+                },
+                Member {
+                    pid: 44,
+                    group: 42,
+                    zombie: true,
+                },
+            ] {
+                assert!(
+                    !verify_completed_group(
+                        42,
+                        || Ok(vec![42, 43]),
+                        |pid| if pid == 43 { Ok(bad) } else { member(pid) }
+                    )
+                    .unwrap()
+                );
+            }
+        }
+        #[test]
+        fn completed_group_rejects_empty_missing_leader_duplicate_and_saturated_lists() {
+            for pids in [
+                vec![],
+                vec![43],
+                vec![42, 42],
+                vec![0, 42],
+                vec![1, 42],
+                vec![42, u32::MAX],
+                (2..(MAX_MEMBERS as u32 + 2)).collect(),
+            ] {
+                assert!(!verify_completed_group(42, || Ok(pids.clone()), member).unwrap());
+            }
+            for group in [0, 1, u32::MAX] {
+                assert!(!verify_completed_group(group, || Ok(vec![42]), member).unwrap());
+            }
+        }
+        #[test]
+        fn completed_group_rejects_changed_group_snapshot_and_unreadable_members() {
+            let mut calls = 0;
+            assert!(
+                !verify_completed_group(
+                    42,
+                    || {
+                        calls += 1;
+                        Ok(if calls == 1 { vec![42] } else { vec![42, 43] })
+                    },
+                    member
+                )
+                .unwrap()
+            );
+            assert!(!matches!(
+                verify_completed_group(42, || Ok(vec![42]), |_| Err(io::Error::other("denied"))),
+                Ok(true)
+            ));
+            assert!(!matches!(
+                verify_completed_group(42, || Err(io::Error::other("truncated")), member),
+                Ok(true)
+            ));
+        }
+        #[cfg(target_os = "macos")]
+        #[test]
+        fn fast_exited_provider_group_reaps_repeatedly_with_the_leader_unreaped() {
+            use super::super::ManagedChild;
+            use std::{
+                process::{Command, Stdio},
+                time::{Duration, Instant},
+            };
+            for _ in 0..8 {
+                let mut child = ManagedChild::spawn(
+                    Command::new(std::env::current_exe().unwrap())
+                        .args([
+                            "--exact",
+                            "tools::media_provider::tests::provider_fixture_raw_bytes",
+                            "--nocapture",
+                        ])
+                        .stdin(Stdio::null())
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null()),
+                )
+                .unwrap();
+                let deadline = Instant::now() + Duration::from_secs(5);
+                loop {
+                    // SAFETY: typed wait storage for our owned, unreaped child.
+                    let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+                    let result = unsafe {
+                        libc::waitid(
+                            libc::P_PID,
+                            child.inner.id() as libc::id_t,
+                            &mut info,
+                            libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+                        )
+                    };
+                    assert_eq!(result, 0, "{}", io::Error::last_os_error());
+                    if unsafe { info.si_pid() } != 0 {
+                        break;
+                    }
+                    assert!(
+                        Instant::now() < deadline,
+                        "generated fast provider did not exit"
+                    );
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                assert!(child.try_wait().unwrap().unwrap().success());
+            }
+        }
     }
 }
 #[cfg(windows)]

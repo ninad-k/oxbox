@@ -816,8 +816,20 @@ mod tests {
         moves.recv_timeout(Duration::from_secs(2)).unwrap();
         last.store(30_001, Ordering::Release);
         now.store(30_001, Ordering::Release);
-        std::thread::sleep(Duration::from_millis(75));
-        assert_eq!(controller.status().unwrap().phase, Phase::Paused);
+        // Wait for the worker's observed phase, not an assumed scheduling delay.
+        // Parallel CI/KDF work can delay its next poll beyond a fixed sleep.
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let phase = controller.status().unwrap().phase;
+            if phase == Phase::Paused {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "worker never acknowledged genuine input: {phase:?}"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
         assert!(moves.try_recv().is_err());
         now.store(60_001, Ordering::Release);
         moves.recv_timeout(Duration::from_secs(2)).unwrap();
