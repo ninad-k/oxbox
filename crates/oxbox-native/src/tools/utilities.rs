@@ -127,7 +127,8 @@ impl UtilitiesTools {
 }
 pub(super) fn field(ui: &mut Ui, label: &str, value: &mut String) {
     let label = ui.label(label);
-    ui.text_edit_singleline(value).labelled_by(label.id);
+    ui.add(eframe::egui::TextEdit::singleline(value).interactive(ui.is_enabled()))
+        .labelled_by(label.id);
 }
 pub(super) fn bytes(value: u64) -> String {
     let units = ["B", "KiB", "MiB", "GiB", "TiB"];

@@ -108,7 +108,7 @@ impl MonitorViews {
                         bytes(s.swap_used),
                         bytes(s.swap_total)
                     ));
-                    egui::CollapsingHeader::new("Disks")
+                    let section = egui::CollapsingHeader::new("Disks")
                         .default_open(true)
                         .show(ui, |ui| {
                             for disk in &s.disks {
@@ -121,26 +121,29 @@ impl MonitorViews {
                                 ));
                             }
                         });
+                    crate::accessibility::disclosure_expansion(&section.header_response);
                     for (title, rows) in [
                         ("Top processes by CPU", &s.processes_cpu),
                         ("Top processes by memory", &s.processes_memory),
                     ] {
-                        egui::CollapsingHeader::new(title)
-                            .default_open(true)
-                            .show(ui, |ui| {
-                                egui::Grid::new(title).striped(true).show(ui, |ui| {
-                                    ui.strong("Process / PID");
-                                    ui.strong("CPU");
-                                    ui.strong("Memory");
-                                    ui.end_row();
-                                    for p in rows {
-                                        ui.label(format!("{} / {}", p.name, p.pid));
-                                        ui.label(format!("{:.1}%", p.cpu_percent));
-                                        ui.label(bytes(p.memory));
+                        let section =
+                            egui::CollapsingHeader::new(title)
+                                .default_open(true)
+                                .show(ui, |ui| {
+                                    egui::Grid::new(title).striped(true).show(ui, |ui| {
+                                        ui.strong("Process / PID");
+                                        ui.strong("CPU");
+                                        ui.strong("Memory");
                                         ui.end_row();
-                                    }
+                                        for p in rows {
+                                            ui.label(format!("{} / {}", p.name, p.pid));
+                                            ui.label(format!("{:.1}%", p.cpu_percent));
+                                            ui.label(bytes(p.memory));
+                                            ui.end_row();
+                                        }
+                                    });
                                 });
-                            });
+                        crate::accessibility::disclosure_expansion(&section.header_response);
                     }
                 }
                 self.snapshot.show_quiet(ui);

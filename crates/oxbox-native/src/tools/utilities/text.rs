@@ -78,7 +78,7 @@ impl TextTools {
             .labelled_by(input_label.id)
             .changed();
         let previous = self.case;
-        egui::ComboBox::from_label("Text case")
+        let choice_response = egui::ComboBox::from_label("Text case")
             .selected_text(format!("{:?}", self.case))
             .show_ui(ui, |ui| {
                 for (case, label) in [
@@ -95,6 +95,7 @@ impl TextTools {
                     ui.selectable_value(&mut self.case, case, label);
                 }
             });
+        crate::accessibility::combo_expansion(&choice_response.response);
         if changed || previous != self.case {
             self.output = text_transform::transform(&self.input, self.case);
         }
@@ -123,13 +124,14 @@ impl TextTools {
             .map(|unit| unit.category)
             .collect::<std::collections::BTreeSet<_>>();
         let old = self.category.clone();
-        egui::ComboBox::from_label("Category")
+        let choice_response = egui::ComboBox::from_label("Category")
             .selected_text(&self.category)
             .show_ui(ui, |ui| {
                 for category in categories {
                     ui.selectable_value(&mut self.category, category.to_string(), category);
                 }
             });
+        crate::accessibility::combo_expansion(&choice_response.response);
         let choices = all
             .iter()
             .filter(|unit| unit.category == self.category)
@@ -143,7 +145,7 @@ impl TextTools {
                 .into();
         }
         field(ui, "Value", &mut self.value);
-        egui::ComboBox::from_label("From")
+        let choice_response = egui::ComboBox::from_label("From")
             .selected_text(
                 choices
                     .iter()
@@ -155,10 +157,11 @@ impl TextTools {
                     ui.selectable_value(&mut self.from, unit.id.into(), unit.label);
                 }
             });
+        crate::accessibility::combo_expansion(&choice_response.response);
         if ui.button("Swap units").clicked() {
             std::mem::swap(&mut self.from, &mut self.to);
         }
-        egui::ComboBox::from_label("To")
+        let choice_response = egui::ComboBox::from_label("To")
             .selected_text(
                 choices
                     .iter()
@@ -170,6 +173,7 @@ impl TextTools {
                     ui.selectable_value(&mut self.to, unit.id.into(), unit.label);
                 }
             });
+        crate::accessibility::combo_expansion(&choice_response.response);
         if self.value.trim().is_empty() {
             ui.label("Enter a value to convert.");
             return;

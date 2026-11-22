@@ -1,0 +1,3 @@
+*.age -text
+*.bin -text
+*.rs text eol=lf

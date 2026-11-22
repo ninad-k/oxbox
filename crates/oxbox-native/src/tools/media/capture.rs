@@ -40,6 +40,8 @@ pub struct CaptureUi {
     review: bool,
     editor: ImageEditor,
     mode: usize,
+    numeric_area: bool,
+    area: [u32; 4],
     delay: usize,
     selected: usize,
     folder: String,
@@ -62,6 +64,8 @@ impl Default for CaptureUi {
             review: true,
             editor: ImageEditor::default(),
             mode: 0,
+            numeric_area: false,
+            area: [0, 0, 100, 100],
             delay: 0,
             selected: 0,
             folder: String::new(),
@@ -178,8 +182,17 @@ impl CaptureUi {
             .iter()
             .filter(|target| target.kind == kind)
             .collect();
-        if self.mode != 2 {
-            egui::ComboBox::from_label("Capture target")
+        let busy = self.capture.running() || self.freeze.running() || self.session.is_some();
+        if self.mode == 2 {
+            ui.add_enabled_ui(!busy, |ui| {
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut self.numeric_area, false, "Drag an area");
+                    ui.selectable_value(&mut self.numeric_area, true, "Numeric area bounds");
+                });
+            });
+        }
+        if self.mode != 2 || self.numeric_area {
+            let choice_response = egui::ComboBox::from_label("Capture target")
                 .selected_text(
                     choices
                         .get(self.selected)
@@ -194,11 +207,86 @@ impl CaptureUi {
                         );
                     }
                 });
+            crate::accessibility::combo_expansion(&choice_response.response);
         } else {
             widgets::note(
                 ui,
                 "A frozen preview opens on each display. Drag within one display; Escape cancels all selectors. Multi-monitor and HiDPI crop coordinates use the original pixels.",
             );
+        }
+        let mut numeric_selection = None;
+        if self.mode == 2 && self.numeric_area {
+            if let Some(target) = choices.get(self.selected) {
+                let scale = if cfg!(any(target_os = "macos", target_os = "linux")) {
+                    f64::from(target.scale_factor)
+                } else {
+                    1.0
+                };
+                let width = f64::from(target.width) * scale;
+                let height = f64::from(target.height) * scale;
+                if scale.is_finite()
+                    && scale > 0.0
+                    && width >= 1.0
+                    && height >= 1.0
+                    && width <= f64::from(u32::MAX)
+                    && height <= f64::from(u32::MAX)
+                    && width * height * 4.0 <= 256.0 * 1024.0 * 1024.0
+                {
+                    let width = width.round() as u32;
+                    let height = height.round() as u32;
+                    ui.label(format!("Selected display bounds: {width} × {height} physical pixels. X/Y start at its top-left (0, 0), independent of desktop position or UI scaling."));
+                    ui.small("Capture uses the original display pixels. If the display changes size, the region is clipped to the current captured display bounds. No pixels are captured until the capture button is activated.");
+                    let mut area = self.area;
+                    area[0] = area[0].min(width - 1);
+                    area[1] = area[1].min(height - 1);
+                    area[2] = area[2].clamp(1, width - area[0]);
+                    area[3] = area[3].clamp(1, height - area[1]);
+                    ui.add_enabled_ui(!busy, |ui| {
+                        widgets::number(
+                            ui,
+                            "Area X (physical pixels)",
+                            &mut area[0],
+                            0..=width - 1,
+                        );
+                        widgets::number(
+                            ui,
+                            "Area Y (physical pixels)",
+                            &mut area[1],
+                            0..=height - 1,
+                        );
+                        let max_width = width - area[0];
+                        let max_height = height - area[1];
+                        widgets::number(
+                            ui,
+                            "Area width (physical pixels)",
+                            &mut area[2],
+                            1..=max_width,
+                        );
+                        widgets::number(
+                            ui,
+                            "Area height (physical pixels)",
+                            &mut area[3],
+                            1..=max_height,
+                        );
+                    });
+                    if !busy {
+                        self.area = area;
+                    }
+                    numeric_selection = Some(Selection {
+                        x: f64::from(self.area[0]),
+                        y: f64::from(self.area[1]),
+                        width: f64::from(self.area[2]),
+                        height: f64::from(self.area[3]),
+                    });
+                } else {
+                    crate::accessibility::alert(
+                        ui,
+                        "The selected display has invalid bounds or exceeds the 256 MiB capture limit. Refresh the display list or choose a smaller display.",
+                    );
+                }
+            } else {
+                ui.label("Find and choose a display before entering numeric area bounds.");
+            }
         }
         widgets::choice(
             ui,
@@ -233,15 +321,18 @@ impl CaptureUi {
                 "Direct-save mode exports the unedited screenshot immediately. Later redaction does not change earlier files or clipboard copies.",
             );
         }
-        let busy = self.capture.running() || self.freeze.running() || self.session.is_some();
         if ui
             .add_enabled(
-                !busy && !choices.is_empty(),
-                egui::Button::new(match (self.mode == 2, self.review) {
-                    (true, true) => "Select area for review…",
-                    (true, false) => "Select area and save…",
-                    (false, true) => "Capture for review",
-                    (false, false) => "Save screenshot",
+                !busy
+                    && !choices.is_empty()
+                    && (self.mode != 2 || !self.numeric_area || numeric_selection.is_some()),
+                egui::Button::new(match (self.mode == 2, self.numeric_area, self.review) {
+                    (true, false, true) => "Select area for review…",
+                    (true, false, false) => "Select area and save…",
+                    (true, true, true) => "Capture numeric area for review",
+                    (true, true, false) => "Capture numeric area and save",
+                    (false, _, true) => "Capture for review",
+                    (false, _, false) => "Save screenshot",
                 }),
             )
             .clicked()
@@ -259,7 +350,7 @@ impl CaptureUi {
             };
             host.hide(ui.ctx());
             self.hidden = true;
-            if self.mode == 2 {
+            if self.mode == 2 && !self.numeric_area {
                 let targets: Vec<_> = choices.iter().map(|target| (*target).clone()).collect();
                 let native: Vec<_> = host
                     .monitors
@@ -305,6 +396,11 @@ impl CaptureUi {
                 };
                 let copy = self.copy;
                 let review = self.review;
+                let area = if self.mode == 2 {
+                    numeric_selection
+                } else {
+                    None
+                };
                 let clipboard = shared.clipboard.clone();
                 let quit = shared.quit.clone();
                 self.capture.start(ui.ctx(), move |cancel, _| {
@@ -313,7 +409,21 @@ impl CaptureUi {
                         &cancel,
                         || {
                             quit.check()?;
+                            cancel.check()?;
                             let image = screenshot::capture_image(target)?;
+                            cancel.check()?;
+                            quit.check()?;
+                            if area.is_some() && image.as_raw().len() > 256 * 1024 * 1024 {
+                                return Err(CoreError::InvalidInput(
+                                    "area capture exceeds the 256 MiB display-pixel limit".into(),
+                                ));
+                            }
+                            let image = match area {
+                                Some(selection) => {
+                                    screenshot::crop_selection(&image, selection, 1.0)?
+                                }
+                                None => image,
+                            };
                             finish(image, folder, copy, review, clipboard, &cancel, &quit)
                         },
                     )
@@ -636,6 +746,116 @@ impl CaptureUi {
 mod review_tests {
     use super::*;
     use std::cell::Cell;
+
+    #[test]
+    fn area_capture_exposes_named_keyboard_bounds_without_capturing_a_screen() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let shared = Shared::default();
+        let mut view = CaptureUi {
+            mode: 2,
+            targets: vec![TargetInfo {
+                kind: CaptureKind::Monitor,
+                id: 17,
+                name: "Generated display".into(),
+                x: -300,
+                y: 50,
+                width: 160,
+                height: 90,
+                scale_factor: 1.5,
+            }],
+            ..Default::default()
+        };
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut first = context.run_ui(egui::RawInput::default(), |ui| {
+            view.show(ui, &mut host, &shared);
+        });
+        first.textures_delta.clear();
+        let alternative = first
+            .platform_output
+            .accesskit_update
+            .unwrap()
+            .nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::Button
+                    && node.label() == Some("Numeric area bounds"))
+                .then_some(id)
+            })
+            .expect("area capture needs a keyboard alternative to pointer dragging");
+        let mut second = context.run_ui(
+            egui::RawInput {
+                events: vec![egui::Event::AccessKitActionRequest(
+                    egui::accesskit::ActionRequest {
+                        action: egui::accesskit::Action::Click,
+                        target_node: alternative,
+                        target_tree: egui::accesskit::TreeId::ROOT,
+                        data: None,
+                    },
+                )],
+                ..Default::default()
+            },
+            |ui| view.show(ui, &mut host, &shared),
+        );
+        second.textures_delta.clear();
+        let nodes = second.platform_output.accesskit_update.unwrap().nodes;
+        let mut edits = Vec::new();
+        for (index, label) in [
+            "Area X (physical pixels)",
+            "Area Y (physical pixels)",
+            "Area width (physical pixels)",
+            "Area height (physical pixels)",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let (id, node) = nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == egui::accesskit::Role::SpinButton
+                        && (node.label() == Some(label)
+                            || node.labelled_by().iter().any(|id| {
+                                nodes.iter().any(|(other_id, label_node)| {
+                                    other_id == id && label_node.label() == Some(label)
+                                })
+                            }))
+                })
+                .unwrap_or_else(|| panic!("missing editable named area control: {label}"));
+            assert!(
+                node.supports_action(egui::accesskit::Action::SetValue),
+                "area input is not editable: {label}"
+            );
+            edits.push(egui::Event::AccessKitActionRequest(
+                egui::accesskit::ActionRequest {
+                    action: egui::accesskit::Action::SetValue,
+                    target_tree: egui::accesskit::TreeId::ROOT,
+                    target_node: *id,
+                    data: Some(egui::accesskit::ActionData::NumericValue(
+                        (index + 5) as f64,
+                    )),
+                },
+            ));
+        }
+        let mut edited = context.run_ui(
+            egui::RawInput {
+                events: edits,
+                ..Default::default()
+            },
+            |ui| view.show(ui, &mut host, &shared),
+        );
+        edited.textures_delta.clear();
+        assert_eq!(
+            view.area,
+            [5, 6, 7, 8],
+            "keyboard bounds did not update the admitted numeric selection"
+        );
+        assert!(!view.capture.running() && !view.freeze.running() && view.session.is_none());
+        assert!(!view.hidden && view.path.is_none());
+        assert!(shared.clipboard.snapshot("").unwrap().paused);
+        view.shutdown(Some(&context));
+        host.shutdown();
+    }
 
     #[test]
     fn screenshot_review_dispatch_never_saves_or_copies_unreviewed_pixels() {

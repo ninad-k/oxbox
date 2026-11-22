@@ -107,7 +107,7 @@ impl AppSetsView {
     ) {
         ui.label("Save named groups of local applications and files. Application arguments are literal values, never a shell command. URLs, network paths and shell scripts are refused.");
         let previous = self.selected.clone();
-        egui::ComboBox::from_label("Saved application set")
+        let choice = egui::ComboBox::from_label("Saved application set")
             .selected_text(
                 stored
                     .sets
@@ -120,6 +120,7 @@ impl AppSetsView {
                     ui.selectable_value(&mut self.selected, set.id.clone(), &set.name);
                 }
             });
+        crate::accessibility::combo_expansion(&choice.response);
         if previous != self.selected
             && let Some(set) = stored.sets.iter().find(|s| s.id == self.selected)
         {

@@ -1,7 +1,7 @@
 //! Dated ECB reference rates. Import and conversion work offline; downloads require explicit opt-in.
 use crate::jobs::CancelToken;
 use crate::{CoreError, CoreResult};
-use chrono::NaiveDate;
+use jiff::civil::Date;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
@@ -20,6 +20,52 @@ pub struct RateBook {
 }
 fn invalid(text: impl Into<String>) -> CoreError {
     CoreError::InvalidInput(text.into())
+}
+fn validate_rate_date(value: &str) -> CoreResult<()> {
+    let value = value.trim_start();
+    let (negative, signed, value) = if let Some(value) = value.strip_prefix('-') {
+        (true, true, value)
+    } else if let Some(value) = value.strip_prefix('+') {
+        (false, true, value)
+    } else {
+        (false, false, value)
+    };
+    let (year, rest) = value
+        .split_once('-')
+        .ok_or_else(|| invalid("invalid rate date"))?;
+    if year.is_empty()
+        || (!signed && year.len() > 4)
+        || !year.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return Err(invalid("invalid rate date"));
+    }
+    let magnitude = year
+        .parse::<i64>()
+        .map_err(|_| invalid("invalid rate date"))?;
+    let year = if negative { -magnitude } else { magnitude };
+    // Preserve the former parser's accepted import range. Calendar validity
+    // repeats every 400 Gregorian years, so Jiff can validate wide signed
+    // years without narrowing saved rate strings to its civil-year range.
+    if !(-262_143..=262_142).contains(&year) {
+        return Err(invalid("invalid rate date"));
+    }
+    let (month, day) = rest
+        .split_once('-')
+        .ok_or_else(|| invalid("invalid rate date"))?;
+    let component = |part: &str| -> CoreResult<i8> {
+        let part = part.trim_start();
+        if part.is_empty() || part.len() > 2 || !part.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err(invalid("invalid rate date"));
+        }
+        part.parse().map_err(|_| invalid("invalid rate date"))
+    };
+    Date::new(
+        year.rem_euclid(400) as i16,
+        component(month)?,
+        component(day)?,
+    )
+    .map_err(|_| invalid("invalid rate date"))?;
+    Ok(())
 }
 fn attributes(mut text: &str) -> CoreResult<BTreeMap<String, String>> {
     let mut result = BTreeMap::new();
@@ -119,8 +165,7 @@ pub fn parse_ecb(xml: &str, fetched_at: u64) -> CoreResult<RateBook> {
                     {
                         return Err(invalid("invalid dated rate context"));
                     }
-                    NaiveDate::parse_from_str(value, "%Y-%m-%d")
-                        .map_err(|_| invalid("invalid rate date"))?;
+                    validate_rate_date(value)?;
                     if date.replace(value.clone()).is_some() {
                         return Err(invalid("expected one daily rate table"));
                     }
@@ -284,6 +329,39 @@ fn provider_bytes(
 mod tests {
     use super::*;
     const XML: &str = "<Envelope><Cube><Cube time='2026-11-20'><Cube currency='USD' rate='1.10'/><Cube currency='GBP' rate='0.85'/></Cube></Cube></Envelope>";
+    #[test]
+    fn preserves_legacy_rate_date_grammar_and_calendar_range() {
+        // Observed against the pinned pre-migration Chrono parser; keep raw
+        // strings intact, even for non-canonical historical import fixtures.
+        for (date, accepted) in [
+            ("+10000-02-29", true),
+            ("+262142-12-31", true),
+            ("+262143-01-01", false),
+            ("-262143-01-01", true),
+            ("-262144-01-01", false),
+            ("10000-01-01", false),
+            ("+00002024-02-29", true),
+            ("2024- 2- 9", true),
+            ("2024 -02-29", false),
+            ("2024-02 -29", false),
+            ("2024-02-29 ", false),
+            ("2024-02-29x", false),
+            ("２０２４-02-29", false),
+            ("\u{2003}2024-02-29", true),
+            ("2024-\u{2003}2-9", true),
+            ("1-1-1", true),
+            ("+-1-01-01", false),
+            ("2024-002-09", false),
+            ("2024-02-009", false),
+        ] {
+            let xml = XML.replace("2026-11-20", date);
+            let parsed = parse_ecb(&xml, 42);
+            assert_eq!(parsed.is_ok(), accepted, "date: {date:?}");
+            if let Ok(book) = parsed {
+                assert_eq!(book.date, date);
+            }
+        }
+    }
     #[test]
     fn imports_daily_rates_and_converts_via_euro() {
         let rates = parse_ecb(XML, 100).unwrap();

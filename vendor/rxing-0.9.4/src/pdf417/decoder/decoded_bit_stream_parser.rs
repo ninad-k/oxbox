@@ -1,0 +1,868 @@
+#![allow(deprecated)]
+/*
+ * Copyright 2009 ZXing authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+use num::{self, BigUint, bigint::ToBigUint};
+use std::sync::Arc;
+
+use crate::{
+    Exceptions,
+    common::{DecoderRXingResult, ECIStringBuilder, Eci, Result},
+    pdf417::PDF417RXingResultMetadata,
+};
+
+/**
+ * <p>This class contains the methods for decoding the PDF417 codewords.</p>
+ *
+ * @author SITA Lab (kevin.osullivan@sita.aero)
+ * @author Guenther Grau
+ */
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Alpha,
+    Lower,
+    Mixed,
+    Punct,
+    AlphaShift,
+    PunctShift,
+}
+
+const TEXT_COMPACTION_MODE_LATCH: u32 = 900;
+const BYTE_COMPACTION_MODE_LATCH: u32 = 901;
+const NUMERIC_COMPACTION_MODE_LATCH: u32 = 902;
+const BYTE_COMPACTION_MODE_LATCH_6: u32 = 924;
+const ECI_USER_DEFINED: u32 = 925;
+const ECI_GENERAL_PURPOSE: u32 = 926;
+const ECI_CHARSET: u32 = 927;
+const BEGIN_MACRO_PDF417_CONTROL_BLOCK: u32 = 928;
+const BEGIN_MACRO_PDF417_OPTIONAL_FIELD: u32 = 923;
+const MACRO_PDF417_TERMINATOR: u32 = 922;
+const MODE_SHIFT_TO_BYTE_COMPACTION_MODE: u32 = 913;
+const MAX_NUMERIC_CODEWORDS: usize = 15;
+
+const MACRO_PDF417_OPTIONAL_FIELD_FILE_NAME: u32 = 0;
+const MACRO_PDF417_OPTIONAL_FIELD_SEGMENT_COUNT: u32 = 1;
+const MACRO_PDF417_OPTIONAL_FIELD_TIME_STAMP: u32 = 2;
+const MACRO_PDF417_OPTIONAL_FIELD_SENDER: u32 = 3;
+const MACRO_PDF417_OPTIONAL_FIELD_ADDRESSEE: u32 = 4;
+const MACRO_PDF417_OPTIONAL_FIELD_FILE_SIZE: u32 = 5;
+const MACRO_PDF417_OPTIONAL_FIELD_CHECKSUM: u32 = 6;
+
+const PRE_TEXT_COMPACTION_MODE_LATCH: u32 = TEXT_COMPACTION_MODE_LATCH - 1;
+
+const PL: u32 = 25;
+const LL: u32 = 27;
+const AS: u32 = 27;
+const ML: u32 = 28;
+const AL: u32 = 28;
+const PS: u32 = 29;
+const PAL: u32 = 29;
+
+const PUNCT_CHARS: [char; 29] = [
+    ';', '<', '>', '@', '[', '\\', ']', '_', '`', '~', '!', '\r', '\t', ',', ':', '\n', '-', '.',
+    '$', '/', '"', '|', '*', '(', ')', '?', '{', '}', '\'',
+];
+
+const MIXED_CHARS: [char; 25] = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '&', '\r', '\t', ',', ':', '#', '-', '.',
+    '$', '/', '+', '%', '*', '=', '^',
+];
+
+use once_cell::sync::Lazy;
+
+/**
+ * Table containing values for the exponent of 900.
+ * This is used in the numeric compaction decode algorithm.
+ */
+static EXP900: Lazy<Vec<BigUint>> = Lazy::new(|| {
+    const EXP_LEN: usize = 16;
+    let mut exp900 = Vec::with_capacity(EXP_LEN); //[0;16];
+    exp900.push(ToBigUint::to_biguint(&1).unwrap_or_default());
+    let nineHundred = ToBigUint::to_biguint(&900).unwrap_or_default();
+    exp900.push(nineHundred);
+    let mut i = 2;
+    while i < EXP_LEN {
+        exp900.push(&exp900[i - 1] * 900_u32);
+
+        i += 1;
+    }
+
+    exp900
+});
+
+const NUMBER_OF_SEQUENCE_CODEWORDS: usize = 2;
+
+/// Returns the number of data codewords declared by the Symbol Length Descriptor.
+///
+/// `codewords[0]` declares how many entries of the recovered array are data,
+/// counting the descriptor itself and excluding the error correction codewords
+/// that follow the data in the same array. Every bound in this parser is
+/// expressed against this value, so a control sequence can never read an error
+/// correction codeword as payload and no length arithmetic can underflow when a
+/// stream is truncated.
+fn dataCodewordCount(codewords: &[u32]) -> Result<usize> {
+    let Some(declaredCount) = codewords.first().map(|count| *count as usize) else {
+        return Err(Exceptions::FORMAT);
+    };
+    if declaredCount == 0 || declaredCount > codewords.len() {
+        // The descriptor counts itself, so zero is not a legal declaration, and a
+        // declaration reaching past the recovered array cannot be trusted.
+        return Err(Exceptions::FORMAT);
+    }
+
+    Ok(declaredCount)
+}
+
+/// Reads the operand that a control sequence consumes at `codeIndex`.
+///
+/// The operand has to lie inside the declared data codewords, so a truncated
+/// control sequence becomes a format error instead of an out of range index or a
+/// silent read of the error correction tail.
+fn operandAt(codewords: &[u32], dataCodewords: usize, codeIndex: usize) -> Result<u32> {
+    if codeIndex >= dataCodewords {
+        return Err(Exceptions::FORMAT);
+    }
+
+    codewords.get(codeIndex).copied().ok_or(Exceptions::FORMAT)
+}
+
+/// Skips the `operands` codewords a control sequence consumes without
+/// interpreting them, after proving they lie inside the declared data codewords.
+fn skipOperands(dataCodewords: usize, codeIndex: usize, operands: usize) -> Result<usize> {
+    let next = codeIndex + operands;
+    if next > dataCodewords {
+        return Err(Exceptions::FORMAT);
+    }
+
+    Ok(next)
+}
+
+/// Number of decoded values a text compaction run starting at `codeIndex` can
+/// produce, which is two per remaining data codeword.
+///
+/// A start index already past the declared data codewords means the control
+/// sequence that produced it was truncated, so it is a format error rather than
+/// an underflowing subtraction and an allocation sized from the result.
+fn textCompactionCapacity(dataCodewords: usize, codeIndex: usize) -> Result<usize> {
+    let Some(remaining) = dataCodewords.checked_sub(codeIndex) else {
+        return Err(Exceptions::FORMAT);
+    };
+
+    Ok(remaining * 2)
+}
+
+pub fn decode(codewords: &[u32], ecLevel: &str) -> Result<DecoderRXingResult> {
+    let dataCodewords = dataCodewordCount(codewords)?;
+    let mut result = ECIStringBuilder::with_capacity(codewords.len() * 2);
+    let mut codeIndex = textCompaction(codewords, 1, &mut result)?;
+    let mut resultMetadata = PDF417RXingResultMetadata::default();
+    while codeIndex < dataCodewords {
+        let code = codewords[codeIndex];
+        codeIndex += 1;
+        match code {
+            TEXT_COMPACTION_MODE_LATCH => {
+                codeIndex = textCompaction(codewords, codeIndex, &mut result)?
+            }
+            BYTE_COMPACTION_MODE_LATCH | BYTE_COMPACTION_MODE_LATCH_6 => {
+                codeIndex = byteCompaction(code, codewords, codeIndex, &mut result)?
+            }
+            MODE_SHIFT_TO_BYTE_COMPACTION_MODE => {
+                let shifted = operandAt(codewords, dataCodewords, codeIndex)?;
+                result.append_char(char::from_u32(shifted).ok_or(Exceptions::PARSE)?);
+                codeIndex += 1;
+            }
+            NUMERIC_COMPACTION_MODE_LATCH => {
+                codeIndex = numericCompaction(codewords, codeIndex, &mut result)?
+            }
+            ECI_CHARSET => {
+                result.append_eci(Eci::from(operandAt(codewords, dataCodewords, codeIndex)?));
+                codeIndex += 1;
+            }
+            ECI_GENERAL_PURPOSE =>
+            // Can't do anything with generic ECI; skip its 2 characters
+            {
+                codeIndex = skipOperands(dataCodewords, codeIndex, 2)?
+            }
+            ECI_USER_DEFINED =>
+            // Can't do anything with user ECI; skip its 1 character
+            {
+                codeIndex = skipOperands(dataCodewords, codeIndex, 1)?
+            }
+            BEGIN_MACRO_PDF417_CONTROL_BLOCK => {
+                codeIndex = decodeMacroBlock(codewords, codeIndex, &mut resultMetadata)?
+            }
+            BEGIN_MACRO_PDF417_OPTIONAL_FIELD | MACRO_PDF417_TERMINATOR =>
+            // Should not see these outside a macro block
+            {
+                return Err(Exceptions::FORMAT);
+            }
+            _ => {
+                // Default to text compaction. During testing numerous barcodes
+                // appeared to be missing the starting Mode:: In these cases defaulting
+                // to text compaction seems to work.
+                codeIndex -= 1;
+                codeIndex = textCompaction(codewords, codeIndex, &mut result)?;
+            }
+        }
+    }
+
+    result = result.build_result();
+
+    if result.is_empty() && resultMetadata.getFileId().is_empty() {
+        return Err(Exceptions::FORMAT);
+    }
+
+    let mut decoderRXingResult = DecoderRXingResult::new(
+        Vec::new(),
+        result.to_string(),
+        Vec::new(),
+        ecLevel.to_owned(),
+    );
+    decoderRXingResult.setOther(Some(Arc::new(resultMetadata)));
+
+    Ok(decoderRXingResult)
+}
+
+pub fn decodeMacroBlock(
+    codewords: &[u32],
+    codeIndex: usize,
+    resultMetadata: &mut PDF417RXingResultMetadata,
+) -> Result<usize> {
+    let dataCodewords = dataCodewordCount(codewords)?;
+    let mut codeIndex = codeIndex;
+    if codeIndex + NUMBER_OF_SEQUENCE_CODEWORDS > dataCodewords {
+        // we must have at least two bytes left for the segment index
+        return Err(Exceptions::FORMAT);
+    }
+    let mut segmentIndexArray = [0; NUMBER_OF_SEQUENCE_CODEWORDS];
+    for seq in segmentIndexArray
+        .iter_mut()
+        .take(NUMBER_OF_SEQUENCE_CODEWORDS)
+    {
+        *seq = operandAt(codewords, dataCodewords, codeIndex)?;
+        codeIndex += 1;
+    }
+    let segmentIndexString =
+        decodeBase900toBase10(&segmentIndexArray, NUMBER_OF_SEQUENCE_CODEWORDS)?;
+    if segmentIndexString.is_empty() {
+        resultMetadata.setSegmentIndex(0);
+    } else if let Ok(parsed_int) = segmentIndexString.parse::<usize>() {
+        resultMetadata.setSegmentIndex(parsed_int);
+    } else {
+        // too large; bad input?
+        return Err(Exceptions::FORMAT);
+    }
+
+    // Decoding the fileId codewords as 0-899 numbers, each 0-filled to width 3. This follows the spec
+    // (See ISO/IEC 15438:2015 Annex H.6) and preserves all info, but some generators (e.g. TEC-IT) write
+    // the fileId using text compaction, so in those cases the fileId will appear mangled.
+    let mut fileId = String::new();
+    while codeIndex < dataCodewords
+        && codewords[codeIndex] != MACRO_PDF417_TERMINATOR
+        && codewords[codeIndex] != BEGIN_MACRO_PDF417_OPTIONAL_FIELD
+    {
+        fileId.push_str(&format!("{:0>3}", codewords[codeIndex])/*String.format("%03d", codewords[codeIndex])*/);
+        codeIndex += 1;
+    }
+    if fileId.chars().count() == 0 {
+        // at least one fileId codeword is required (Annex H.2)
+        return Err(Exceptions::FORMAT);
+    }
+    resultMetadata.setFileId(fileId);
+
+    let mut optionalFieldsStart = -1_isize;
+    // A file ID that ends exactly at the declared data boundary is not followed
+    // by an optional field latch, whatever the error correction tail happens to
+    // hold there.
+    if codeIndex < dataCodewords && codewords[codeIndex] == BEGIN_MACRO_PDF417_OPTIONAL_FIELD {
+        optionalFieldsStart = codeIndex as isize + 1;
+    }
+
+    while codeIndex < dataCodewords {
+        match codewords[codeIndex] {
+            BEGIN_MACRO_PDF417_OPTIONAL_FIELD => {
+                codeIndex += 1;
+                match operandAt(codewords, dataCodewords, codeIndex)? {
+                    MACRO_PDF417_OPTIONAL_FIELD_FILE_NAME => {
+                        let mut fileName = ECIStringBuilder::default();
+                        codeIndex = textCompaction(codewords, codeIndex + 1, &mut fileName)?;
+                        resultMetadata.setFileName(fileName.to_string());
+                    }
+                    MACRO_PDF417_OPTIONAL_FIELD_SENDER => {
+                        let mut sender = ECIStringBuilder::default();
+                        codeIndex = textCompaction(codewords, codeIndex + 1, &mut sender)?;
+                        resultMetadata.setSender(sender.to_string());
+                    }
+                    MACRO_PDF417_OPTIONAL_FIELD_ADDRESSEE => {
+                        let mut addressee = ECIStringBuilder::default();
+                        codeIndex = textCompaction(codewords, codeIndex + 1, &mut addressee)?;
+                        resultMetadata.setAddressee(addressee.to_string());
+                    }
+                    MACRO_PDF417_OPTIONAL_FIELD_SEGMENT_COUNT => {
+                        let mut segmentCount = ECIStringBuilder::default();
+                        codeIndex = numericCompaction(codewords, codeIndex + 1, &mut segmentCount)?;
+                        let Ok(parsed_segment_count) = segmentCount.to_string().parse() else {
+                            return Err(Exceptions::FORMAT);
+                        };
+                        resultMetadata.setSegmentCount(parsed_segment_count);
+                    }
+                    MACRO_PDF417_OPTIONAL_FIELD_TIME_STAMP => {
+                        let mut timestamp = ECIStringBuilder::default();
+                        codeIndex = numericCompaction(codewords, codeIndex + 1, &mut timestamp)?;
+                        let Ok(parsed_timestamp) = timestamp.to_string().parse() else {
+                            return Err(Exceptions::FORMAT);
+                        };
+                        resultMetadata.setTimestamp(parsed_timestamp);
+                    }
+                    MACRO_PDF417_OPTIONAL_FIELD_CHECKSUM => {
+                        let mut checksum = ECIStringBuilder::default();
+                        codeIndex = numericCompaction(codewords, codeIndex + 1, &mut checksum)?;
+                        let Ok(parsed_checksum) = checksum.to_string().parse() else {
+                            return Err(Exceptions::FORMAT);
+                        };
+                        resultMetadata.setChecksum(parsed_checksum);
+                    }
+                    MACRO_PDF417_OPTIONAL_FIELD_FILE_SIZE => {
+                        let mut fileSize = ECIStringBuilder::default();
+                        codeIndex = numericCompaction(codewords, codeIndex + 1, &mut fileSize)?;
+                        let Ok(parsed_file_size) = fileSize.to_string().parse() else {
+                            return Err(Exceptions::FORMAT);
+                        };
+                        resultMetadata.setFileSize(parsed_file_size);
+                    }
+                    _ => return Err(Exceptions::FORMAT),
+                }
+            }
+            MACRO_PDF417_TERMINATOR => {
+                codeIndex += 1;
+                resultMetadata.setLastSegment(true);
+            }
+            _ => return Err(Exceptions::FORMAT),
+        }
+    }
+
+    // copy optional fields to additional options
+    if optionalFieldsStart != -1 {
+        let optionalFieldsStart = optionalFieldsStart as usize;
+        let Some(mut optionalFieldsLength) = codeIndex.checked_sub(optionalFieldsStart) else {
+            return Err(Exceptions::FORMAT);
+        };
+        if resultMetadata.isLastSegment() {
+            // do not include terminator
+            let Some(withoutTerminator) = optionalFieldsLength.checked_sub(1) else {
+                return Err(Exceptions::FORMAT);
+            };
+            optionalFieldsLength = withoutTerminator;
+        }
+
+        // `codeIndex` never passed the declared data boundary, so this range
+        // holds data codewords only.
+        resultMetadata.setOptionalData(
+            codewords[optionalFieldsStart..optionalFieldsStart + optionalFieldsLength].to_vec(),
+        );
+    }
+
+    Ok(codeIndex)
+}
+
+/**
+ * Text Compaction mode (see 5.4.1.5) permits all printable ASCII characters to be
+ * encoded, i.e. values 32 - 126 inclusive in accordance with ISO/IEC 646 (IRV), as
+ * well as selected control characters.
+ *
+ * @param codewords The array of codewords (data + error)
+ * @param codeIndex The current index into the codeword array.
+ * @param result    The decoded data is appended to the result.
+ * @return The next index into the codeword array.
+ */
+fn textCompaction(
+    codewords: &[u32],
+    codeIndex: usize,
+    result: &mut ECIStringBuilder,
+) -> Result<usize> {
+    let dataCodewords = dataCodewordCount(codewords)?;
+    let mut codeIndex = codeIndex;
+    // 2 character per codeword
+    let capacity = textCompactionCapacity(dataCodewords, codeIndex)?;
+    let mut textCompactionData = vec![0; capacity];
+    // Used to hold the byte compaction value if there is a mode shift
+    let mut byteCompactionData = vec![0; capacity];
+
+    let mut index = 0;
+    let mut end = false;
+    let mut subMode = Mode::Alpha;
+
+    while (codeIndex < dataCodewords) && !end {
+        let mut code = codewords[codeIndex];
+        codeIndex += 1;
+
+        match code {
+            ..=PRE_TEXT_COMPACTION_MODE_LATCH => {
+                textCompactionData[index] = code / 30;
+                textCompactionData[index + 1] = code % 30;
+                index += 2;
+            }
+            TEXT_COMPACTION_MODE_LATCH => {
+                // reinitialize text compaction mode to alpha sub mode
+                textCompactionData[index] = TEXT_COMPACTION_MODE_LATCH;
+                index += 1;
+            }
+            BYTE_COMPACTION_MODE_LATCH
+            | BYTE_COMPACTION_MODE_LATCH_6
+            | NUMERIC_COMPACTION_MODE_LATCH
+            | BEGIN_MACRO_PDF417_CONTROL_BLOCK
+            | BEGIN_MACRO_PDF417_OPTIONAL_FIELD
+            | MACRO_PDF417_TERMINATOR => {
+                codeIndex -= 1;
+                end = true;
+            }
+            MODE_SHIFT_TO_BYTE_COMPACTION_MODE => {
+                // The Mode Shift codeword 913 shall cause a temporary
+                // switch from Text Compaction mode to Byte Compaction Mode::
+                // This switch shall be in effect for only the next codeword,
+                // after which the mode shall revert to the prevailing sub-mode
+                // of the Text Compaction Mode:: Codeword 913 is only available
+                // in Text Compaction mode; its use is described in 5.4.2.4.
+                textCompactionData[index] = MODE_SHIFT_TO_BYTE_COMPACTION_MODE;
+                code = operandAt(codewords, dataCodewords, codeIndex)?;
+                codeIndex += 1;
+                byteCompactionData[index] = code;
+                index += 1;
+            }
+            ECI_CHARSET => {
+                // Read the charset operand before flushing, so a truncated
+                // sequence fails without having appended anything.
+                let charset = operandAt(codewords, dataCodewords, codeIndex)?;
+                subMode = decodeTextCompaction(
+                    &textCompactionData,
+                    &byteCompactionData,
+                    index,
+                    result,
+                    subMode,
+                )
+                .ok_or(Exceptions::ILLEGAL_STATE)?;
+                result.append_eci(Eci::from(charset));
+                codeIndex += 1;
+                let capacity = textCompactionCapacity(dataCodewords, codeIndex)?;
+                textCompactionData = vec![0; capacity];
+                byteCompactionData = vec![0; capacity];
+                index = 0;
+            }
+            // Text Compaction is the mode in effect at the start of a symbol, so
+            // an ECI that opens the data is read here, as is one between two
+            // text segments. These two forms select no character set: skip
+            // their operands as the top-level loop does, rather than decoding
+            // them as text. Nothing is flushed, so the sub-mode carries across.
+            ECI_GENERAL_PURPOSE => {
+                codeIndex = skipOperands(dataCodewords, codeIndex, 2)?;
+            }
+            ECI_USER_DEFINED => {
+                codeIndex = skipOperands(dataCodewords, codeIndex, 1)?;
+            }
+            _ => {}
+        }
+    }
+    decodeTextCompaction(
+        &textCompactionData,
+        &byteCompactionData,
+        index,
+        result,
+        subMode,
+    );
+
+    Ok(codeIndex)
+}
+
+/**
+ * The Text Compaction mode includes all the printable ASCII characters
+ * (i.e. values from 32 to 126) and three ASCII control characters: HT or tab
+ * (ASCII value 9), LF or line feed (ASCII value 10), and CR or carriage
+ * return (ASCII value 13). The Text Compaction mode also includes various latch
+ * and shift characters which are used exclusively within the Mode:: The Text
+ * Compaction mode encodes up to 2 characters per codeword. The compaction rules
+ * for converting data into PDF417 codewords are defined in 5.4.2.2. The sub-mode
+ * switches are defined in 5.4.2.3.
+ *
+ * @param textCompactionData The text compaction data.
+ * @param byteCompactionData The byte compaction data if there
+ *                           was a mode shift.
+ * @param length             The size of the text compaction and byte compaction data.
+ * @param result             The decoded data is appended to the result.
+ * @param startMode          The mode in which decoding starts
+ * @return The mode in which decoding ended
+ */
+fn decodeTextCompaction(
+    textCompactionData: &[u32],
+    byteCompactionData: &[u32],
+    length: usize,
+    result: &mut ECIStringBuilder,
+    startMode: Mode,
+) -> Option<Mode> {
+    // Beginning from an initial state
+    // The default compaction mode for PDF417 in effect at the start of each symbol shall always be Text
+    // Compaction mode Alpha sub-mode (uppercase alphabetic). A latch codeword from another mode to the Text
+    // Compaction mode shall always switch to the Text Compaction Alpha sub-Mode::
+    let mut subMode = startMode;
+    let mut priorToShiftMode = startMode;
+    let mut latchedMode = startMode;
+    let mut i = 0;
+    const PRE_PL: u32 = PL - 1;
+    const PRE_PAL: u32 = PAL - 1;
+    while i < length {
+        let subModeCh = textCompactionData[i];
+        let mut ch = 0 as char;
+        match subMode {
+            Mode::Alpha =>
+            // Alpha (uppercase alphabetic)
+            {
+                match subModeCh {
+                    // Upper case Alpha Character
+                    0..=25 => ch = char::from_u32('A' as u32 + subModeCh)?,
+                    26 => ch = ' ',
+                    LL => {
+                        subMode = Mode::Lower;
+                        latchedMode = subMode;
+                    }
+                    ML => {
+                        subMode = Mode::Mixed;
+                        latchedMode = subMode;
+                    }
+                    PS => {
+                        // Shift to punctuation
+                        priorToShiftMode = subMode;
+                        subMode = Mode::PunctShift;
+                    }
+                    MODE_SHIFT_TO_BYTE_COMPACTION_MODE => {
+                        result.append_char(char::from_u32(byteCompactionData[i])?)
+                    }
+                    TEXT_COMPACTION_MODE_LATCH => {
+                        subMode = Mode::Alpha;
+                        latchedMode = subMode;
+                    }
+                    _ => {}
+                }
+            }
+
+            Mode::Lower =>
+            // Lower (lowercase alphabetic)
+            {
+                match subModeCh {
+                    ..=25 => ch = char::from_u32('a' as u32 + subModeCh)?,
+                    26 => ch = ' ',
+                    AS => {
+                        // Shift to alpha
+                        priorToShiftMode = subMode;
+                        subMode = Mode::AlphaShift;
+                    }
+                    ML => {
+                        subMode = Mode::Mixed;
+                        latchedMode = subMode;
+                    }
+                    PS => {
+                        // Shift to punctuation
+                        priorToShiftMode = subMode;
+                        subMode = Mode::PunctShift;
+                    }
+                    MODE_SHIFT_TO_BYTE_COMPACTION_MODE => {
+                        result.append_char(char::from_u32(byteCompactionData[i])?)
+                    }
+                    TEXT_COMPACTION_MODE_LATCH => {
+                        subMode = Mode::Alpha;
+                        latchedMode = subMode;
+                    }
+                    _ => {}
+                }
+            }
+
+            Mode::Mixed =>
+            // Mixed (numeric and some punctuation)
+            {
+                match subModeCh {
+                    0..=PRE_PL => ch = MIXED_CHARS[subModeCh as usize],
+                    PL => {
+                        subMode = Mode::Punct;
+                        latchedMode = subMode;
+                    }
+                    26 => ch = ' ',
+                    LL => {
+                        subMode = Mode::Lower;
+                        latchedMode = subMode;
+                    }
+                    AL | TEXT_COMPACTION_MODE_LATCH => {
+                        subMode = Mode::Alpha;
+                        latchedMode = subMode;
+                    }
+                    PS => {
+                        // Shift to punctuation
+                        priorToShiftMode = subMode;
+                        subMode = Mode::PunctShift;
+                    }
+                    MODE_SHIFT_TO_BYTE_COMPACTION_MODE => {
+                        result.append_char(char::from_u32(byteCompactionData[i])?)
+                    }
+                    _ => {}
+                }
+            }
+
+            Mode::Punct =>
+            // Punctuation
+            {
+                match subModeCh {
+                    ..=PRE_PAL => ch = PUNCT_CHARS[subModeCh as usize],
+                    PAL | TEXT_COMPACTION_MODE_LATCH => {
+                        subMode = Mode::Alpha;
+                        latchedMode = subMode;
+                    }
+                    MODE_SHIFT_TO_BYTE_COMPACTION_MODE => {
+                        result.append_char(char::from_u32(byteCompactionData[i])?)
+                    }
+                    _ => {}
+                }
+            }
+
+            Mode::AlphaShift => {
+                // Restore sub-mode
+                subMode = priorToShiftMode;
+
+                match subModeCh {
+                    ..=25 => ch = char::from_u32('A' as u32 + subModeCh)?,
+                    26 => ch = ' ',
+                    TEXT_COMPACTION_MODE_LATCH => subMode = Mode::Alpha,
+                    _ => {}
+                }
+            }
+
+            Mode::PunctShift => {
+                // Restore sub-mode
+                subMode = priorToShiftMode;
+
+                match subModeCh {
+                    ..=PRE_PAL => ch = PUNCT_CHARS[subModeCh as usize],
+                    PAL | TEXT_COMPACTION_MODE_LATCH => subMode = Mode::Alpha,
+                    MODE_SHIFT_TO_BYTE_COMPACTION_MODE =>
+                    // PS before Shift-to-Byte is used as a padding character,
+                    // see 5.4.2.4 of the specification
+                    {
+                        result.append_char(char::from_u32(byteCompactionData[i])?)
+                    }
+                    _ => {}
+                }
+            }
+        }
+        if ch as u32 != 0 {
+            // Append decoded character to result
+            result.append_char(ch);
+        }
+        i += 1;
+    }
+    Some(latchedMode)
+}
+
+/**
+ * Byte Compaction mode (see 5.4.3) permits all 256 possible 8-bit byte values to be encoded.
+ * This includes all ASCII characters value 0 to 127 inclusive and provides for international
+ * character set support.
+ *
+ * @param mode      The byte compaction mode i.e. 901 or 924
+ * @param codewords The array of codewords (data + error)
+ * @param codeIndex The current index into the codeword array.
+ * @param result    The decoded data is appended to the result.
+ * @return The next index into the codeword array.
+ */
+fn byteCompaction(
+    mode: u32,
+    codewords: &[u32],
+    codeIndex: usize,
+    result: &mut ECIStringBuilder,
+) -> Result<usize> {
+    let dataCodewords = dataCodewordCount(codewords)?;
+    let mut end = false;
+    let mut codeIndex = codeIndex;
+
+    while codeIndex < dataCodewords && !end {
+        //handle leading ECIs
+        while codeIndex < dataCodewords && codewords[codeIndex] == ECI_CHARSET {
+            let charset = operandAt(codewords, dataCodewords, codeIndex + 1)?;
+            codeIndex += 2;
+            result.append_eci(Eci::from(charset));
+        }
+
+        if codeIndex >= dataCodewords || codewords[codeIndex] >= TEXT_COMPACTION_MODE_LATCH {
+            end = true;
+        } else {
+            //decode one block of 5 codewords to 6 bytes
+            let mut value: u64 = 0;
+            let mut count = 0;
+            loop {
+                value = 900 * value + codewords[codeIndex] as u64;
+                codeIndex += 1;
+                count += 1;
+                if !(count < 5
+                    && codeIndex < dataCodewords
+                    && codewords[codeIndex] < TEXT_COMPACTION_MODE_LATCH)
+                {
+                    break;
+                }
+            }
+            if count == 5
+                && (mode == BYTE_COMPACTION_MODE_LATCH_6
+                    || codeIndex < dataCodewords
+                        && codewords[codeIndex] < TEXT_COMPACTION_MODE_LATCH)
+            {
+                for i in 0..6 {
+                    result.append_byte((value >> (8 * (5 - i))) as u8);
+                }
+            } else {
+                codeIndex -= count;
+                while (codeIndex < dataCodewords) && !end {
+                    let code = codewords[codeIndex];
+                    codeIndex += 1;
+                    if code < TEXT_COMPACTION_MODE_LATCH {
+                        result.append_byte(code as u8);
+                    } else if code == ECI_CHARSET {
+                        result.append_eci(Eci::from(operandAt(
+                            codewords,
+                            dataCodewords,
+                            codeIndex,
+                        )?));
+                        codeIndex += 1;
+                    } else {
+                        codeIndex -= 1;
+                        end = true;
+                    }
+                }
+            }
+        }
+    }
+    Ok(codeIndex)
+}
+
+/**
+ * Numeric Compaction mode (see 5.4.4) permits efficient encoding of numeric data strings.
+ *
+ * @param codewords The array of codewords (data + error)
+ * @param codeIndex The current index into the codeword array.
+ * @param result    The decoded data is appended to the result.
+ * @return The next index into the codeword array.
+ */
+fn numericCompaction(
+    codewords: &[u32],
+    codeIndex: usize,
+    result: &mut ECIStringBuilder,
+) -> Result<usize> {
+    let dataCodewords = dataCodewordCount(codewords)?;
+    let mut count = 0;
+    let mut end = false;
+    let mut codeIndex = codeIndex;
+
+    let mut numericCodewords = [0; MAX_NUMERIC_CODEWORDS];
+
+    while codeIndex < dataCodewords && !end {
+        let code = codewords[codeIndex];
+        codeIndex += 1;
+        if codeIndex == dataCodewords {
+            end = true;
+        }
+        match code {
+            ..=PRE_TEXT_COMPACTION_MODE_LATCH => {
+                numericCodewords[count] = code;
+                count += 1;
+            }
+            TEXT_COMPACTION_MODE_LATCH
+            | BYTE_COMPACTION_MODE_LATCH
+            | BYTE_COMPACTION_MODE_LATCH_6
+            | BEGIN_MACRO_PDF417_CONTROL_BLOCK
+            | BEGIN_MACRO_PDF417_OPTIONAL_FIELD
+            | MACRO_PDF417_TERMINATOR
+            | ECI_CHARSET
+            | ECI_GENERAL_PURPOSE
+            | ECI_USER_DEFINED => {
+                codeIndex -= 1;
+                end = true;
+            }
+            _ => {}
+        }
+
+        if (count % MAX_NUMERIC_CODEWORDS == 0 || code == NUMERIC_COMPACTION_MODE_LATCH || end)
+            && count > 0
+        {
+            // Re-invoking Numeric Compaction mode (by using codeword 902
+            // while in Numeric Compaction mode) serves  to terminate the
+            // current Numeric Compaction mode grouping as described in 5.4.4.2,
+            // and then to start a new one grouping.
+            result.append_string(&decodeBase900toBase10(&numericCodewords, count)?);
+            count = 0;
+        }
+    }
+    Ok(codeIndex)
+}
+
+/**
+ * Convert a list of Numeric Compacted codewords from Base 900 to Base 10.
+ *
+ * @param codewords The array of codewords
+ * @param count     The number of codewords
+ * @return The decoded string representing the Numeric data.
+ */
+/*
+  EXAMPLE
+  Encode the fifteen digit numeric string 000213298174000
+  Prefix the numeric string with a 1 and set the initial value of
+  t = 1 000 213 298 174 000
+  Calculate codeword 0
+  d0 = 1 000 213 298 174 000 mod 900 = 200
+
+  t = 1 000 213 298 174 000 div 900 = 1 111 348 109 082
+  Calculate codeword 1
+  d1 = 1 111 348 109 082 mod 900 = 282
+
+  t = 1 111 348 109 082 div 900 = 1 234 831 232
+  Calculate codeword 2
+  d2 = 1 234 831 232 mod 900 = 632
+
+  t = 1 234 831 232 div 900 = 1 372 034
+  Calculate codeword 3
+  d3 = 1 372 034 mod 900 = 434
+
+  t = 1 372 034 div 900 = 1 524
+  Calculate codeword 4
+  d4 = 1 524 mod 900 = 624
+
+  t = 1 524 div 900 = 1
+  Calculate codeword 5
+  d5 = 1 mod 900 = 1
+  t = 1 div 900 = 0
+  Codeword sequence is: 1, 624, 434, 632, 282, 200
+
+  Decode the above codewords involves
+    1 x 900 power of 5 + 624 x 900 power of 4 + 434 x 900 power of 3 +
+  632 x 900 power of 2 + 282 x 900 power of 1 + 200 x 900 power of 0 = 1000213298174000
+
+  Remove leading 1 =>  RXingResult is 000213298174000
+*/
+fn decodeBase900toBase10(codewords: &[u32], count: usize) -> Result<String> {
+    let mut result = 0.to_biguint().ok_or(Exceptions::ARITHMETIC)?;
+    for i in 0..count {
+        result +=
+            &EXP900[count - i - 1] * (codewords[i].to_biguint().ok_or(Exceptions::ARITHMETIC)?);
+    }
+    let resultString = result.to_string();
+    if !resultString.starts_with('1') {
+        return Err(Exceptions::FORMAT);
+    }
+    Ok(resultString[1..].to_owned())
+}

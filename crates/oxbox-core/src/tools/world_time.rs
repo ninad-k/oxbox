@@ -1,7 +1,6 @@
 //! Tool: World Time. Convert UTC instants with bundled IANA time-zone rules.
+use super::time_support;
 use crate::{CoreError, CoreResult};
-use chrono::{DateTime, Offset, Timelike, Utc};
-use chrono_tz::{TZ_VARIANTS, Tz};
 use serde::Serialize;
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,7 +13,7 @@ pub struct Clock {
     pub daytime: bool,
 }
 pub fn zones() -> Vec<&'static str> {
-    TZ_VARIANTS.iter().map(|zone| zone.name()).collect()
+    time_support::zones()
 }
 /// Search canonical IANA names and the readable city labels shown by the host.
 pub fn search_zones(query: &str) -> Vec<&'static str> {
@@ -25,28 +24,50 @@ pub fn search_zones(query: &str) -> Vec<&'static str> {
         .collect()
 }
 pub fn clock_at(zone: &str, timestamp: i64) -> CoreResult<Clock> {
-    let zone: Tz = zone
-        .parse()
-        .map_err(|_| CoreError::InvalidInput("unknown IANA time zone".into()))?;
-    let utc = DateTime::<Utc>::from_timestamp(timestamp, 0)
+    let timezone = time_support::timezone(zone)?;
+    if !time_support::valid_timestamp(timestamp) {
+        return Err(CoreError::InvalidInput("invalid timestamp".into()));
+    }
+    let offset = time_support::offset_info(&timezone, timestamp)?;
+    let wall = timestamp
+        .checked_add(i64::from(offset.seconds))
         .ok_or_else(|| CoreError::InvalidInput("invalid timestamp".into()))?;
-    let local = utc.with_timezone(&zone);
+    let local = time_support::wall_parts(wall)?;
     Ok(Clock {
-        zone: zone.name().into(),
-        date: local.format("%Y-%m-%d").to_string(),
-        time: local.format("%H:%M:%S").to_string(),
-        abbreviation: local.format("%Z").to_string(),
-        offset_seconds: local.offset().fix().local_minus_utc(),
-        daytime: (7..19).contains(&local.hour()),
+        zone: zone.into(),
+        date: time_support::date_text(&local),
+        time: time_support::time_text(&local),
+        abbreviation: offset.abbreviation,
+        offset_seconds: offset.seconds,
+        daytime: (7..19).contains(&local.hour),
     })
 }
 pub fn now(zone: &str) -> CoreResult<Clock> {
-    clock_at(zone, Utc::now().timestamp())
+    clock_at(zone, time_support::now_timestamp())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn jiff_future_world_clock_keeps_recurring_dst_and_checked_wide_dates() {
+        let epoch = jiff::civil::date(1970, 1, 1).at(0, 0, 0, 0);
+        let reference = jiff::civil::date(2200, 7, 1).at(12, 0, 0, 0);
+        let timestamp = reference.duration_since(epoch).as_secs();
+        for (timestamp, date) in [
+            (timestamp, "2200-07-01"),
+            (timestamp + 25 * 146_097 * 86_400, "+12200-07-01"),
+        ] {
+            let clock = clock_at("America/New_York", timestamp).unwrap();
+            assert_eq!(
+                clock.offset_seconds, -14_400,
+                "future POSIX DST must not freeze at the last 2099 standard-time table entry"
+            );
+            assert_eq!(clock.abbreviation, "EDT");
+            assert_eq!(clock.date, date);
+            assert_eq!(clock.time, "08:00:00");
+        }
+    }
     #[test]
     fn daylight_saving_boundary() {
         let before = clock_at("America/New_York", 1710053999).unwrap();

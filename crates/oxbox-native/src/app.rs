@@ -408,7 +408,7 @@ impl App {
         ui.separator();
         let appearance_label = ui.label("Appearance");
         let old = self.prefs.theme;
-        egui::ComboBox::from_id_salt("appearance")
+        let appearance = egui::ComboBox::from_id_salt("appearance")
             .selected_text(format!("{:?}", old))
             .show_ui(ui, |ui| {
                 for (theme, name) in [
@@ -421,6 +421,7 @@ impl App {
             })
             .response
             .labelled_by(appearance_label.id);
+        crate::accessibility::combo_expansion(&appearance);
         if old != self.prefs.theme {
             ui.ctx().set_theme(match self.prefs.theme {
                 Theme::System => egui::ThemePreference::System,
@@ -1099,6 +1100,11 @@ fn shell_navigation(
     details: bool,
     query: bool,
 ) -> Option<ShellNavigation> {
+    // A chooser/context popup receives Escape before Back or search clearing.
+    // Leave the event intact so egui can close it and retain the current route.
+    if egui::Popup::is_any_open(ctx) {
+        return None;
+    }
     if (details || query)
         && crate::shortcuts::consume(ctx, egui::Modifiers::NONE, egui::Key::Escape)
     {
@@ -1124,6 +1130,69 @@ fn shell_navigation(
 #[cfg(test)]
 mod navigation_tests {
     use super::*;
+
+    #[test]
+    fn shell_popup_escape_dismisses_combo_before_back_or_search_clear() {
+        use egui::accesskit::{Action, ActionRequest, Role, TreeId};
+        for (details, query) in [(true, false), (false, true)] {
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let frame = |events| {
+                let mut navigation = None;
+                let mut output = context.run_ui(
+                    egui::RawInput {
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        // eframe calls shell logic before drawing the current form.
+                        navigation = shell_navigation(ui.ctx(), false, details, query);
+                        egui::ComboBox::from_label("Generated shell chooser")
+                            .selected_text("First")
+                            .show_ui(ui, |ui| {
+                                let _ = ui.selectable_label(true, "First");
+                                let _ = ui.selectable_label(false, "Second");
+                            });
+                    },
+                );
+                output.textures_delta.clear();
+                (
+                    navigation,
+                    output.platform_output.accesskit_update.unwrap().nodes,
+                )
+            };
+            let (_, nodes) = frame(Vec::new());
+            let chooser = nodes
+                .into_iter()
+                .find_map(|(id, node)| (node.role() == Role::ComboBox).then_some(id))
+                .unwrap();
+            frame(vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                action: Action::Click,
+                target_node: chooser,
+                target_tree: TreeId::ROOT,
+                data: None,
+            })]);
+            assert!(
+                egui::Popup::is_any_open(&context),
+                "fixture must open the real chooser popup"
+            );
+            let (navigation, _) = frame(vec![egui::Event::Key {
+                key: egui::Key::Escape,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            }]);
+            assert_eq!(
+                navigation, None,
+                "Escape belongs to the open chooser before shell navigation"
+            );
+            assert!(
+                !egui::Popup::is_any_open(&context),
+                "the chooser must receive Escape and close"
+            );
+        }
+    }
 
     #[test]
     fn restoring_a_tool_or_settings_does_not_navigate_or_cancel_its_work() {

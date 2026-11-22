@@ -1,0 +1,114 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -38,6 +38,7 @@
+ allow_forced_iso_ied_18004_compliance = []
+ aztec = []
+ client_support = [
++    "dep:chrono",
+     "dep:chrono-tz",
+     "dep:fancy-regex",
+     "dep:urlencoding",
+@@ -115,7 +116,10 @@
+     "image",
+ ]
+ svg_write = ["dep:svg"]
+-wasm_support = ["chrono/wasmbind"]
++wasm_support = [
++    "dep:chrono",
++    "chrono/wasmbind",
++]
+ 
+ [lib]
+ name = "rxing"
+@@ -236,6 +240,7 @@
+ 
+ [dependencies.chrono]
+ version = "0.4"
++optional = true
+ features = [
+     "clock",
+     "std",
+--- a/Cargo.toml.orig
++++ b/Cargo.toml.orig
+@@ -22,7 +22,7 @@
+ encoding = { version = "0.2", optional = true }
+ urlencoding = {version = "2.1", optional = true}
+ uriparse = {version = "0.6", optional = true}
+-chrono = { version = "0.4", default-features = false, features = ["clock", "std", "oldtime"] }
++chrono = { version = "0.4", default-features = false, features = ["clock", "std", "oldtime"], optional = true }
+ chrono-tz = {version = "0.10", optional = true}
+ image = {version = "=0.25.8", optional = true, default-features = false}
+ imageproc = {version = "0.25", optional = true, default-features = false}
+@@ -137,7 +137,7 @@
+ svg_read = ["dep:resvg", "image"]
+ 
+ #/// Enable support building this module in WASM
+-wasm_support = ["chrono/wasmbind"]
++wasm_support = ["dep:chrono", "chrono/wasmbind"]
+ 
+ #/// Enable experimental features, risky.
+ experimental_features = []
+@@ -149,7 +149,7 @@
+ otsu_level = ["image"]
+ 
+ #/// Adds "client" features do decode many common data formats found in barcodes
+-client_support = ["dep:chrono-tz", "dep:fancy-regex", "dep:urlencoding", "dep:uriparse"]
++client_support = ["dep:chrono", "dep:chrono-tz", "dep:fancy-regex", "dep:urlencoding", "dep:uriparse"]
+ 
+ #/// For the `FilteredImageReader` if this feature is enabled it
+ #/// will always reverse the order of pyramid scans
+--- a/src/aztec/aztec_reader.rs
++++ b/src/aztec/aztec_reader.rs
+@@ -119,7 +119,7 @@
+             decoderRXingResult.getNumBits(),
+             points.to_vec(),
+             BarcodeFormat::AZTEC,
+-            chrono::Utc::now().timestamp_millis() as u128,
++            crate::rxing_result::timestamp_now_millis(),
+         );
+ 
+         let byteSegments = decoderRXingResult.getByteSegments();
+--- a/src/rxing_result.rs
++++ b/src/rxing_result.rs
+@@ -43,6 +43,26 @@
+     timestamp: u128,
+     line_count: usize,
+ }
++/// Milliseconds since the Unix epoch, for a result's timestamp.
++///
++/// Uses the standard library's clock, so that `chrono` is only needed by the
++/// features that parse dates (`client_support`). `std::time::SystemTime` is
++/// not available on `wasm32-unknown-unknown`, so `wasm_support` keeps using
++/// chrono's JavaScript-backed clock there.
++pub(crate) fn timestamp_now_millis() -> u128 {
++    #[cfg(all(feature = "wasm_support", target_arch = "wasm32"))]
++    {
++        chrono::Utc::now().timestamp_millis() as u128
++    }
++    #[cfg(not(all(feature = "wasm_support", target_arch = "wasm32")))]
++    {
++        std::time::SystemTime::now()
++            .duration_since(std::time::UNIX_EPOCH)
++            .map(|d| d.as_millis())
++            .unwrap_or_default()
++    }
++}
++
+ impl RXingResult {
+     pub fn new(
+         text: &str,
+@@ -50,13 +70,7 @@
+         resultPoints: Vec<Point>,
+         format: BarcodeFormat,
+     ) -> Self {
+-        Self::new_timestamp(
+-            text,
+-            rawBytes,
+-            resultPoints,
+-            format,
+-            chrono::Utc::now().timestamp_millis() as u128,
+-        )
++        Self::new_timestamp(text, rawBytes, resultPoints, format, timestamp_now_millis())
+     }
+ 
+     pub fn new_timestamp(

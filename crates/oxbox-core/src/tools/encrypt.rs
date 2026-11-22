@@ -454,6 +454,116 @@ pub fn transform_file_with_receipt(
 mod tests {
     use super::*;
 
+    const LEGACY_AGE_0115: &[u8] = include_bytes!("../../tests/fixtures/age-0.11.5/legacy.age");
+    const LEGACY_PLAINTEXT: &[u8] = include_bytes!("../../tests/fixtures/age-0.11.5/plaintext.bin");
+    const LEGACY_FIXTURE_PASSPHRASE: &str = "Oxbox public age 0.11.5 fixture password";
+
+    #[test]
+    fn legacy_age_0115_generated_fixture_decrypts_without_changing_input() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("generated-old.age");
+        let restored = directory.path().join("restored.bin");
+        fs::write(&source, LEGACY_AGE_0115).unwrap();
+        assert!(LEGACY_AGE_0115.starts_with(b"age-encryption.org/v1\n-> scrypt "));
+        let recipient = LEGACY_AGE_0115.split(|byte| *byte == b'\n').nth(1).unwrap();
+        assert!(recipient.ends_with(b" 10"));
+        assert!(LEGACY_PLAINTEXT.contains(&0) && LEGACY_PLAINTEXT.contains(&255));
+        transform_file(
+            &source,
+            &restored,
+            LEGACY_FIXTURE_PASSPHRASE.into(),
+            true,
+            &CancelToken::default(),
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(fs::read(restored).unwrap(), LEGACY_PLAINTEXT);
+        assert_eq!(fs::read(source).unwrap(), LEGACY_AGE_0115);
+    }
+
+    #[test]
+    fn legacy_age_0115_fixture_keeps_error_cancel_and_exclusive_output_guards() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("generated-old.age");
+        let output = directory.path().join("must-not-remain.bin");
+        fs::write(&source, LEGACY_AGE_0115).unwrap();
+        let wrong_password = transform_file(
+            &source,
+            &output,
+            "generated wrong fixture password".into(),
+            true,
+            &CancelToken::default(),
+            &mut |_| {},
+        )
+        .unwrap_err();
+        assert_eq!(wrong_password.code(), "invalid_input");
+        assert!(
+            !wrong_password
+                .to_string()
+                .contains(LEGACY_FIXTURE_PASSPHRASE)
+        );
+        assert!(!output.exists());
+
+        let mut corrupt = LEGACY_AGE_0115.to_vec();
+        let last = corrupt.len() - 1;
+        corrupt[last] ^= 1;
+        let damaged = directory.path().join("generated-corrupt.age");
+        fs::write(&damaged, &corrupt).unwrap();
+        assert!(
+            transform_file(
+                &damaged,
+                &output,
+                LEGACY_FIXTURE_PASSPHRASE.into(),
+                true,
+                &CancelToken::default(),
+                &mut |_| {},
+            )
+            .is_err()
+        );
+        assert!(!output.exists());
+
+        let cancel = CancelToken::default();
+        let mut progressed = false;
+        let cancelled = transform_file(
+            &source,
+            &output,
+            LEGACY_FIXTURE_PASSPHRASE.into(),
+            true,
+            &cancel,
+            &mut |progress| {
+                if progress.done > 0 {
+                    progressed = true;
+                    cancel.cancel();
+                }
+            },
+        )
+        .unwrap_err();
+        assert!(
+            progressed,
+            "cancel test must reach actual decryption progress"
+        );
+        assert_eq!(cancelled.code(), "cancelled");
+        assert!(!output.exists());
+
+        fs::write(&output, b"preserve occupied generated destination").unwrap();
+        assert!(
+            transform_file(
+                &source,
+                &output,
+                LEGACY_FIXTURE_PASSPHRASE.into(),
+                true,
+                &CancelToken::default(),
+                &mut |_| {},
+            )
+            .is_err()
+        );
+        assert_eq!(
+            fs::read(output).unwrap(),
+            b"preserve occupied generated destination"
+        );
+        assert_eq!(fs::read(source).unwrap(), LEGACY_AGE_0115);
+    }
+
     fn fixture_receipt(source: &Path, output: &Path) -> TransformReceipt {
         let token = CancelToken::default();
         let (source_stamp, source_hash) = capture_fingerprint(source, &token, &mut |_| {}).unwrap();

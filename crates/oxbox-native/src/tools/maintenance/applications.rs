@@ -97,9 +97,11 @@ impl ApplicationReview {
                     ));
                     ui.label(&application.limitation);
                     if let Some(executable) = &application.executable {
-                        ui.collapsing("Desktop Exec metadata · never executed", |ui| {
-                            ui.monospace(executable);
-                        });
+                        let section =
+                            ui.collapsing("Desktop Exec metadata · never executed", |ui| {
+                                ui.monospace(executable);
+                            });
+                        crate::accessibility::disclosure_expansion(&section.header_response);
                     }
                 });
             }

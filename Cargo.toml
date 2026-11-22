@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/oxbox-core", "crates/oxbox-native", "src-tauri"]
+exclude = ["vendor/glib-0.18.5", "vendor/i18n-config-0.4.8", "vendor/rxing-0.9.4"]
 default-members = ["crates/oxbox-native"]
 
 [workspace.package]
@@ -16,6 +17,13 @@ oxbox-core = { path = "crates/oxbox-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+jiff = { version = "=1.0.2", default-features = false, features = ["std", "tz-system", "tz-fat", "tzdb-bundle-always", "tzdb-zoneinfo", "tzdb-concatenated", "perf-inline"] }
+
+[patch.crates-io]
+# User-approved source backports; provenance and integrity are recorded in vendor/.
+glib = { path = "vendor/glib-0.18.5" }
+i18n-config = { path = "vendor/i18n-config-0.4.8" }
+rxing = { path = "vendor/rxing-0.9.4" }
 
 # Compact native builds. Workers unwind so failures are reported and cleanup can run.
 [profile.release]

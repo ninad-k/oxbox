@@ -151,7 +151,7 @@ impl PowerView {
                 ui.add_enabled_ui(!status.active && !self.task.running(), |ui| {
                     ui.horizontal(|ui| {
                         ui.label("Keep awake");
-                        egui::ComboBox::from_label("Keep awake")
+                        let choice = egui::ComboBox::from_label("Keep awake")
                             .selected_text(
                                 ["Until stopped", "For a duration", "Until a dated time"]
                                     [self.awake_mode as usize],
@@ -161,6 +161,7 @@ impl PowerView {
                                 ui.selectable_value(&mut self.awake_mode, 1, "For a duration");
                                 ui.selectable_value(&mut self.awake_mode, 2, "Until a dated time");
                             });
+                        crate::accessibility::combo_expansion(&choice.response);
                     });
                     if self.awake_mode == 1 {
                         number(ui, "Minutes", &mut self.minutes, 1..=44640);
@@ -223,7 +224,7 @@ impl PowerView {
                 }
                 ui.horizontal(|ui| {
                     ui.label("Action");
-                    egui::ComboBox::from_label("Power action")
+                    let choice = egui::ComboBox::from_label("Power action")
                         .selected_text(format!("{:?}", self.sleep_action))
                         .show_ui(ui, |ui| {
                             for (action, label) in [
@@ -235,6 +236,7 @@ impl PowerView {
                                 ui.selectable_value(&mut self.sleep_action, action, label);
                             }
                         });
+                    crate::accessibility::combo_expansion(&choice.response);
                 });
                 number(ui, "Delay in seconds", &mut self.sleep_seconds, 1..=2678400);
                 if ui

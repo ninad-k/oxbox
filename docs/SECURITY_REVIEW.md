@@ -9,6 +9,23 @@ advisory lookups are research, not production runtime-network acceptance.
 
 ## Scope and method
 
+### Dependency and accessibility gate
+
+The approved [ADR 0005](adr/0005-dependency-security-remediation.md) source backports and maintained
+time migration have generated compatibility/source-integrity coverage in the
+[follow-up receipt](verification/2026-11-22-dependency-accessibility.md). Fresh auditing rejected the
+otherwise passing Age 0.12.1 candidate: its mandatory P-256 chain introduces vulnerable
+`crypto-bigint 0.5.5` ([RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387.html)).
+The candidate therefore retains exact Age 0.11.5; no crypto version override or advisory ignore is used.
+[ADR 0006](adr/0006-age-upgrade-security-gate.md) proposes the separately reviewed localization remedy.
+
+At the held-candidate gate, the same advisory database reported zero vulnerability entries and six
+maintenance warnings. The scanner omits the local GLib source package: its original version still
+matches its advisory, so exact reviewed source identity and optimized Linux regression remain necessary.
+Active runtime graphs must be distinguished from optional packages retained in Cargo.lock. This is
+neither a warning-free audit nor independent security acceptance. Final source, CI and artifact evidence
+must supersede earlier binary receipts before distribution.
+
 ### Complete 56-tool follow-up
 
 The [parallel route review](verification/2026-11-22-56-tool-pass.md) accounts for every canonical ID.

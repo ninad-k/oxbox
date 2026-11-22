@@ -266,6 +266,8 @@ function writeGenerated(filename, text) {
 
 export function main(args = process.argv.slice(2)) {
   const options = parseOptions(args);
+  // Distribution must use exactly the user-approved, source-pinned backports.
+  run(process.execPath, [path.join(root, 'scripts/verify-vendor.mjs')], process.env);
   const host = execFileSync('rustc', ['-vV'], { encoding: 'utf8' }).match(/^host:\s*(\S+)$/m)?.[1];
   if (!host) throw new Error('Could not determine the Rust host target.');
   const target = options.target || host;

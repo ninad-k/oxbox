@@ -46,6 +46,64 @@ as a design check. Alert/status semantics follow the principle of exposing chang
 described in [W3C status-message guidance](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html).
 These narrow checks do not certify every text/state, OS high-contrast mode, rendered pixel or assistive technology.
 
+## 2026-11-22 expanded-state follow-up
+
+The next bounded review reproduced pointer-only screenshot area selection, accessibility value edits
+changing disabled file/numeric drafts, ambiguous barcode Copy and resize Remove actions, changing resize
+row identity after a preceding removal, missing combo expansion metadata and unhandled screen-reader
+Expand/Collapse requests. The tests failed before their corresponding fixes. The integrated native suite
+then passed **146/146 tests before the Chrono-to-Jiff time migration**. The
+[dependency/accessibility receipt](verification/2026-11-22-dependency-accessibility.md) tracks the subsequent
+candidate separately; this count does not certify the changed dependencies or a new production executable.
+
+After the approved dependency/time port, the Windows full-workspace run passed **148 native tests**, plus
+294 core tests, five frozen time-compatibility comparisons and 12 retained legacy-host tests, with none
+failed or ignored. The two additional native tests check preserved date/fetched-time formatting. This is
+current-source headless evidence; production-binary speech and keyboard observations remain pending.
+
+All **56 default native routes** are checked for named interactive controls and actual combo expansion
+metadata. Shared combo/disclosure helpers report real collapsed/expanded state and handle enabled,
+idempotent Expand/Collapse requests while preserving normal click and keyboard behavior. Screenshot Area
+mode now offers a named numeric alternative: choose a display and enter physical-pixel X, Y, width and
+height before explicit capture. The form explains display-relative coordinates and bounds; headless edits
+to all four controls are tested without capturing a screen. Pointer selection remains available.
+
+The regression-covered utility/maintenance text and numeric inputs retain the job's admitted values when
+disabled accessibility actions arrive. The timer's draft likewise stays unchanged while running or paused. Resize Remove
+actions identify their selected image and retain stable row identity; decoded-barcode Copy actions identify
+the format and result number. These are generated-data/tree and fake-worker checks, not spoken-output or
+physical-keyboard acceptance. No test captures private content, reads the system clipboard, deletes user
+files or changes an OS setting.
+
+The final-binary build and real Narrator session for this follow-up have **not yet been recorded**. The user
+offered to help with speech observations; no speech result is inferred from that offer or from the tests.
+
+### Generated-data Narrator contribution checklist
+
+Use the exact candidate executable with a fresh disposable profile and generated local fixtures. Record
+the source revision, executable SHA-256, Windows/Narrator versions, keyboard layout and each actual result.
+Do not include private filenames, process details or remembered clipboard content in a public report.
+These are instructions for a future human session, not completed checks.
+
+- Use Ctrl+K, type a tool name, activate the result with Enter and return with Back. Check spoken names,
+  visible focus and Tab/Shift+Tab order; record any unexpected focus movement.
+- Open Settings and focus Appearance. Open the chooser, change a value, then reopen and dismiss it with
+  Escape. Check the spoken collapsed/expanded state and that Escape returns to the closed chooser.
+  Also try Narrator's Expand/Collapse actions where available; repeating an action should not toggle it.
+- In Unit Converter, enter generated invalid text such as `not a number`. Check that the error is announced
+  without stealing focus, then enter a valid number and verify recovery.
+- In Verify Checksum, select a generated local file and start a read-only hash. Use a fixture large enough
+  to observe Working on the test machine. Check the polite completion announcement and accessible result;
+  do not substitute a personal file or interpret a fast job's inaudible Working state as a passed test.
+- Leave a passive System Monitor or Network Usage view open briefly. Check that unchanged or periodic
+  samples do not repeatedly interrupt speech. Do not start clipboard history for this check.
+- Open a file picker from Verify Checksum, cancel once, then reopen and select the generated fixture.
+  Check dialog labels, keyboard navigation, focus on return and the retained exact selection.
+
+Report partial, failed and inconclusive observations explicitly. Even a successful checklist leaves the
+complete keyboard-only matrix, another screen reader, real IME composition, DPI/high contrast, monitor
+changes and macOS/Linux runtime accessibility pending.
+
 ## Reproducible checks
 
 Run exact Rust 1.95 with the locked dependencies:

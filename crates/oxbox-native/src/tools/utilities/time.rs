@@ -7,6 +7,7 @@ use oxbox_core::{
         alarm::{Alarm, AlarmBook, AlarmInput, Ambiguity, Recurrence},
         break_time::{BreakScheduler, BreakSettings},
         date_countdown::{Countdown, CountdownBook, CountdownInput},
+        time_support,
         timer_stopwatch::{Clock, format_time},
         world_time,
     },
@@ -18,12 +19,18 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
     thread::JoinHandle,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant},
 };
 pub(super) fn unix_now() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_secs().min(i64::MAX as u64) as i64)
+    time_support::now_timestamp()
+}
+
+fn utc_draft_date(timestamp: i64) -> CoreResult<String> {
+    let clock = world_time::clock_at("UTC", timestamp)?;
+    let minute = clock.time.get(..5).ok_or_else(|| {
+        CoreError::InvalidInput("UTC time cannot be formatted as hours and minutes".into())
+    })?;
+    Ok(format!("{}T{minute}", clock.date))
 }
 #[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
@@ -149,9 +156,10 @@ impl Default for Draft {
     fn default() -> Self {
         Self {
             label: String::new(),
-            date: (chrono::Utc::now() + chrono::Duration::hours(1))
-                .format("%Y-%m-%dT%H:%M")
-                .to_string(),
+            date: unix_now()
+                .checked_add(3600)
+                .and_then(|timestamp| utc_draft_date(timestamp).ok())
+                .unwrap_or_default(),
             zone: "UTC".into(),
             recurrence: Recurrence::Once,
             later: false,
@@ -574,15 +582,19 @@ impl TimeTools {
             ui.horizontal(|ui| {
                 let label = ui.label("Duration (minutes)");
                 let editable = !clock.running() && (clock.elapsed(now) == 0 || clock.completed());
+                let mut minutes = self.minutes;
                 let changed = ui
                     .add_enabled(
                         editable,
-                        egui::DragValue::new(&mut self.minutes)
+                        egui::DragValue::new(&mut minutes)
                             .range(0.01..=10080.0)
                             .speed(0.1),
                     )
                     .labelled_by(label.id)
                     .changed();
+                if editable {
+                    self.minutes = minutes;
+                }
                 if editable
                     && changed
                     && self.minutes.is_finite()
@@ -679,13 +691,14 @@ impl TimeTools {
         if !matches.contains(&self.zone.as_str()) {
             self.zone = matches.first().copied().unwrap_or("").into();
         }
-        egui::ComboBox::from_label("Time zone to add")
+        let choice_response = egui::ComboBox::from_label("Time zone to add")
             .selected_text(&self.zone)
             .show_ui(ui, |ui| {
                 for zone in &matches {
                     ui.selectable_value(&mut self.zone, zone.to_string(), zone.replace('_', " "));
                 }
             });
+        crate::accessibility::combo_expansion(&choice_response.response);
         let previous = state.zones.clone();
         if ui
             .add_enabled(
@@ -703,16 +716,23 @@ impl TimeTools {
                     ui.heading(zone.replace('_', " "));
                     ui.monospace(clock.time);
                     let minutes = clock.offset_seconds / 60;
-                    let local = chrono::Local::now().offset().local_minus_utc();
+                    let difference = time_support::local_offset_seconds(unix_now())
+                        .map(|local| {
+                            format!(
+                                "{:+} minutes from local",
+                                (clock.offset_seconds - local) / 60
+                            )
+                        })
+                        .unwrap_or_else(|_| "Local offset unavailable".into());
                     ui.label(format!(
-                        "{} · {} · UTC{}{:02}:{:02} · {} · {:+} minutes from local",
+                        "{} · {} · UTC{}{:02}:{:02} · {} · {}",
                         clock.date,
                         clock.abbreviation,
                         if minutes < 0 { "−" } else { "+" },
                         minutes.unsigned_abs() / 60,
                         minutes.unsigned_abs() % 60,
                         if clock.daytime { "Day" } else { "Night" },
-                        (clock.offset_seconds - local) / 60
+                        difference
                     ));
                 }
                 ui.horizontal(|ui| {
@@ -859,13 +879,14 @@ impl TimeTools {
             &mut draft.date,
         );
         field(ui, "IANA time zone", &mut draft.zone);
-        egui::ComboBox::from_label("Choose IANA zone")
+        let choice_response = egui::ComboBox::from_label("Choose IANA zone")
             .selected_text(&draft.zone)
             .show_ui(ui, |ui| {
                 for zone in world_time::zones() {
                     ui.selectable_value(&mut draft.zone, zone.to_string(), zone.replace('_', " "));
                 }
             });
+        crate::accessibility::combo_expansion(&choice_response.response);
         ui.checkbox(
             &mut draft.later,
             "Use the later occurrence when daylight saving repeats this local time",
@@ -874,7 +895,7 @@ impl TimeTools {
     }
     fn alarms(&mut self, ui: &mut Ui, host: &mut Host) {
         Self::draft(ui, &mut self.alarm);
-        egui::ComboBox::from_label("Repeat")
+        let choice_response = egui::ComboBox::from_label("Repeat")
             .selected_text(format!("{:?}", self.alarm.recurrence))
             .show_ui(ui, |ui| {
                 for (value, label) in [
@@ -885,6 +906,7 @@ impl TimeTools {
                     ui.selectable_value(&mut self.alarm.recurrence, value, label);
                 }
             });
+        crate::accessibility::combo_expansion(&choice_response.response);
         if ui.button("Add alarm").clicked() {
             let input = AlarmInput {
                 label: self.alarm.label.clone(),
@@ -1141,6 +1163,20 @@ mod timer_input_tests {
     use super::*;
     use egui::accesskit::{Action, ActionData, ActionRequest, TreeId};
 
+    #[test]
+    fn native_time_adapter_preserves_utc_draft_minute_strings() {
+        for (timestamp, expected) in [
+            (0, "1970-01-01T00:00"),
+            (-1, "1969-12-31T23:59"),
+            (946_684_800, "2000-01-01T00:00"),
+            (253_402_300_800, "+10000-01-01T00:00"),
+        ] {
+            assert_eq!(utc_draft_date(timestamp).unwrap(), expected);
+        }
+        assert!(utc_draft_date(i64::MAX).is_err());
+        assert!(utc_draft_date(i64::MIN).is_err());
+    }
+
     fn edit_custom_minutes(tools: &mut TimeTools, minutes: f64) {
         let context = egui::Context::default();
         context.enable_accesskit();
@@ -1211,6 +1247,27 @@ mod timer_input_tests {
                 "editing reset elapsed time"
             );
             assert_eq!(state.timer.running(), !paused);
+            assert!(tools.worker.is_none());
+        }
+    }
+
+    #[test]
+    fn disabled_running_or_paused_timer_duration_rejects_accessibility_edits() {
+        for paused in [false, true] {
+            let mut tools = TimeTools::default();
+            {
+                let mut state = tools.state.lock().unwrap();
+                state.timer.start(0);
+                if paused {
+                    state.timer.pause(10_000);
+                }
+            }
+            edit_custom_minutes(&mut tools, 10.0);
+            assert_eq!(
+                tools.minutes, 25.0,
+                "disabled timer duration accepted an edit"
+            );
+            assert_eq!(tools.state.lock().unwrap().timer.duration(), 1_500_000);
             assert!(tools.worker.is_none());
         }
     }

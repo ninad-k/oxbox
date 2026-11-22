@@ -56,6 +56,7 @@ fn password_field(ui: &mut Ui, label: &str, value: &mut String) -> egui::Respons
     let mut output = egui::TextEdit::singleline(value)
         .id_salt(("password", label))
         .password(true)
+        .interactive(ui.is_enabled())
         .char_limit(4096)
         .show(ui);
     // egui's password mode masks display/copy, but its ordinary undoer stores
@@ -399,7 +400,7 @@ impl FileTools {
                 let _ = self.admit_path(PathField::Checksum, path);
             }
             let old = self.algorithm;
-            egui::ComboBox::from_label("Hash algorithm")
+            let choice_response = egui::ComboBox::from_label("Hash algorithm")
                 .selected_text(format!("{:?}", self.algorithm))
                 .show_ui(ui, |ui| {
                     for (algorithm, label) in [
@@ -411,6 +412,7 @@ impl FileTools {
                         ui.selectable_value(&mut self.algorithm, algorithm, label);
                     }
                 });
+            crate::accessibility::combo_expansion(&choice_response.response);
             if before != self.checksum_path || old != self.algorithm {
                 self.hash.result = None;
             }
@@ -514,7 +516,7 @@ impl FileTools {
         let previous = self.archive_draft();
         ui.add_enabled_ui(!busy,|ui|{
         ui.horizontal(|ui|{ui.selectable_value(&mut self.archive_extract,false,"Create archive");ui.selectable_value(&mut self.archive_extract,true,"Extract archive");});
-        if self.archive_extract {self.pick_field(ui,"archive input",PathField::ArchiveInput,0);if let Some(path)=dropped(ui).first(){let _=self.admit_path(PathField::ArchiveInput,path);}self.pick_field(ui,"new destination folder",PathField::ArchiveOutput,2);ui.label("The destination must not exist. Choose or enter a new folder name, not an existing folder.");ui.horizontal(|ui|{let label=ui.label("Maximum extracted size (MiB)");ui.add(egui::DragValue::new(&mut self.max_mib).range(1..=1_048_576)).labelled_by(label.id);});}
+        if self.archive_extract {self.pick_field(ui,"archive input",PathField::ArchiveInput,0);if let Some(path)=dropped(ui).first(){let _=self.admit_path(PathField::ArchiveInput,path);}self.pick_field(ui,"new destination folder",PathField::ArchiveOutput,2);ui.label("The destination must not exist. Choose or enter a new folder name, not an existing folder.");ui.horizontal(|ui|{let label=ui.label("Maximum extracted size (MiB)");let mut max_mib=self.max_mib;ui.add(egui::DragValue::new(&mut max_mib).range(1..=1_048_576)).labelled_by(label.id);if ui.is_enabled(){self.max_mib=max_mib;}});}
         else {ui.checkbox(&mut self.archive_folders,"Select folders in picker");if ui.button("Add archive inputs…").clicked(){let dialog=crate::host::dialogs::file(ui.ctx());let paths=if self.archive_folders{dialog.pick_folders()}else{dialog.pick_files()};if let Some(paths)=paths{for path in paths{if !self.sources.contains(&path){self.sources.push(path);}}}}for path in dropped(ui){if !self.sources.contains(&path){self.sources.push(path);}}list(ui,&mut self.sources);ui.horizontal(|ui|{ui.selectable_value(&mut self.tar,false,"ZIP");ui.selectable_value(&mut self.tar,true,"TAR.GZ");});self.pick_field(ui,"new archive filename",PathField::ArchiveOutput,2);}
         if self.archive_draft()!=previous{self.archive.result=None;self.archive.error=None;self.archive.progress=None;}
         let ready=self.path_input_error.is_none()&&!self.archive_output.is_empty()&&if self.archive_extract{!self.archive_input.is_empty()}else{!self.sources.is_empty()};
@@ -832,6 +834,118 @@ mod input_state_tests {
             tools.archive_input.clone(),
             tools.source.clone(),
         )
+    }
+
+    #[test]
+    fn busy_file_path_fields_refuse_accessibility_value_changes() {
+        for (id, field) in [
+            ("verify-checksum", PathField::Checksum),
+            ("archive", PathField::ArchiveInput),
+            ("archive", PathField::ArchiveOutput),
+            ("encrypt-files", PathField::CryptSource),
+            ("encrypt-files", PathField::CryptOutput),
+        ] {
+            let original = "Generated path belonging to the active job".to_owned();
+            let mut tools = FileTools {
+                archive_extract: true,
+                ..Default::default()
+            };
+            *tools.path_field(field) = original.clone();
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let _release = match id {
+                "verify-checksum" => hold(&mut tools.hash, &context),
+                "archive" => hold(&mut tools.archive, &context),
+                _ => hold(&mut tools.crypt, &context),
+            };
+            let mut first = context.run_ui(egui::RawInput::default(), |ui| tools.show(ui, id));
+            first.textures_delta.clear();
+            let target = first
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .into_iter()
+                .find_map(|(id, node)| {
+                    (node.role() == egui::accesskit::Role::TextInput
+                        && node.value() == Some(original.as_str()))
+                    .then_some(id)
+                })
+                .unwrap();
+            let mut second = context.run_ui(
+                egui::RawInput {
+                    events: vec![egui::Event::AccessKitActionRequest(
+                        egui::accesskit::ActionRequest {
+                            action: egui::accesskit::Action::SetValue,
+                            target_node: target,
+                            target_tree: egui::accesskit::TreeId::ROOT,
+                            data: Some(egui::accesskit::ActionData::Value(
+                                "Generated unrelated replacement path".into(),
+                            )),
+                        },
+                    )],
+                    ..Default::default()
+                },
+                |ui| tools.show(ui, id),
+            );
+            second.textures_delta.clear();
+            assert_eq!(
+                tools.path_field(field),
+                &original,
+                "disabled {id} input accepted a new label for an active job"
+            );
+            tools.shutdown();
+        }
+    }
+
+    #[test]
+    fn busy_archive_budget_refuses_accessibility_numeric_changes() {
+        use egui::accesskit::{Action, ActionData, ActionRequest, Role, TreeId};
+        for (action, data) in [
+            (Action::SetValue, Some(ActionData::NumericValue(9999.0))),
+            (Action::Increment, None),
+        ] {
+            let mut tools = FileTools {
+                archive_extract: true,
+                max_mib: 1024,
+                ..Default::default()
+            };
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let _release = hold(&mut tools.archive, &context);
+            let mut first =
+                context.run_ui(egui::RawInput::default(), |ui| tools.show(ui, "archive"));
+            first.textures_delta.clear();
+            let target = first
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .into_iter()
+                .find_map(|(id, node)| {
+                    (node.role() == Role::SpinButton && node.numeric_value() == Some(1024.0))
+                        .then_some(id)
+                })
+                .unwrap();
+            let mut second = context.run_ui(
+                egui::RawInput {
+                    events: vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                        action,
+                        data,
+                        target_tree: TreeId::ROOT,
+                        target_node: target,
+                    })],
+                    ..Default::default()
+                },
+                |ui| tools.show(ui, "archive"),
+            );
+            second.textures_delta.clear();
+            assert_eq!(
+                tools.max_mib, 1024,
+                "disabled extraction budget changed during an active job"
+            );
+            tools.shutdown();
+        }
     }
 
     #[test]

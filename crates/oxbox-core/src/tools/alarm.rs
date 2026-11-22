@@ -1,7 +1,10 @@
 //! Tool: **Alarm**. Native callers inject UTC seconds; local recurrences use bundled IANA rules.
+use super::time_support;
 use crate::{CoreError, CoreResult};
-use chrono::{DateTime, Datelike, Days, LocalResult, NaiveDateTime, TimeZone, Utc, Weekday};
-use chrono_tz::Tz;
+use jiff::{
+    civil::{DateTime, Weekday},
+    tz::{AmbiguousOffset, TimeZone},
+};
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -47,53 +50,110 @@ pub fn validate_label(label: &str) -> CoreResult<()> {
     }
     Ok(())
 }
-fn local(value: &str) -> CoreResult<NaiveDateTime> {
+fn local(value: &str) -> CoreResult<i64> {
     if value.len() > 25 {
         return Err(CoreError::InvalidInput(
             "Invalid local date and time.".into(),
         ));
     }
-    let parsed = NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M")
-        .or_else(|_| NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%S"))
-        .map_err(|_| CoreError::InvalidInput("Use a valid local date and time.".into()))?;
-    if !(1..=9999).contains(&parsed.year()) {
+    let invalid = || CoreError::InvalidInput("Use a valid local date and time.".into());
+    // The old numeric directives skipped Unicode whitespace before each
+    // number, and accepted explicitly signed, padded years. Normalize only
+    // those positions; literal separators and trailing text remain strict.
+    let value = value.trim_start();
+    let (negative, signed, value) = if let Some(value) = value.strip_prefix('-') {
+        (true, true, value)
+    } else if let Some(value) = value.strip_prefix('+') {
+        (false, true, value)
+    } else {
+        (false, false, value)
+    };
+    let (year, rest) = value.split_once('-').ok_or_else(invalid)?;
+    if year.is_empty()
+        || (!signed && year.len() > 4)
+        || !year.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return Err(invalid());
+    }
+    let year = year.parse::<i32>().map_err(|_| invalid())?;
+    let year = if negative {
+        year.checked_neg().ok_or_else(invalid)?
+    } else {
+        year
+    };
+    // Match the preceding parser's calendar range before the tool's stricter
+    // saved-alarm year check, including its distinct error message.
+    if !(-262_143..=262_142).contains(&year) {
+        return Err(invalid());
+    }
+    let component = |value: &str| -> CoreResult<i8> {
+        let value = value.trim_start();
+        if value.is_empty() || value.len() > 2 || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err(invalid());
+        }
+        value.parse().map_err(|_| invalid())
+    };
+    let (month, rest) = rest.split_once('-').ok_or_else(invalid)?;
+    let (day, rest) = rest.split_once('T').ok_or_else(invalid)?;
+    let (hour, rest) = rest.split_once(':').ok_or_else(invalid)?;
+    let (minute, second) = match rest.split_once(':') {
+        Some((minute, second)) => (component(minute)?, component(second)?),
+        None => (component(rest)?, 0),
+    };
+    let calendar_year = if (1..=9999).contains(&year) {
+        year
+    } else {
+        // Only calendar validity is needed for an out-of-tool-range year.
+        // Gregorian dates repeat every400 years; Jiff remains the validator.
+        year.rem_euclid(400)
+    };
+    let canonical = format!(
+        "{calendar_year:04}-{:02}-{:02}T{:02}:{minute:02}:{second:02}",
+        component(month)?,
+        component(day)?,
+        component(hour)?,
+    );
+    let parsed = DateTime::strptime("%Y-%m-%dT%H:%M:%S", canonical).map_err(|_| invalid())?;
+    if !(1..=9999).contains(&year) {
         return Err(CoreError::InvalidInput(
             "Choose a year between 1 and 9999.".into(),
         ));
     }
-    Ok(parsed)
+    Ok(time_support::wall_seconds(parsed))
 }
-fn timezone(zone: &str) -> CoreResult<Tz> {
+fn timezone(zone: &str) -> CoreResult<TimeZone> {
     if zone.len() > 128 {
         return Err(CoreError::InvalidInput(
             "Time zone name is too long.".into(),
         ));
     }
-    zone.parse()
+    time_support::timezone(zone)
         .map_err(|_| CoreError::InvalidInput("Choose a valid IANA time zone.".into()))
 }
-fn resolve(date: NaiveDateTime, zone: Tz, ambiguity: Ambiguity) -> CoreResult<i64> {
-    match zone.from_local_datetime(&date) {
-        LocalResult::Single(value) => Ok(value.timestamp()),
-        LocalResult::Ambiguous(earlier, later) => Ok(match ambiguity {
-            Ambiguity::Earlier => earlier.timestamp().min(later.timestamp()),
-            Ambiguity::Later => earlier.timestamp().max(later.timestamp()),
-        }),
-        LocalResult::None => Err(CoreError::InvalidInput(
+fn resolve(date: i64, zone: &TimeZone, ambiguity: Ambiguity) -> CoreResult<i64> {
+    let offset = match time_support::wall_offset(zone, date)? {
+        AmbiguousOffset::Unambiguous { offset } => offset.seconds(),
+        AmbiguousOffset::Fold { before, after } => match ambiguity {
+            Ambiguity::Earlier => before.seconds().max(after.seconds()),
+            Ambiguity::Later => before.seconds().min(after.seconds()),
+        },
+        AmbiguousOffset::Gap { .. } => return Err(CoreError::InvalidInput(
             "This local time does not exist because the clock moves forward. Choose another time."
                 .into(),
         )),
-    }
+    };
+    date.checked_sub(i64::from(offset))
+        .ok_or_else(|| CoreError::InvalidInput("Date exceeds the supported range.".into()))
 }
 pub fn resolve_local(value: &str, zone: &str, ambiguity: Ambiguity) -> CoreResult<i64> {
-    resolve(local(value)?, timezone(zone)?, ambiguity)
+    resolve(local(value)?, &timezone(zone)?, ambiguity)
 }
 pub fn next_occurrence(input: &AlarmInput, after: i64) -> CoreResult<i64> {
     validate_label(&input.label)?;
     let requested = local(&input.local_date_time)?;
     let zone = timezone(&input.zone)?;
     if input.recurrence == Recurrence::Once {
-        let at = resolve(requested, zone, input.ambiguity)?;
+        let at = resolve(requested, &zone, input.ambiguity)?;
         if at <= after {
             return Err(CoreError::InvalidInput(
                 "A one-time alarm must be in the future.".into(),
@@ -101,20 +161,42 @@ pub fn next_occurrence(input: &AlarmInput, after: i64) -> CoreResult<i64> {
         }
         return Ok(at);
     }
-    let now = DateTime::<Utc>::from_timestamp(after, 0)
-        .ok_or_else(|| CoreError::InvalidInput("Invalid clock timestamp.".into()))?
-        .with_timezone(&zone);
-    let start = now.date_naive().max(requested.date());
+    if !time_support::valid_timestamp(after) {
+        return Err(CoreError::InvalidInput("Invalid clock timestamp.".into()));
+    }
+    let offset = time_support::offset_info(&zone, after)?;
+    let now = after
+        .checked_add(i64::from(offset.seconds))
+        .ok_or_else(|| CoreError::InvalidInput("Invalid clock timestamp.".into()))?;
+    let start = now
+        .div_euclid(time_support::DAY_SECONDS)
+        .max(requested.div_euclid(time_support::DAY_SECONDS));
     for days in 0..9 {
         let date = start
-            .checked_add_days(Days::new(days))
+            .checked_add(days)
+            .ok_or_else(|| CoreError::InvalidInput("Date exceeds the supported range.".into()))?;
+        if date < time_support::MIN_TIMESTAMP.div_euclid(time_support::DAY_SECONDS)
+            || date > time_support::MAX_TIMESTAMP.div_euclid(time_support::DAY_SECONDS)
+        {
+            return Err(CoreError::InvalidInput(
+                "Date exceeds the supported range.".into(),
+            ));
+        }
+        let midnight = date
+            .checked_mul(time_support::DAY_SECONDS)
             .ok_or_else(|| CoreError::InvalidInput("Date exceeds the supported range.".into()))?;
         if input.recurrence == Recurrence::Weekdays
-            && matches!(date.weekday(), Weekday::Sat | Weekday::Sun)
+            && matches!(
+                time_support::wall_parts(midnight)?.weekday,
+                Weekday::Saturday | Weekday::Sunday
+            )
         {
             continue;
         }
-        if let Ok(at) = resolve(date.and_time(requested.time()), zone, input.ambiguity)
+        let candidate = midnight
+            .checked_add(requested.rem_euclid(time_support::DAY_SECONDS))
+            .ok_or_else(|| CoreError::InvalidInput("Date exceeds the supported range.".into()))?;
+        if let Ok(at) = resolve(candidate, &zone, input.ambiguity)
             && at > after
         {
             return Ok(at);
@@ -139,7 +221,7 @@ impl AlarmBook {
             if item.id == 0
                 || item.id > 9_007_199_254_740_991
                 || !ids.insert(item.id)
-                || DateTime::<Utc>::from_timestamp(item.next_at, 0).is_none()
+                || !time_support::valid_timestamp(item.next_at)
             {
                 return Err(CoreError::InvalidInput(
                     "Alarm storage contains an invalid identifier or timestamp.".into(),
@@ -237,6 +319,79 @@ impl AlarmBook {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn alarm_legacy_grammar_preserves_numeric_whitespace_and_signed_padding() {
+        // Captured from the original Chrono parser, including the UTF-8 byte cap.
+        for (value, expected) in [
+            ("\u{2003}2024-1-2T3:4", 1_704_164_640),
+            ("2024-\u{2003}1-2T3:4", 1_704_164_640),
+            ("2024-1-\u{2003}2T3:4", 1_704_164_640),
+            ("2024-1-2T\u{2003}3:4", 1_704_164_640),
+            ("2024-1-2T3:\u{2003}4", 1_704_164_640),
+            ("2024-1-2T3:4:\u{2003}5", 1_704_164_645),
+            ("+00002024-01-02T03:04", 1_704_164_640),
+            (" +00002024-01-02T03:04", 1_704_164_640),
+            ("1-1-1T1:2", -62_135_593_080),
+            ("2024-1-2T3:\t4", 1_704_164_640),
+            ("2024-1-2T3:\n4", 1_704_164_640),
+        ] {
+            assert_eq!(
+                resolve_local(value, "UTC", Ambiguity::Earlier).unwrap(),
+                expected,
+                "{value:?}"
+            );
+        }
+        for value in [
+            "2024-1-2T3:4 ",
+            "2024 -1-2T3:4",
+            "2024-001-2T3:4",
+            "2024-1-002T3:4",
+            "2024-1-2T003:4",
+            "2024-1-2T3:004",
+            "2024-1-2T3:4:005",
+            "２０２４-1-2T3:4",
+            "2024-1-2t3:4",
+            "2024-2-30T3:4",
+            "2024-1-2T24:00",
+        ] {
+            assert!(
+                matches!(
+                    resolve_local(value, "UTC", Ambiguity::Earlier),
+                    Err(CoreError::InvalidInput(message)) if message == "Use a valid local date and time."
+                ),
+                "{value:?}"
+            );
+        }
+        for value in ["0000-1-2T3:4", "+10000-1-2T3:4", "-00002024-1-2T3:4"] {
+            assert!(
+                matches!(
+                    resolve_local(value, "UTC", Ambiguity::Earlier),
+                    Err(CoreError::InvalidInput(message)) if message == "Choose a year between 1 and 9999."
+                ),
+                "{value:?}"
+            );
+        }
+        assert!(matches!(
+            resolve_local("\u{2003}\u{2003}\u{2003}2024-01-02T03:04:05", "UTC", Ambiguity::Earlier),
+            Err(CoreError::InvalidInput(message)) if message == "Invalid local date and time."
+        ));
+    }
+    #[test]
+    fn jiff_future_alarm_uses_recurring_dst_instead_of_the_finite_2099_tail() {
+        let epoch = jiff::civil::date(1970, 1, 1).at(0, 0, 0, 0);
+        let after = jiff::civil::date(2200, 7, 1)
+            .at(12, 0, 0, 0)
+            .duration_since(epoch)
+            .as_secs();
+        let input = AlarmInput {
+            label: "Generated future recurrence".into(),
+            local_date_time: "2200-07-01T09:00".into(),
+            zone: "America/New_York".into(),
+            recurrence: Recurrence::Daily,
+            ambiguity: Ambiguity::Earlier,
+        };
+        assert_eq!(next_occurrence(&input, after).unwrap(), after + 3600);
+    }
     #[test]
     fn timezone_resolution_rejects_gap_and_selects_fold() {
         assert!(resolve_local("2024-03-10T02:30", "America/New_York", Ambiguity::Earlier).is_err());

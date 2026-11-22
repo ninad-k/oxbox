@@ -126,7 +126,8 @@ impl RecordingUi {
                 if self.source==2{
                     widgets::text(ui,"Exact window title",&mut self.title);
                     if ui.button("Find open windows").clicked(){self.windows.start(ui.ctx(),|cancel,_|{cancel.check()?;screenshot::targets()});}
-                    egui::ComboBox::from_label("Listed recording window").selected_text("Choose a listed window…").show_ui(ui,|ui|{for name in &self.window_names{if ui.selectable_label(self.title==*name,name).clicked(){self.title=name.clone();}}});
+                    let choice_response = egui::ComboBox::from_label("Listed recording window").selected_text("Choose a listed window…").show_ui(ui,|ui|{for name in &self.window_names{if ui.selectable_label(self.title==*name,name).clicked(){self.title=name.clone();}}});
+crate::accessibility::combo_expansion(&choice_response.response);
                     self.windows.show(ui);
                 }
                 widgets::number(ui,"Frames per second",&mut self.fps,1..=60);

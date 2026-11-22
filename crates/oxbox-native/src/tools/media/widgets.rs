@@ -26,13 +26,17 @@ pub fn error(ui: &mut egui::Ui, text: &Option<String>) {
 }
 pub fn text(ui: &mut egui::Ui, label: &str, value: &mut String) {
     let label = ui.label(label);
-    ui.add(egui::TextEdit::singleline(value).desired_width(f32::INFINITY))
-        .labelled_by(label.id);
+    ui.add(
+        egui::TextEdit::singleline(value)
+            .interactive(ui.is_enabled())
+            .desired_width(f32::INFINITY),
+    )
+    .labelled_by(label.id);
 }
 pub fn choice(ui: &mut egui::Ui, label: &str, selected: &mut usize, options: &[&str]) {
     ui.horizontal(|ui| {
         let description = ui.label(label);
-        egui::ComboBox::from_id_salt(label)
+        let choice_response = egui::ComboBox::from_id_salt(label)
             .selected_text(options.get(*selected).copied().unwrap_or(options[0]))
             .show_ui(ui, |ui| {
                 for (index, label) in options.iter().enumerate() {
@@ -41,6 +45,7 @@ pub fn choice(ui: &mut egui::Ui, label: &str, selected: &mut usize, options: &[&
             })
             .response
             .labelled_by(description.id);
+        crate::accessibility::combo_expansion(&choice_response);
     });
 }
 pub fn number(
@@ -50,9 +55,15 @@ pub fn number(
     range: std::ops::RangeInclusive<u32>,
 ) {
     ui.horizontal(|ui| {
-        let label = ui.label(label);
-        ui.add(egui::DragValue::new(value).range(range))
-            .labelled_by(label.id);
+        let description = ui.label(label);
+        let mut draft = *value;
+        let response = ui
+            .add(egui::DragValue::new(&mut draft).range(range))
+            .labelled_by(description.id);
+        crate::accessibility::name(&response, label);
+        if ui.is_enabled() {
+            *value = draft;
+        }
     });
 }
 pub fn file(ui: &mut egui::Ui, label: &str, value: &mut String, filters: &[&str]) -> bool {

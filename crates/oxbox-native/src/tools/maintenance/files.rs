@@ -91,6 +91,7 @@ impl FileMaintenance {
             if ui
                 .add(
                     egui::TextEdit::multiline(&mut self.paths)
+                        .interactive(ui.is_enabled())
                         .desired_rows(4)
                         .desired_width(f32::INFINITY),
                 )
@@ -182,8 +183,12 @@ impl FileMaintenance {
                 }
                 number(ui, "First counter value", &mut self.counter_start);
                 let label = ui.label("Counter digits (1–20)");
-                ui.add(egui::DragValue::new(&mut self.counter_width).range(1..=20))
+                let mut counter_width = self.counter_width;
+                ui.add(egui::DragValue::new(&mut counter_width).range(1..=20))
                     .labelled_by(label.id);
+                if ui.is_enabled() {
+                    self.counter_width = counter_width;
+                }
                 field(ui, "Counter separator", &mut self.counter_separator);
             }
             self.options.counter = self.counter_enabled.then(|| Counter {
@@ -474,11 +479,17 @@ impl FileMaintenance {
 }
 fn field(ui: &mut egui::Ui, label: &str, value: &mut String) {
     let label = ui.label(label);
-    ui.text_edit_singleline(value).labelled_by(label.id);
+    ui.add(egui::TextEdit::singleline(value).interactive(ui.is_enabled()))
+        .labelled_by(label.id);
 }
 fn number(ui: &mut egui::Ui, label: &str, value: &mut u64) {
     let label = ui.label(label);
-    ui.add(egui::DragValue::new(value)).labelled_by(label.id);
+    let mut draft = *value;
+    ui.add(egui::DragValue::new(&mut draft))
+        .labelled_by(label.id);
+    if ui.is_enabled() {
+        *value = draft;
+    }
 }
 fn confirm(ui: &egui::Ui, title: &str, description: &str) -> bool {
     host::dialogs::message(ui.ctx())
@@ -513,6 +524,72 @@ fn selected_paths_text(paths: &[PathBuf]) -> CoreResult<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn busy_maintenance_selected_paths_reject_accessibility_edits() {
+        use egui::accesskit::{Action, ActionData, ActionRequest, Role, TreeId};
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        for tool in ["batch-rename", "file-shred"] {
+            let original = "Generated exact reviewed selected path".to_owned();
+            let mut tools = FileMaintenance {
+                paths: original.clone(),
+                ..Default::default()
+            };
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let (ready_send, ready_receive) = std::sync::mpsc::channel();
+            assert!(tools.action.start(&context, move |cancel, _| {
+                ready_send.send(()).unwrap();
+                loop {
+                    cancel.check()?;
+                    std::thread::park_timeout(std::time::Duration::from_millis(5));
+                }
+            }));
+            ready_receive
+                .recv_timeout(std::time::Duration::from_secs(2))
+                .unwrap();
+            let mut first = context.run_ui(egui::RawInput::default(), |ui| {
+                tools.show(ui, tool, &mut host);
+            });
+            first.textures_delta.clear();
+            let target = first
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .into_iter()
+                .find_map(|(id, node)| {
+                    (node.role() == Role::MultilineTextInput
+                        && node.value() == Some(original.as_str()))
+                    .then_some(id)
+                })
+                .unwrap();
+            let mut second = context.run_ui(
+                egui::RawInput {
+                    events: vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                        action: Action::SetValue,
+                        target_tree: TreeId::ROOT,
+                        target_node: target,
+                        data: Some(ActionData::Value(
+                            "Generated unrelated replacement path".into(),
+                        )),
+                    })],
+                    ..Default::default()
+                },
+                |ui| {
+                    tools.show(ui, tool, &mut host);
+                },
+            );
+            second.textures_delta.clear();
+            assert_eq!(
+                tools.paths, original,
+                "busy {tool} relabeled its reviewed selection"
+            );
+            tools.shutdown();
+        }
+        host.shutdown();
+    }
+
     #[test]
     fn selected_file_paths_preserve_trailing_spaces_instead_of_targeting_a_neighbor() {
         let selected = std::env::temp_dir().join("generated-selected-file ");

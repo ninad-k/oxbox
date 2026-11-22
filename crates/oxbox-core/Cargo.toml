@@ -18,8 +18,7 @@ sha1 = "0.10"
 md-5 = "0.10"
 blake3 = "1"
 # Phase 1: offline converters, time zones and codes
-chrono = "0.4"
-chrono-tz = "0.10"
+jiff.workspace = true
 qrcode = "0.14"
 barcoders = "2"
 # Phase 2: streaming file tools and safe trash
@@ -37,7 +36,9 @@ keepawake = "0.6"
 xcap = "0.8"
 arboard = "3"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
-age = "0.11"
+# The 0.12.1 candidate failed the security gate (ADR 0006); keep the
+# existing passphrase implementation until a reviewed remedy is approved.
+age = "=0.11.5"
 rqrr = "0.11"
 rxing = { version = "0.9.3", default-features = false, features = ["decoders", "qrcode", "oned", "encoding_rs", "multi_barcode_readers"] }
 

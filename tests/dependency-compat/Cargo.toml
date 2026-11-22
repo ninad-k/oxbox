@@ -1,0 +1,14 @@
+[package]
+name = "oxbox-dependency-compatibility-tests"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+# Isolated validation of approved dependency patches, not an app workspace member.
+[workspace]
+resolver = "3"
+
+[dev-dependencies]
+i18n-config = { path = "../../vendor/i18n-config-0.4.8" }
+tempfile = "=3.27.0"

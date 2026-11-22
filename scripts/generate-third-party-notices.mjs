@@ -9,7 +9,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { selectNativeApplication, noticeNpmRoots, activePackageKeys, parseNoticeOptions } from './license-inventory.mjs';
+import { selectNativeApplication, noticeNpmRoots, activePackageKeys, parseNoticeOptions, loadVerifiedPatchedSources, cargoSourceDetails, cargoSourceLines } from './license-inventory.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { check, target, output: outputOption } = parseNoticeOptions(process.argv.slice(2));
@@ -55,6 +55,9 @@ function licenseFiles(directory, specified) {
   });
 }
 
+// Verify the approved modified sources before Cargo metadata or attribution reads.
+// The verifier is local/read-only; this generator never downloads source packages.
+const patchedSources = await loadVerifiedPatchedSources(root);
 let metadata;
 try {
   metadata = JSON.parse(execFileSync('cargo', ['metadata', '--locked', '--offline', '--format-version', '1', '--filter-platform', target], {
@@ -91,11 +94,10 @@ const entries = [];
 for (const [id, usage] of uses) {
   if (metadata.workspace_members.includes(id)) continue;
   const pkg = packages.get(id);
-  const registry = pkg.source?.startsWith('registry+');
-  const source = registry ? `https://crates.io/api/v1/crates/${encodeURIComponent(pkg.name)}/${encodeURIComponent(pkg.version)}/download` : publicUrl(pkg.repository);
+  const sourceDetails = cargoSourceDetails(pkg, patchedSources);
   entries.push({
     ecosystem: 'Cargo', name: pkg.name, version: pkg.version,
-    license: pkg.license || 'UNSPECIFIED — review required', source: source || 'Local or non-registry source — maintainer source review required',
+    license: pkg.license || 'UNSPECIFIED — review required', source: sourceDetails.source, sourceDetails,
     repository: publicUrl(pkg.repository), usage: [...usage].sort(compare).join(' + '),
     files: licenseFiles(path.dirname(pkg.manifest_path), pkg.license_file),
   });
@@ -179,8 +181,11 @@ const lines = [
   'License expressions and upstream license/copyright/NOTICE texts below are preserved from package sources.',
   'For notices omitted from published package archives, checked-in upstream supplements retain their',
   'revision-pinned source URLs and verified SHA-256 provenance in docs/third-party-licenses/sources.json.',
-  'Source URLs identify the exact original package version. Downstream modifications require their own',
-  'corresponding-source review; MPL-2.0-covered packages have explicit source retrieval links below.',
+  'Unmodified registry entries identify the original package version. Approved patched entries instead',
+  'identify modified project sources, their tree/provenance SHA-256 and immutable upstream reconstruction',
+  'archives and changes. Project branch URLs are mutable locators, not immutable source identities.',
+  'Patched source identity/integrity was verified locally against vendor/PROVENANCE.json before generation.',
+  'MPL-2.0-covered packages have explicit source retrieval links below; license review remains separate.',
   'Operating-system runtimes and installer-toolchain redistributables require a separate notice review.',
   'FFmpeg and Tesseract are user-installed optional providers and are not redistributed by Oxbox.',
   `Dependency packages inventoried: ${distinct.length}`,
@@ -190,7 +195,8 @@ const lines = [
   '',
 ];
 for (const entry of distinct) {
-  lines.push('='.repeat(88), `${entry.ecosystem}: ${entry.name} ${entry.version}`, `Use: ${entry.usage}`, `Declared license: ${entry.license}`, `Versioned package source: ${entry.source}`);
+  lines.push('='.repeat(88), `${entry.ecosystem}: ${entry.name} ${entry.version}`, `Use: ${entry.usage}`, `Declared license: ${entry.license}`,
+    ...cargoSourceLines(entry.sourceDetails ?? { source: entry.source, patched: false, additionalLines: [] }));
   if (entry.selectedLicense) lines.push(`License option selected for this inventory: ${entry.selectedLicense}`);
   if (entry.repository) lines.push(`Upstream repository: ${entry.repository}`);
   if (/MPL-2\.0/.test(entry.license)) lines.push(`MPL covered-source retrieval: ${entry.source}`);

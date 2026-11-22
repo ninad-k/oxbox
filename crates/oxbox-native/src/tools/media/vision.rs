@@ -242,11 +242,17 @@ impl VisionUi {
             });
         }
         self.barcode_job.show(ui);
-        for result in &self.barcodes {
+        for (index, result) in self.barcodes.iter().enumerate() {
             ui.group(|ui| {
                 ui.strong(&result.format);
                 ui.label(&result.text);
-                if ui.button("Copy decoded text").clicked() {
+                if crate::accessibility::button(
+                    ui,
+                    "Copy decoded text",
+                    &format!("Copy decoded {} result {}", result.format, index + 1),
+                )
+                .clicked()
+                {
                     ui.ctx().copy_text(result.text.clone());
                 }
             });
@@ -331,7 +337,7 @@ impl VisionUi {
                         .collect())
                 });
             }
-            egui::ComboBox::from_label("Display to sample")
+            let choice_response = egui::ComboBox::from_label("Display to sample")
                 .selected_text(
                     self.monitors
                         .get(self.monitor)
@@ -342,6 +348,7 @@ impl VisionUi {
                         ui.selectable_value(&mut self.monitor, index, &target.name);
                     }
                 });
+            crate::accessibility::combo_expansion(&choice_response.response);
             self.targets.show(ui);
             widgets::number(ui, "Physical pixel X", &mut self.x, 0..=32767);
             widgets::number(ui, "Physical pixel Y", &mut self.y, 0..=32767);
@@ -544,6 +551,39 @@ impl VisionUi {
 mod community_tests {
     use super::*;
     use std::sync::Arc;
+
+    #[test]
+    fn decoded_barcode_rows_have_distinct_contextual_copy_names() {
+        let mut view = VisionUi {
+            barcodes: vec![
+                BarcodeResult {
+                    format: "QR_CODE".into(),
+                    text: "Generated first result".into(),
+                },
+                BarcodeResult {
+                    format: "CODE_128".into(),
+                    text: "Generated second result".into(),
+                },
+            ],
+            ..Default::default()
+        };
+        let nodes = crate::accessibility::test_tree(|ui| view.barcode(ui));
+        for expected in [
+            "Copy decoded QR_CODE result 1",
+            "Copy decoded CODE_128 result 2",
+        ] {
+            assert!(
+                nodes
+                    .iter()
+                    .any(|node| node.role() == egui::accesskit::Role::Button
+                        && node.label() == Some(expected)),
+                "missing contextual decoded-result action: {expected}"
+            );
+        }
+        assert_eq!(view.barcodes.len(), 2);
+        assert!(!view.barcode_job.running() && !view.preview_job.running());
+        view.shutdown();
+    }
 
     fn generated_pixels() -> Arc<screenshot::RgbaImage> {
         Arc::new(screenshot::RgbaImage::from_pixel(

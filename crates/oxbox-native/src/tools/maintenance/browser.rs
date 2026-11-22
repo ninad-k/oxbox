@@ -42,7 +42,8 @@ impl BrowserTools {
         ui.add_enabled_ui(!self.task.running(),|ui|{
             let label=ui.label("Browser user-data folder (optional)");ui.text_edit_singleline(&mut self.custom).labelled_by(label.id);
             if ui.button("Choose browser user-data folder…").clicked()&&let Some(path)=crate::host::dialogs::file(ui.ctx()).pick_folder(){self.admit_folder(&path);}
-            egui::ComboBox::from_label("Browser for selected folder").selected_text(["Chrome / Chromium","Edge","Brave","Firefox Profiles"][self.browser]).show_ui(ui,|ui|{for(index,name)in["Chrome / Chromium","Edge","Brave","Firefox Profiles"].into_iter().enumerate(){ui.selectable_value(&mut self.browser,index,name);}});
+            let choice_response = egui::ComboBox::from_label("Browser for selected folder").selected_text(["Chrome / Chromium","Edge","Brave","Firefox Profiles"][self.browser]).show_ui(ui,|ui|{for(index,name)in["Chrome / Chromium","Edge","Brave","Firefox Profiles"].into_iter().enumerate(){ui.selectable_value(&mut self.browser,index,name);}});
+crate::accessibility::combo_expansion(&choice_response.response);
             ui.weak("Leave the folder blank to review installed browsers in their known per-OS profile locations. For a custom Chromium folder, select the parent of Default / Profile N; Firefox uses its Profiles directory.");
         });
         if before != (self.custom.clone(), self.browser) {
@@ -91,7 +92,7 @@ impl BrowserTools {
             }
             for profile in &report.profiles {
                 ui.push_id(&profile.path, |ui| {
-                    ui.collapsing(
+                    let section = ui.collapsing(
                         format!(
                             "{} · {} extension versions",
                             profile.browser.label(),
@@ -144,6 +145,7 @@ impl BrowserTools {
                             }
                         },
                     );
+                    crate::accessibility::disclosure_expansion(&section.header_response);
                 });
             }
         }

@@ -59,6 +59,7 @@ pub mod take_photo;
 pub mod take_video;
 pub mod text_clean;
 pub mod text_transform;
+pub mod time_support;
 pub mod timer_stopwatch;
 pub mod uninstall;
 pub mod unit_convert;

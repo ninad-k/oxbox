@@ -217,7 +217,7 @@ impl WindowsViews {
             .selected_window
             .and_then(|(id, pid)| self.windows.iter().find(|w| w.id == id && w.pid == pid))
             .map_or("Choose a window", |w| w.title.as_str());
-        egui::ComboBox::from_label("Application window")
+        let choice = egui::ComboBox::from_label("Application window")
             .selected_text(text)
             .width(ui.available_width().min(500.0))
             .show_ui(ui, |ui| {
@@ -234,6 +234,7 @@ impl WindowsViews {
                     );
                 }
             });
+        crate::accessibility::combo_expansion(&choice.response);
         if self.windows.is_empty() {
             ui.label("Refresh to enumerate available windows. Protected or closed windows may be unavailable.");
         }
@@ -432,7 +433,7 @@ impl WindowsViews {
                         Ok(Read::Displays(resolution::displays()?))
                     });
                 }
-                egui::ComboBox::from_label("Display")
+                let choice = egui::ComboBox::from_label("Display")
                     .selected_text(
                         self.displays
                             .get(self.display_index)
@@ -448,12 +449,13 @@ impl WindowsViews {
                             }
                         }
                     });
+                crate::accessibility::combo_expansion(&choice.response);
                 if let Some(display) = self.displays.get(self.display_index) {
                     ui.label(format!(
                         "Current: {} × {} @ {} Hz",
                         display.current.width, display.current.height, display.current.refresh
                     ));
-                    egui::ComboBox::from_label("Display mode")
+                    let choice = egui::ComboBox::from_label("Display mode")
                         .selected_text(
                             display
                                 .modes
@@ -471,6 +473,7 @@ impl WindowsViews {
                                 );
                             }
                         });
+                    crate::accessibility::combo_expansion(&choice.response);
                     if let Some(mode) = display.modes.get(self.mode_index)
                         && ui.button("Review display test…").clicked()
                     {
@@ -627,7 +630,7 @@ impl WindowsViews {
         ui.text_edit_singleline(&mut self.query)
             .labelled_by(label.id);
         let previous = self.app_id.clone();
-        egui::ComboBox::from_label("Registered application")
+        let choice = egui::ComboBox::from_label("Registered application")
             .selected_text(
                 self.apps
                     .iter()
@@ -649,6 +652,7 @@ impl WindowsViews {
                     }
                 }
             });
+        crate::accessibility::combo_expansion(&choice.response);
         if previous != self.app_id {
             self.leftovers.clear();
             self.leftover_checked.clear();

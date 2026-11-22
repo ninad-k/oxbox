@@ -329,11 +329,19 @@ impl ImageTools {
                 .max_height(140.0)
                 .show(ui, |ui| {
                     for (index, path) in self.resize_paths.iter().enumerate() {
-                        ui.horizontal(|ui| {
-                            ui.label(path.display().to_string());
-                            if ui.small_button("Remove").clicked() {
-                                remove = Some(index);
-                            }
+                        let row_id = ui.scope_id().with(("resize selected image", path));
+                        ui.scope_builder(egui::UiBuilder::new().scope_id(row_id), |ui| {
+                            ui.horizontal(|ui| {
+                                ui.label(path.display().to_string());
+                                let button = ui.small_button("Remove");
+                                crate::accessibility::name(
+                                    &button,
+                                    &format!("Remove resize image {}", path.display()),
+                                );
+                                if button.clicked() {
+                                    remove = Some(index);
+                                }
+                            });
                         });
                     }
                 });
@@ -931,6 +939,45 @@ mod verification56_tests {
         sync::mpsc,
         time::{Duration, Instant},
     };
+
+    #[test]
+    fn resize_selected_rows_have_contextual_remove_names_and_stable_identity() {
+        let first_path = PathBuf::from("generated-first-image.png");
+        let second_path = PathBuf::from("generated-second-image.png");
+        let mut view = ImageTools {
+            resize_paths: vec![first_path.clone(), second_path.clone()],
+            ..Default::default()
+        };
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let nodes = frame(&mut view, &context, "resize-images", vec![]);
+        let button = |nodes: &[(NodeId, Node)], path: &std::path::Path| {
+            nodes
+                .iter()
+                .find_map(|(id, node)| {
+                    (node.role() == Role::Button
+                        && node.label()
+                            == Some(format!("Remove resize image {}", path.display()).as_str()))
+                    .then_some(*id)
+                })
+                .expect("each resize removal must name the selected image")
+        };
+        let first = button(&nodes, &first_path);
+        let second = button(&nodes, &second_path);
+        let remaining = frame(
+            &mut view,
+            &context,
+            "resize-images",
+            vec![action(first, Action::Click, None)],
+        );
+        assert_eq!(view.resize_paths, vec![second_path.clone()]);
+        // A later row keeps its own identity instead of inheriting a removed row's focus.
+        let mut next = frame(&mut view, &context, "resize-images", vec![]);
+        next.extend(remaining);
+        assert_eq!(button(&next, &second_path), second);
+        assert!(!view.resize_job.running());
+        view.shutdown();
+    }
 
     fn frame(
         view: &mut ImageTools,

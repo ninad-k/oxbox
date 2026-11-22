@@ -3,17 +3,19 @@
 `Cargo.lock` and `pnpm-lock.yaml` pin the resolved builds. Use `pnpm install --frozen-lockfile` and Cargo's
 `--locked` flag in CI/release work. Ask before adding dependencies outside the tool's approved plan. Check
 maintenance, license, platform requirements, binary impact, and runtime network behavior in a dependency PR.
-Do not commit downloaded packages, `node_modules`, `target`, installers, or credentials.
+Do not commit downloaded packages, `node_modules`, `target`, installers, or credentials, except for
+the three explicitly approved source backports described below. That exception does not permit
+unrelated vendoring or a new dependency/version/backend.
 
 | Area | Direct dependencies and purpose |
 |---|---|
 | Native desktop | eframe 0.37.0 with accesskit/clipboard/default_fonts/system_fonts/glow/wayland/x11; rfd, tray-icon, global-hotkey, auto-launch, open; native notification adapters |
 | Icon/legacy sources | ISC-licensed Lucide vectors copied into the native catalogue; Svelte/Tauri sources remain for comparison, outside the native binary graph |
 | Hashing | sha2, sha1, md-5, blake3 |
-| Codes/time | qrcode, barcoders, chrono, chrono-tz; rqrr/rxing decode local barcodes at runtime and in tests |
+| Codes/time | qrcode, barcoders, approved Jiff 1.0.2 time/time-zone migration; historical Chrono/Chrono-TZ paths are tracked below; rqrr/rxing decode local barcodes at runtime and in tests |
 | Files | walkdir, trash, dirs, zip 9.8 (patched parser), tar, flate2, sevenz-rust2 |
 | System | sysinfo, keepawake, target-specific windows-sys |
-| Capture/media/privacy | xcap, arboard, image (PNG/JPEG/WebP), age, rqrr/rxing; Windows COM/WinRT via windows |
+| Capture/media/privacy | xcap, arboard, image (PNG/JPEG/WebP), Age 0.11.5 (0.12.1 candidate held at its security gate), rqrr/rxing; Windows COM/WinRT via windows |
 | Unix provider lifecycle | libc =0.2.191, user-approved as a direct Unix-only dependency on 2026-11-22; typed waitid(WNOWAIT) preserves the group leader identity until descendant cancellation |
 | Shared/test | serde, serde_json, thiserror, tempfile, vitest, svelte-check |
 
@@ -34,9 +36,85 @@ platform acceptance remain separate release gates. See [runtime privacy findings
 
 Useful primary references: [Tauri plugins](https://v2.tauri.app/plugin/), [image](https://docs.rs/image/),
 [age](https://docs.rs/age/), [sysinfo](https://docs.rs/sysinfo/), [xcap](https://docs.rs/xcap/),
-[chrono-tz](https://docs.rs/chrono-tz/), and [sevenz-rust2](https://docs.rs/sevenz-rust2/).
+[Jiff](https://docs.rs/jiff/1.0.2/), and [sevenz-rust2](https://docs.rs/sevenz-rust2/).
 
-## RustSec assessment — 2026-11-21
+## Accepted source remediation — 2026-11-22, validation in progress
+
+The user approved phases 1 and 2 of [ADR 0005](adr/0005-dependency-security-remediation.md), including
+Age 0.12.1, Jiff 1.0.2 and the named vendoring-policy exception. The selected eframe 0.37.0, AccessKit,
+all 56 tools, application data and offline defaults remain requirements. Macro/tray/Zbus migrations
+described as separate options in the ADR are **not approved or implemented by these changes**.
+
+**Security gate:** the tested Age 0.12.1 candidate introduced `crypto-bigint 0.5.5` through mandatory
+P-256/HPKE dependencies, matching [RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387.html).
+Its published dependency bounds cannot select the fixed family. The application therefore retains
+exact Age 0.11.5. [ADR 0006](adr/0006-age-upgrade-security-gate.md) proposes a separate, narrow localization
+remedy; its extra source exception needs approval before implementation. The fresh held-candidate audit
+reports zero vulnerability entries and six maintenance warnings, without ignores; patched GLib is omitted
+by the scanner's path-package handling and remains explicitly accounted for in source provenance.
+
+The exception permits only complete, original-license-preserving published source for these packages,
+with the approved minimal upstream-derived changes. The original registry cache is not modified.
+
+| Patched package, version unchanged | Applied source change | Exact modified source tree SHA-256 |
+|---|---|---|
+| GLib 0.18.5 | Mutable C out-pointer correction from gtk-rs `05dff0ee696f9bcd8617cd48c4b812d046d440cb` | `a42d6ad83dcdb52c0df284fedd8d373cfa0d346ee48a529aed524d86aeea617d` |
+| i18n-config 0.4.8 | Maintained TOML parser replacement, extracted from cargo-i18n `2ce7b1dfe9a8cc224288bf50cbc2a67a6de863c4` | `0afbebac8143a9bb0c85f51a83ec5c5bdf99f37934dff898d6a8acc4d96495a4` |
+| RXing 0.9.4 | Optional Chrono and standard-clock decoder timestamps from `912b1083ffd164b29e6b244e4845de9df06b107a`; client/WASM support preserved | `b4f75fef1931c796cb21ea3ffebf08736599390da7963eb8b71b058f739261aa` |
+
+[Vendor provenance](../vendor/PROVENANCE.json) records the verified original archive URLs/checksums,
+published VCS revisions, exact applied patch artifacts and hashes, changed-file before/after hashes,
+and complete final file manifests. [Vendor instructions](../vendor/README.md) define reconstruction and
+the tree-hash algorithm. Preserve source LF bytes and every recorded file, including upstream package
+lockfiles and Markdown files ignored by the packages' original `.gitignore` files. Check a fresh checkout;
+do not silently regenerate integrity records to accept missing, edited or reformatted upstream source.
+
+```sh
+node --test scripts/vendor-integrity.test.mjs scripts/license-inventory.test.mjs
+node scripts/verify-vendor.mjs
+```
+
+The five generated integrity fixtures and nine notice fixtures passed locally. The verifier checks 572
+package files and five source/patch artifacts, refuses links/path escapes and unexpected bytes, and
+does no network or package execution. It is an integrity check, not a security or legal audit. A
+coordinated change to source and provenance still requires review. No advisory ignore or version spoof
+is authorized: GLib's reviewed source fix does not turn version 0.18.5 into a published fixed release,
+and a path package being omitted by an audit tool must not become a clean-audit claim.
+
+The held Age 0.12.1 candidate resolved i18n-embed-fl 0.10.1 and proc-macro-error3 rather than the old
+macro-error2 path; the separate retained i18n-config backport replaces basic-toml. The integrator completed
+Core compilation and native tests with the candidate API before its audit failed. Generated 196,731-byte
+binary fixtures passed both Age 0.11.5 → candidate Core and candidate Core → Age 0.11.5 directions,
+with wrong-password, corruption,
+truncation, actual stream cancellation, exclusive-output and source-preservation guards. Production
+encryption still emits factor 18 and decryption refuses factors above 20. This is bounded passphrase-file
+compatibility evidence, not acceptance of every age recipient, plugin, armor or high-factor legacy file.
+
+A [small checked-in historical fixture and producer](../crates/oxbox-core/tests/fixtures/age-0.11.5/README.md)
+make the old-writer direction reproducible in Core's normal `legacy_age_0115_` tests, using factor 10
+only for generated test data. Both current-Core tests passed in the integrator's Rust 1.95 Windows
+workspace run, with no failures or ignored tests. The existing production
+round-trip test retains the factor-18 header assertion without adding another heavy KDF here. The
+[standalone parser compatibility workspace](../tests/dependency-compat/README.md) passed all five generated
+valid/invalid/missing Cargo and localization configurations, Unicode/default values and explicit parent
+fallback checks, with zero failures or ignored tests. The minimally patched upstream i18n-config emits
+two pre-existing lifetime-syntax warnings under Rust 1.95; they are not suppressed or edited out of
+the source-pinned package. These validation workspaces are not application dependencies.
+
+Jiff's approved feature selection includes a bundled offline IANA fallback on every target. Time/date
+adapters, persisted values, DST gaps/folds and rates need the final migration checks before removing
+historical direct dependencies. RXing's optional Chrono/Chrono-TZ client/WASM capabilities are retained.
+Cargo may keep optional packages in its lockfile even after compiled application paths stop using them;
+record native/legacy target trees separately from lockfile/audit entries. Do not prune upstream features
+to improve an audit count. Linux AccessKit/AT-SPI, keepawake and capture still have the separately tracked
+Zbus 5 maintenance path; this work does not remove or replace accessibility to silence it.
+
+**Final post-resolution audit counts, full all-platform tests/Clippy/builds, optimized Linux GLib iterator
+execution, regenerated notices and new production artifact acceptance remain pending.** Earlier CI and
+runtime hashes do not certify this changed dependency build. Clean-machine and human attribution gates
+remain open. Updated validation belongs in [VALIDATION.md](VALIDATION.md) when actual receipts arrive.
+
+## Historical RustSec assessment — 2026-11-21
 
 This assessment records findings rather than suppressing them. It used `cargo audit --json` with advisory
 database commit `55e1c3dfbd834237a05bbbf7b50ba3b5be27b662`, reverse dependency trees from the locked workspace,
@@ -45,6 +123,11 @@ and source inspection of the resolved crates. Re-run against the native migratio
 is not a clean-audit claim. The lockfile also preserves legacy and other-target packages, so compare each
 finding with the concrete native target graph. Run the audit again after every lockfile update. No advisory
 ignore list or audit exit-code override was added.
+
+This section preserves the pre-remediation assessment. The 2026-11-22 pre-change audit, using database
+commit `d1fe6ac3eba823a3515e849045f36dc34543885d`, again reported zero vulnerability entries, eight
+unmaintained packages and one GLib unsoundness finding. Neither receipt is the final result of the
+accepted changes above.
 
 ### Unsoundness findings
 
@@ -85,19 +168,20 @@ The advisory remains visible in this history, but no longer matches the resolved
 These are upstream maintenance advisories, not evidence that the following code is currently exploitable.
 They remain actionable upkeep and must be revisited with new advisories and releases.
 
-| Resolved package and advisory | Current path / exposure | Maintainer follow-up |
+| Baseline package and advisory | Pre-remediation path / exposure | Follow-up at the baseline |
 |---|---|---|
-| `chrono 0.4.45` ([RUSTSEC-2026-0543](https://rustsec.org/advisories/RUSTSEC-2026-0543.html)); `chrono-tz 0.10.4` ([RUSTSEC-2026-0555](https://rustsec.org/advisories/RUSTSEC-2026-0555.html)) | Direct runtime dependencies for World Time, Alarm, Date Countdown, rate dates and media naming; RXing also uses Chrono. All versions are marked unmaintained, with no patched version. | Plan an approved migration to a maintained time/time-zone stack and an updated RXing dependency path. Preserve DST gap/fold, weekday, serialization and rate-date tests. Any new direct crate name still needs approval under the dependency policy. A patch update alone cannot close these advisories. |
+| `chrono 0.4.45` ([RUSTSEC-2026-0543](https://rustsec.org/advisories/RUSTSEC-2026-0543.html)); `chrono-tz 0.10.4` ([RUSTSEC-2026-0555](https://rustsec.org/advisories/RUSTSEC-2026-0555.html)) | Runtime time/rate-date APIs and RXing. All versions are marked unmaintained, with no patched version. | Plan an approved migration to a maintained time/time-zone stack and an updated RXing dependency path. Preserve DST gap/fold, weekday, serialization and rate-date tests. ADR 0005 subsequently approved the Jiff and RXing changes above; a patch update alone cannot close these advisories. |
 | `basic-toml 0.1.10` ([RUSTSEC-2026-0374](https://rustsec.org/advisories/RUSTSEC-2026-0374.html)) | `age 0.11.5 → i18n-embed-fl / i18n-embed-impl → i18n-config → basic-toml`; build-time localization configuration, not a runtime parser for encrypted user files. | Track migration by the localization/age maintainers to the maintained TOML parser. Age 0.12.1 still resolves the same i18n-config 0.4 family through its newer localization macros, so that upgrade alone is not a demonstrated fix. |
 | `proc-macro-error 1.0.4` ([RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370.html)) | Linux GTK/glib procedural-macro build dependencies. | Coordinate replacement with the GTK/Tauri dependency migration; do not force an incompatible macro crate into the old dependency requirement. |
-| `proc-macro-error2 2.0.1` ([RUSTSEC-2026-0173](https://rustsec.org/advisories/RUSTSEC-2026-0173.html)) | `age → i18n-embed-fl`; build-time macros on all targets. Cargo also reports a future-compatibility notice for this version. | Track a maintained localization-macro replacement upstream. The newer i18n-embed-fl 0.10.0 metadata still requests this package; replacing the original deprecated macro package with this fork is no longer a maintenance solution. |
-| `zbus_names 4.3.5` ([RUSTSEC-2026-0371](https://rustsec.org/advisories/RUSTSEC-2026-0371.html)); `zvariant 5.15.1` ([RUSTSEC-2026-0370](https://rustsec.org/advisories/RUSTSEC-2026-0370.html)); `zvariant_derive 5.15.1` ([RUSTSEC-2026-0372](https://rustsec.org/advisories/RUSTSEC-2026-0372.html)) | Linux D-Bus paths through keepawake, xcap and native notifications; legacy Tauri integrations also remain locked. The derive package runs during builds. | These standalone crates moved into Zbus 6 (`names`, `wire` and derive APIs). Track compatible upstream upgrades across the owning libraries. Updating only one transitive package cannot satisfy the old Zbus 5 API/dependency requirements. Recheck Linux awake, capture and notification behavior after migration. |
+| `proc-macro-error2 2.0.1` ([RUSTSEC-2026-0173](https://rustsec.org/advisories/RUSTSEC-2026-0173.html)) | `age → i18n-embed-fl`; build-time macros on all targets. Cargo also reports a future-compatibility notice for this version. | The baseline review checked i18n-embed-fl 0.10.0, which still requested this package. Subsequent inspection identified 0.10.1's maintained macro-error3 replacement, selected above. Replacing the original deprecated macro package with macro-error2 is no longer a maintenance solution. |
+| `zbus_names 4.3.5` ([RUSTSEC-2026-0371](https://rustsec.org/advisories/RUSTSEC-2026-0371.html)); `zvariant 5.15.1` ([RUSTSEC-2026-0370](https://rustsec.org/advisories/RUSTSEC-2026-0370.html)); `zvariant_derive 5.15.1` ([RUSTSEC-2026-0372](https://rustsec.org/advisories/RUSTSEC-2026-0372.html)) | Linux D-Bus paths through AccessKit/AT-SPI, keepawake and xcap; legacy Tauri integrations also remain locked. The derive package runs during builds. | These standalone crates moved into Zbus 6 (`names`, `wire` and derive APIs). Track compatible upstream upgrades across the owning libraries. Updating only one transitive package cannot satisfy the old Zbus 5 API/dependency requirements. Preserve accessibility; recheck affected Linux behavior after migration. |
 
 Reproduce reverse-path inspection with `cargo tree --locked --target all -i PACKAGE@VERSION`; compare it
 with a concrete target before making a platform-specific claim. Primary package metadata was checked through
 the [RQRR package](https://crates.io/crates/rqrr), [GTK package](https://crates.io/crates/gtk), and
 [Age package](https://crates.io/crates/age). The table's advisories link to the upstream notices and migration
-references. No local dependency source or operating-system package was patched during this assessment.
+references. No local dependency source or operating-system package was patched during that historical
+assessment. The separately approved 2026-11-22 source backports are recorded above.
 
 ## Reproducing Windows third-party notices
 
@@ -110,8 +194,9 @@ node scripts/generate-third-party-notices.mjs --check --target x86_64-pc-windows
 
 The generator uses locked, offline Cargo metadata, an active normal/build Cargo tree rooted at
 `oxbox-native`, and installed Lucide source dependencies. Inactive optional dependencies in broad metadata
-are excluded using the active target tree. Five pure Node regressions cover native selection, missing or
-ambiguous roots, conservative icon-source roots, tree parsing and alternate output; run `node --test scripts/license-inventory.test.mjs`.
+are excluded using the active target tree. Nine Node regressions cover native selection, missing or
+ambiguous roots, conservative icon-source roots, tree parsing, alternate output and patched-source
+identity/provenance refusal; run `node --test scripts/license-inventory.test.mjs`.
 The generator does not
 download packages or change lockfiles. It writes [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt), with
 package names, versions, license expressions, versioned source links, original copyright/license/NOTICE
@@ -123,6 +208,14 @@ every inventoried module is shipped. Installed optional packages depend on the g
 build environment. The checked-in file is bundled with the Windows app together with Oxbox's own licenses.
 Use `--output target/notices-TARGET.txt` when probing another target so the checked-in Windows inventory
 remains intact. Output paths are constrained to the workspace; this option does not fetch missing packages.
+
+Before invoking Cargo or reading license files, the generator checks every approved patched package
+against the offline integrity verifier and binds its Cargo name/version/path to that record. Patched
+entries identify the modified project directory, final tree SHA-256, provenance SHA-256, original
+immutable archive and checksum, and applied patch/upstream references. An original registry archive
+is labeled as a reconstruction base, never as the modified shipped source. Project branch URLs are
+clearly mutable locators whose bytes must match the recorded hashes; the generator does not read Git
+HEAD or create a self-referential notice identity. No local workspace/profile paths are published.
 
 Some published package archives omit their upstream monorepo license files. The checked-in
 `docs/third-party-licenses/sources.json` records supplements from exact upstream revisions, their original

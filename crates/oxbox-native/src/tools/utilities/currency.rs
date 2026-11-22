@@ -3,6 +3,16 @@ use crate::{host::Host, jobs::Task};
 use eframe::egui::{self, Ui};
 use oxbox_core::tools::currency::{self, RateBook};
 use serde::{Deserialize, Serialize};
+
+fn fetched_time(timestamp: u64) -> String {
+    i64::try_from(timestamp)
+        .ok()
+        .and_then(|timestamp| oxbox_core::tools::world_time::clock_at("UTC", timestamp).ok())
+        .map_or_else(
+            || "unknown time".into(),
+            |clock| format!("{} {}", clock.date, clock.time),
+        )
+}
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
 struct Stored {
@@ -157,13 +167,7 @@ impl CurrencyTools {
             crate::accessibility::status(ui, &self.notice);
         }
         if let Some(book) = &self.stored.book {
-            let fetched = i64::try_from(book.fetched_at)
-                .ok()
-                .and_then(|timestamp| chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0))
-                .map_or_else(
-                    || "unknown time".into(),
-                    |value| value.format("%Y-%m-%d %H:%M:%S").to_string(),
-                );
+            let fetched = fetched_time(book.fetched_at);
             ui.label(format!(
                 "Reference date: {} · fetched {} UTC · provider ECB",
                 book.date, fetched
@@ -175,13 +179,14 @@ impl CurrencyTools {
             field(ui, "Amount", &mut self.amount);
             for (from, label) in [(true, "From currency"), (false, "To currency")] {
                 let selected = if from { &mut self.from } else { &mut self.to };
-                egui::ComboBox::from_label(label)
+                let choice_response = egui::ComboBox::from_label(label)
                     .selected_text(selected.as_str())
                     .show_ui(ui, |ui| {
                         for currency in book.rates.keys() {
                             ui.selectable_value(selected, currency.clone(), currency);
                         }
                     });
+                crate::accessibility::combo_expansion(&choice_response.response);
             }
             if ui.button("Swap currencies").clicked() {
                 std::mem::swap(&mut self.from, &mut self.to);
@@ -221,6 +226,15 @@ mod functional_tests {
         collections::BTreeMap,
         time::{Duration, Instant},
     };
+
+    #[test]
+    fn native_currency_adapter_preserves_utc_fetch_labels_and_unknown_bounds() {
+        assert_eq!(fetched_time(0), "1970-01-01 00:00:00");
+        assert_eq!(fetched_time(1), "1970-01-01 00:00:01");
+        assert_eq!(fetched_time(253_402_300_800), "+10000-01-01 00:00:00");
+        assert_eq!(fetched_time(u64::MAX), "unknown time");
+        assert_eq!(fetched_time(i64::MAX as u64), "unknown time");
+    }
 
     fn book(usd: f64) -> RateBook {
         RateBook {

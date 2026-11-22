@@ -307,3 +307,38 @@ impl Drop for Integration {
         TrayIconEvent::set_event_handler(None::<fn(TrayIconEvent)>);
     }
 }
+
+#[cfg(all(test, target_os = "linux"))]
+mod dependency_tests {
+    use gtk::glib::{Variant, variant::ToVariant};
+
+    /// Exercise the actual patched binding without initializing GTK or a desktop.
+    /// CI also runs this case under the production optimization profile.
+    #[test]
+    fn approved_glib_backport_string_iterator_methods() {
+        let values = ["first", "日本語", "", "last", "🧰"];
+        let variant =
+            Variant::array_from_iter::<String>(values.iter().map(|value| value.to_variant()));
+        assert_eq!(
+            variant.array_iter_str().unwrap().collect::<Vec<_>>(),
+            values
+        );
+        assert_eq!(
+            variant.array_iter_str().unwrap().rev().collect::<Vec<_>>(),
+            values.iter().rev().copied().collect::<Vec<_>>()
+        );
+        assert_eq!(variant.array_iter_str().unwrap().last(), Some("🧰"));
+        assert_eq!(variant.array_iter_str().unwrap().nth(1), Some("日本語"));
+        assert_eq!(variant.array_iter_str().unwrap().nth_back(1), Some("last"));
+        let mut mixed = variant.array_iter_str().unwrap();
+        assert_eq!(mixed.next(), Some("first"));
+        assert_eq!(mixed.next_back(), Some("🧰"));
+        assert_eq!(mixed.nth(1), Some(""));
+        assert_eq!(mixed.next_back(), Some("last"));
+        assert_eq!(mixed.next(), None);
+        assert_eq!(mixed.next_back(), None);
+        let empty = Variant::array_from_iter::<String>(std::iter::empty());
+        assert_eq!(empty.array_iter_str().unwrap().next(), None);
+        assert!(42_i32.to_variant().array_iter_str().is_err());
+    }
+}
