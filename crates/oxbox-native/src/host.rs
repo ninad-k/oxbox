@@ -155,6 +155,22 @@ impl Drop for Host {
 pub fn save_at<T: Serialize>(directory: &Path, name: &str, value: &T) -> CoreResult<()> {
     preferences::save(directory, name, value)
 }
+/// Preserve a picked path exactly when admitting it to a line-based text field.
+pub fn path_text(path: &Path) -> CoreResult<String> {
+    let text = path.to_str().ok_or_else(|| {
+        CoreError::InvalidInput(
+            "This path cannot be represented exactly in a text field. Choose a Unicode path instead."
+                .into(),
+        )
+    })?;
+    if text.contains(['\r', '\n']) {
+        return Err(CoreError::InvalidInput(
+            "This path contains a line break and cannot be represented exactly in this field. Choose another path."
+                .into(),
+        ));
+    }
+    Ok(text.to_owned())
+}
 pub fn default_data_dir() -> CoreResult<PathBuf> {
     dirs::data_dir()
         .map(|path| path.join("dev.oxbox.desktop"))
@@ -186,5 +202,40 @@ fn native_notification(title: &str, body: &str) -> Result<(), String> {
             .show()
             .map(|_| ())
             .map_err(|error| error.to_string())
+    }
+}
+
+#[cfg(test)]
+mod path_text_tests {
+    use super::*;
+
+    #[test]
+    fn picked_path_text_preserves_unicode_and_spaces_without_trimming() {
+        for name in ["chosen folder/画像 🧰.png", "chosen folder/trailing "] {
+            assert_eq!(path_text(Path::new(name)).unwrap(), name);
+        }
+    }
+
+    #[test]
+    fn picked_path_text_refuses_line_breaks_without_creating_other_targets() {
+        for name in ["chosen\nneighbor", "chosen\rneighbor", "chosen\r\nneighbor"] {
+            assert!(path_text(Path::new(name)).is_err());
+        }
+    }
+
+    #[test]
+    #[cfg(any(windows, unix))]
+    fn picked_path_text_refuses_non_unicode_instead_of_targeting_a_lossy_neighbor() {
+        #[cfg(windows)]
+        let name = {
+            use std::os::windows::ffi::OsStringExt;
+            std::ffi::OsString::from_wide(&[b'x' as u16, 0xd800])
+        };
+        #[cfg(unix)]
+        let name = {
+            use std::os::unix::ffi::OsStringExt;
+            std::ffi::OsString::from_vec(vec![b'x', 0xff])
+        };
+        assert!(path_text(Path::new(&name)).is_err());
     }
 }

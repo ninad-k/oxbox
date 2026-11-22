@@ -56,54 +56,107 @@ pub fn number(
     });
 }
 pub fn file(ui: &mut egui::Ui, label: &str, value: &mut String, filters: &[&str]) -> bool {
-    let description = ui.label(label);
-    let mut changed = false;
-    ui.horizontal(|ui| {
-        changed |= ui
-            .add(egui::TextEdit::singleline(value).desired_width(ui.available_width() - 100.0))
-            .labelled_by(description.id)
-            .changed();
-        if crate::accessibility::button(ui, "Choose…", &format!("Choose {label}")).clicked() {
-            let mut dialog = crate::host::dialogs::file(ui.ctx()).set_title(label);
+    let context = ui.ctx().clone();
+    path_field_using(
+        ui,
+        label,
+        value,
+        "Choose…",
+        &format!("Choose {label}"),
+        || {
+            let mut dialog = crate::host::dialogs::file(&context).set_title(label);
             if !filters.is_empty() {
                 dialog = dialog.add_filter("Supported files", filters);
             }
-            if let Some(path) = dialog.pick_file() {
-                *value = path.display().to_string();
-                changed = true;
-            }
-        }
-    });
-    changed
+            dialog.pick_file()
+        },
+    )
 }
-pub fn folder(ui: &mut egui::Ui, label: &str, value: &mut String) {
-    let description = ui.label(label);
-    ui.horizontal(|ui| {
-        ui.add(egui::TextEdit::singleline(value).desired_width(ui.available_width() - 100.0))
-            .labelled_by(description.id);
-        if crate::accessibility::button(ui, "Choose…", &format!("Choose {label}")).clicked()
-            && let Some(path) = crate::host::dialogs::file(ui.ctx())
+pub fn folder(ui: &mut egui::Ui, label: &str, value: &mut String) -> bool {
+    let context = ui.ctx().clone();
+    path_field_using(
+        ui,
+        label,
+        value,
+        "Choose…",
+        &format!("Choose {label}"),
+        || {
+            crate::host::dialogs::file(&context)
                 .set_title(label)
                 .pick_folder()
-        {
-            *value = path.display().to_string();
-        }
-    });
+        },
+    )
 }
-pub fn output(ui: &mut egui::Ui, label: &str, value: &mut String, filename: &str) {
-    let description = ui.label(label);
-    ui.horizontal(|ui| {
-        ui.add(egui::TextEdit::singleline(value).desired_width(ui.available_width() - 100.0))
-            .labelled_by(description.id);
-        if crate::accessibility::button(ui, "Save as…", &format!("Save {label} as")).clicked()
-            && let Some(path) = crate::host::dialogs::file(ui.ctx())
+pub fn output(ui: &mut egui::Ui, label: &str, value: &mut String, filename: &str) -> bool {
+    let context = ui.ctx().clone();
+    path_field_using(
+        ui,
+        label,
+        value,
+        "Save as…",
+        &format!("Save {label} as"),
+        || {
+            crate::host::dialogs::file(&context)
                 .set_title(label)
                 .set_file_name(filename)
                 .save_file()
+        },
+    )
+}
+fn path_field_using(
+    ui: &mut egui::Ui,
+    label: &str,
+    value: &mut String,
+    button: &str,
+    accessible_button: &str,
+    choose: impl FnOnce() -> Option<PathBuf>,
+) -> bool {
+    let error_id = ui.scope_id().with(("media path admission error", label));
+    let enabled = ui.is_enabled();
+    let description = ui.label(label);
+    let mut changed = false;
+    let mut candidate = value.clone();
+    let mut replacement = None;
+    ui.horizontal(|ui| {
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut candidate)
+                    .interactive(enabled)
+                    .desired_width(ui.available_width() - 100.0),
+            )
+            .labelled_by(description.id)
+            .changed()
+            && enabled
         {
-            *value = path.display().to_string();
+            replacement = Some(PathBuf::from(&candidate));
+            changed = true;
+        }
+        if crate::accessibility::button(ui, button, accessible_button).clicked()
+            && enabled
+            && let Some(path) = choose()
+        {
+            replacement = Some(path);
+            changed = true;
         }
     });
+    if let Some(path) = replacement {
+        match crate::host::path_text(&path) {
+            Ok(text) => {
+                *value = text;
+                ui.ctx().data_mut(|data| data.remove::<String>(error_id));
+            }
+            Err(error) => {
+                // Keep the previous valid selection, but still return true so
+                // the caller discards results belonging to the refused draft.
+                ui.ctx()
+                    .data_mut(|data| data.insert_temp(error_id, error.to_string()));
+            }
+        }
+    }
+    if let Some(error) = ui.ctx().data(|data| data.get_temp::<String>(error_id)) {
+        crate::accessibility::alert(ui, &error);
+    }
+    changed
 }
 pub fn confirm(ctx: &egui::Context, title: &str, description: &str) -> bool {
     crate::host::dialogs::message(ctx)
@@ -276,5 +329,127 @@ impl Providers {
     }
     pub fn shutdown(&mut self) {
         self.task.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod verification56_path_tests {
+    use super::*;
+    use egui::accesskit::{Action, ActionData, ActionRequest, Node, NodeId, Role, TreeId};
+
+    fn frame(
+        context: &egui::Context,
+        value: &mut String,
+        selected: &Path,
+        events: Vec<egui::Event>,
+    ) -> (bool, Vec<(NodeId, Node)>) {
+        let mut changed = false;
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                ui.push_id("first generated form", |ui| {
+                    changed = path_field_using(
+                        ui,
+                        "Generated media path",
+                        value,
+                        "Choose…",
+                        "Choose Generated media path",
+                        || Some(selected.to_path_buf()),
+                    );
+                });
+                ui.push_id("second generated form", |ui| {
+                    path_field_using(
+                        ui,
+                        "Generated media path",
+                        &mut "Other valid input".to_string(),
+                        "Choose…",
+                        "Choose Generated media path",
+                        || None,
+                    );
+                });
+            },
+        );
+        output.textures_delta.clear();
+        (
+            changed,
+            output.platform_output.accesskit_update.unwrap().nodes,
+        )
+    }
+    fn action(target_node: NodeId, action: Action, data: Option<ActionData>) -> egui::Event {
+        egui::Event::AccessKitActionRequest(ActionRequest {
+            action,
+            target_node,
+            target_tree: TreeId::ROOT,
+            data,
+        })
+    }
+    #[test]
+    fn verification56_refused_picker_retains_selection_invalidates_and_persists_only_its_field_error()
+     {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut value = "Generated valid input.mp4".to_string();
+        let selected = Path::new("generated\nrefused.mp4");
+        let (_, first) = frame(&context, &mut value, selected, vec![]);
+        let button = first
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == Role::Button && node.label() == Some("Choose Generated media path"))
+                    .then_some(id)
+            })
+            .unwrap();
+        let (changed, _) = frame(
+            &context,
+            &mut value,
+            selected,
+            vec![action(button, Action::Click, None)],
+        );
+        assert_eq!(
+            value, "Generated valid input.mp4",
+            "a refused picker must retain the preceding valid selection"
+        );
+        assert!(
+            changed,
+            "refused replacement must signal invalidation of stale outcomes"
+        );
+        let (_, persistent) = frame(&context, &mut value, selected, vec![]);
+        assert_eq!(
+            persistent
+                .iter()
+                .filter(|(_, node)| node.role() == Role::Alert)
+                .count(),
+            1,
+            "field error must persist without leaking to another same-named field"
+        );
+        let field = persistent
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == Role::TextInput && node.value() == Some(value.as_str()))
+                    .then_some(id)
+            })
+            .unwrap();
+        let (_, edited) = frame(
+            &context,
+            &mut value,
+            selected,
+            vec![action(
+                field,
+                Action::SetValue,
+                Some(ActionData::Value(
+                    "Generated accepted replacement.mp4".into(),
+                )),
+            )],
+        );
+        assert_eq!(
+            value, "Generated accepted replacement.mp4",
+            "fixture must edit the actual path control"
+        );
+        assert!(
+            !edited.iter().any(|(_, node)| node.role() == Role::Alert),
+            "accepted manual edit must clear the old admission error"
+        );
     }
 }

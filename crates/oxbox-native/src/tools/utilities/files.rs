@@ -19,21 +19,21 @@ fn confirm(ctx: &egui::Context, title: &str, body: impl Into<String>) -> bool {
         .show()
         == rfd::MessageDialogResult::Yes
 }
-fn picker(ui: &mut Ui, label: &str, value: &mut String, kind: u8) {
+fn picker(ui: &mut Ui, label: &str, value: &mut String, kind: u8) -> Option<PathBuf> {
     ui.push_id(label, |ui| {
         field(ui, label, value);
         if ui.button(format!("Choose {label}…")).clicked() {
             let dialog = crate::host::dialogs::file(ui.ctx()).set_title(label);
-            let chosen = match kind {
+            match kind {
                 1 => dialog.pick_folder(),
                 2 => dialog.save_file(),
                 _ => dialog.pick_file(),
-            };
-            if let Some(path) = chosen {
-                *value = path.to_string_lossy().into_owned();
             }
+        } else {
+            None
         }
-    });
+    })
+    .inner
 }
 fn dropped(ui: &Ui) -> Vec<PathBuf> {
     // Disabling widgets does not stop closure code from reading RawInput. Ignore
@@ -84,11 +84,59 @@ fn list(ui: &mut Ui, paths: &mut Vec<PathBuf>) {
         paths.remove(index);
     }
 }
+fn cache_path_display(path: &std::path::Path) -> String {
+    match path.to_str() {
+        Some(text) if !text.chars().any(char::is_control) => text.to_owned(),
+        _ => format!("Escaped path: {:?}", path.as_os_str()),
+    }
+}
+
+fn cache_path_rows(ui: &mut Ui, categories: &[&CleanCategory], salt: &str) {
+    ui.small(
+        "Names containing control characters or non-Unicode data are marked ‘Escaped path’ and shown in quoted OS-string notation (for example \\n). The selected path is unchanged.",
+    );
+    let total = categories.iter().fold(0_usize, |total, category| {
+        total.saturating_add(category.candidates.len())
+    });
+    let row_height =
+        ui.text_style_height(&egui::TextStyle::Monospace) + ui.spacing().item_spacing.y;
+    egui::ScrollArea::both()
+        .id_salt(("exact-cache-paths", salt))
+        .max_height(180.0)
+        .show_rows(ui, row_height, total, |ui, range| {
+            for index in range {
+                let mut remaining = index;
+                for category in categories {
+                    if let Some(path) = category.candidates.get(remaining) {
+                        let display = cache_path_display(path);
+                        ui.add(
+                            egui::Label::new(egui::RichText::new(display).monospace())
+                                .wrap_mode(egui::TextWrapMode::Extend),
+                        );
+                        break;
+                    }
+                    remaining = remaining.saturating_sub(category.candidates.len());
+                }
+            }
+        });
+}
 
 struct OriginalCleanup {
     source: PathBuf,
     output: PathBuf,
     trashed: bool,
+}
+struct CleanupReview {
+    categories: Vec<CleanCategory>,
+    selected_ids: HashSet<String>,
+}
+#[derive(Clone, Copy, Debug)]
+enum PathField {
+    Checksum,
+    ArchiveInput,
+    ArchiveOutput,
+    CryptSource,
+    CryptOutput,
 }
 #[derive(PartialEq, Eq)]
 struct ArchiveDraft {
@@ -101,6 +149,7 @@ struct ArchiveDraft {
 }
 
 pub(super) struct FileTools {
+    path_input_error: Option<String>,
     checksum_path: String,
     algorithm: Algorithm,
     expected: String,
@@ -119,6 +168,8 @@ pub(super) struct FileTools {
     archive: Task<PathBuf>,
     cleanup: Task<Vec<CleanCategory>>,
     categories: HashSet<String>,
+    clean_paths: Option<String>,
+    clean_review: Option<CleanupReview>,
     trash: Task<usize>,
     message: String,
     decrypt: bool,
@@ -133,6 +184,7 @@ pub(super) struct FileTools {
 impl Default for FileTools {
     fn default() -> Self {
         Self {
+            path_input_error: None,
             checksum_path: String::new(),
             algorithm: Algorithm::Sha256,
             expected: String::new(),
@@ -151,6 +203,8 @@ impl Default for FileTools {
             archive: Task::default(),
             cleanup: Task::default(),
             categories: HashSet::new(),
+            clean_paths: None,
+            clean_review: None,
             trash: Task::default(),
             message: String::new(),
             decrypt: false,
@@ -165,6 +219,53 @@ impl Default for FileTools {
     }
 }
 impl FileTools {
+    fn path_field(&mut self, field: PathField) -> &mut String {
+        match field {
+            PathField::Checksum => &mut self.checksum_path,
+            PathField::ArchiveInput => &mut self.archive_input,
+            PathField::ArchiveOutput => &mut self.archive_output,
+            PathField::CryptSource => &mut self.source,
+            PathField::CryptOutput => &mut self.output,
+        }
+    }
+    fn admit_path(
+        &mut self,
+        field: PathField,
+        path: &std::path::Path,
+    ) -> oxbox_core::CoreResult<()> {
+        match crate::host::path_text(path) {
+            Ok(text) => {
+                *self.path_field(field) = text;
+                self.path_input_error = None;
+                Ok(())
+            }
+            Err(error) => {
+                self.path_input_error = Some(format!("Selection unchanged: {error}"));
+                match field {
+                    PathField::Checksum => self.hash.abandon(),
+                    PathField::ArchiveInput | PathField::ArchiveOutput => self.archive.abandon(),
+                    PathField::CryptSource | PathField::CryptOutput => {
+                        self.crypt.abandon();
+                        self.trash.abandon();
+                        self.reset_crypt_result();
+                        self.password.clear();
+                        self.confirmation.clear();
+                    }
+                }
+                Err(error)
+            }
+        }
+    }
+    fn pick_field(&mut self, ui: &mut Ui, label: &str, field: PathField, kind: u8) {
+        let previous = self.path_field(field).clone();
+        let chosen = picker(ui, label, self.path_field(field), kind);
+        if previous != *self.path_field(field) {
+            self.path_input_error = None;
+        }
+        if let Some(path) = chosen {
+            let _ = self.admit_path(field, &path);
+        }
+    }
     pub fn checksum_preset(&self) -> oxbox_core::presets::ChecksumPreset {
         oxbox_core::presets::ChecksumPreset {
             algorithm: self.algorithm,
@@ -192,6 +293,7 @@ impl FileTools {
         self.confirmation.clear();
     }
     pub(super) fn leave_tool(&mut self, id: &str) {
+        self.path_input_error = None;
         match id {
             "verify-checksum" => self.hash.abandon(),
             "find-duplicates" => {
@@ -204,6 +306,8 @@ impl FileTools {
                 self.cleanup.abandon();
                 self.trash.abandon();
                 self.categories.clear();
+                self.clean_paths = None;
+                self.clean_review = None;
             }
             "encrypt-files" => {
                 self.crypt.abandon();
@@ -239,6 +343,8 @@ impl FileTools {
                 format!("Moved {count} files to Trash. Scan again before further cleanup.");
             self.duplicates.result = None;
             self.cleanup.result = None;
+            self.clean_review = None;
+            self.clean_paths = None;
             self.selected.clear();
             self.categories.clear();
         }
@@ -276,6 +382,9 @@ impl FileTools {
             "encrypt-files" => self.encrypt(ui),
             _ => {}
         }
+        if let Some(error) = &self.path_input_error {
+            crate::accessibility::alert(ui, error);
+        }
         if !self.message.is_empty() {
             ui.label(&self.message);
         }
@@ -285,9 +394,9 @@ impl FileTools {
         let busy = self.hash.running();
         ui.add_enabled_ui(!busy, |ui| {
             let before = self.checksum_path.clone();
-            picker(ui, "file", &mut self.checksum_path, 0);
+            self.pick_field(ui, "file", PathField::Checksum, 0);
             if let Some(path) = dropped(ui).first() {
-                self.checksum_path = path.to_string_lossy().into_owned();
+                let _ = self.admit_path(PathField::Checksum, path);
             }
             let old = self.algorithm;
             egui::ComboBox::from_label("Hash algorithm")
@@ -307,7 +416,7 @@ impl FileTools {
             }
             if ui
                 .add_enabled(
-                    !self.checksum_path.is_empty(),
+                    !self.checksum_path.is_empty() && self.path_input_error.is_none(),
                     egui::Button::new("Calculate checksum"),
                 )
                 .clicked()
@@ -405,10 +514,10 @@ impl FileTools {
         let previous = self.archive_draft();
         ui.add_enabled_ui(!busy,|ui|{
         ui.horizontal(|ui|{ui.selectable_value(&mut self.archive_extract,false,"Create archive");ui.selectable_value(&mut self.archive_extract,true,"Extract archive");});
-        if self.archive_extract {picker(ui,"archive input",&mut self.archive_input,0);if let Some(path)=dropped(ui).first(){self.archive_input=path.to_string_lossy().into_owned();}picker(ui,"new destination folder",&mut self.archive_output,2);ui.label("The destination must not exist. Choose or enter a new folder name, not an existing folder.");ui.horizontal(|ui|{let label=ui.label("Maximum extracted size (MiB)");ui.add(egui::DragValue::new(&mut self.max_mib).range(1..=1_048_576)).labelled_by(label.id);});}
-        else {ui.checkbox(&mut self.archive_folders,"Select folders in picker");if ui.button("Add archive inputs…").clicked(){let dialog=crate::host::dialogs::file(ui.ctx());let paths=if self.archive_folders{dialog.pick_folders()}else{dialog.pick_files()};if let Some(paths)=paths{for path in paths{if !self.sources.contains(&path){self.sources.push(path);}}}}for path in dropped(ui){if !self.sources.contains(&path){self.sources.push(path);}}list(ui,&mut self.sources);ui.horizontal(|ui|{ui.selectable_value(&mut self.tar,false,"ZIP");ui.selectable_value(&mut self.tar,true,"TAR.GZ");});picker(ui,"new archive filename",&mut self.archive_output,2);}
+        if self.archive_extract {self.pick_field(ui,"archive input",PathField::ArchiveInput,0);if let Some(path)=dropped(ui).first(){let _=self.admit_path(PathField::ArchiveInput,path);}self.pick_field(ui,"new destination folder",PathField::ArchiveOutput,2);ui.label("The destination must not exist. Choose or enter a new folder name, not an existing folder.");ui.horizontal(|ui|{let label=ui.label("Maximum extracted size (MiB)");ui.add(egui::DragValue::new(&mut self.max_mib).range(1..=1_048_576)).labelled_by(label.id);});}
+        else {ui.checkbox(&mut self.archive_folders,"Select folders in picker");if ui.button("Add archive inputs…").clicked(){let dialog=crate::host::dialogs::file(ui.ctx());let paths=if self.archive_folders{dialog.pick_folders()}else{dialog.pick_files()};if let Some(paths)=paths{for path in paths{if !self.sources.contains(&path){self.sources.push(path);}}}}for path in dropped(ui){if !self.sources.contains(&path){self.sources.push(path);}}list(ui,&mut self.sources);ui.horizontal(|ui|{ui.selectable_value(&mut self.tar,false,"ZIP");ui.selectable_value(&mut self.tar,true,"TAR.GZ");});self.pick_field(ui,"new archive filename",PathField::ArchiveOutput,2);}
         if self.archive_draft()!=previous{self.archive.result=None;self.archive.error=None;self.archive.progress=None;}
-        let ready=!self.archive_output.is_empty()&&if self.archive_extract{!self.archive_input.is_empty()}else{!self.sources.is_empty()};
+        let ready=self.path_input_error.is_none()&&!self.archive_output.is_empty()&&if self.archive_extract{!self.archive_input.is_empty()}else{!self.sources.is_empty()};
         if ui.add_enabled(ready,egui::Button::new(if self.archive_extract{"Review and extract…"}else{"Create archive"})).clicked(){let output=PathBuf::from(&self.archive_output);if self.archive_extract{let input=PathBuf::from(&self.archive_input);let limit=self.max_mib*1024*1024;if confirm(ui.ctx(), "Review extraction",format!("Extract into a NEW folder:\n{}\n\nOutput limited to {} MiB or 20× compressed size, whichever is smaller. Existing folders are never merged.",output.display(),self.max_mib)){self.archive.start(ui.ctx(),move|cancel,progress|archive::extract_archive(&input,&output,limit,&cancel,progress));}}else{let sources=self.sources.clone();let format=if self.tar{ArchiveFormat::TarGz}else{ArchiveFormat::Zip};self.archive.start(ui.ctx(),move|cancel,progress|archive::create_archive(&sources,&output,format,&cancel,progress));}}
     });
         self.archive.show(ui);
@@ -440,17 +549,79 @@ impl FileTools {
             .clicked()
         {
             self.categories.clear();
+            self.clean_paths = None;
+            self.clean_review = None;
             self.message.clear();
             self.cleanup.start(ui.ctx(), move |cancel, progress| {
                 clean_drive::scan_current(&cancel, progress)
             });
         }
         self.cleanup.show(ui);
+        let previous_selection = self.categories.clone();
+        let mut requested_review = None;
         if let Some(categories) = &self.cleanup.result {
-            ui.add_enabled_ui(!busy,|ui|{for category in categories{let mut selected=self.categories.contains(&category.id);ui.group(|ui|{if ui.add_enabled(!category.read_only&&category.files>0,egui::Checkbox::new(&mut selected,&category.name)).changed(){if selected{self.categories.insert(category.id.clone());}else{self.categories.remove(&category.id);}}ui.label(category.path.display().to_string());ui.label(format!("{} files · {} · {} skipped{}",category.files,bytes(category.bytes),category.skipped,if category.limited{" · Partial scan: read only"}else if category.read_only{" · Read only"}else{""}));});}
-            let reviewed=categories.iter().filter(|category|self.categories.contains(&category.id)&&!category.read_only).collect::<Vec<_>>();let files=reviewed.iter().map(|category|category.files).sum::<u64>();let size=reviewed.iter().map(|category|category.bytes).sum();ui.label(format!("Selected: {files} files, {}.",bytes(size)));
-            if ui.add_enabled(files>0,egui::Button::new("Review and move selected cache files to Trash…")).clicked(){let detail=reviewed.iter().map(|category|format!("{}\n{}\n{} files, {}",category.name,category.path.display(),category.files,bytes(category.bytes))).collect::<Vec<_>>().join("\n\n");if confirm(ui.ctx(), "Review cleanup",format!("Move {files} reviewed cache files ({}) to Trash?\n\n{detail}\n\nOnly this scan's exact files are eligible. Recently modified/accessed or changed files are refused. Close affected browsers/apps first; locked files are not forced.",bytes(size))){let snapshots=reviewed.into_iter().cloned().collect::<Vec<_>>();self.trash.start(ui.ctx(),move|cancel,progress|clean_drive::clean_reviewed_categories(&snapshots,true,&cancel,progress));}}
-        });
+            ui.add_enabled_ui(!busy, |ui| {
+                for category in categories {
+                    let mut selected = self.categories.contains(&category.id);
+                    ui.group(|ui| {
+                        if ui.add_enabled(!category.read_only && !category.limited && category.files > 0, egui::Checkbox::new(&mut selected, &category.name)).changed() {
+                            if selected { self.categories.insert(category.id.clone()); } else { self.categories.remove(&category.id); }
+                        }
+                        ui.label(category.path.display().to_string());
+                        ui.label(format!("{} files · {} · {} skipped{}", category.files, bytes(category.bytes), category.skipped,
+                            if category.limited { " · Partial scan: read only" } else if category.read_only { " · Read only" } else { "" }));
+                        if crate::accessibility::enabled_button(ui, !category.candidates.is_empty(), "Review exact file paths…", &format!("Review exact file paths for {}", category.name)).clicked() {
+                            self.clean_paths = Some(category.id.clone());
+                        }
+                        if self.clean_paths.as_deref() == Some(category.id.as_str()) {
+                            ui.label(format!("{} exact paths from this scan · scroll to inspect; this does not move anything", category.candidates.len()));
+                            cache_path_rows(ui, &[category], &category.id);
+                        }
+                    });
+                }
+                let reviewed = categories.iter().filter(|category| self.categories.contains(&category.id) && !category.read_only && !category.limited && !category.candidates.is_empty()).collect::<Vec<_>>();
+                let files = reviewed.iter().fold(0_u64, |total, category| total.saturating_add(category.candidates.len() as u64));
+                let size = reviewed.iter().fold(0_u64, |total, category| total.saturating_add(category.bytes));
+                ui.label(format!("Selected: {files} exact files, {}.", bytes(size)));
+                if ui.add_enabled(files > 0, egui::Button::new("Review and move selected cache files to Trash…")).clicked() {
+                    requested_review = Some(CleanupReview { categories: reviewed.into_iter().cloned().collect(), selected_ids: self.categories.clone() });
+                }
+            });
+        }
+        if previous_selection != self.categories
+            || self
+                .clean_review
+                .as_ref()
+                .is_some_and(|review| review.selected_ids != self.categories)
+        {
+            self.clean_review = None;
+        }
+        if let Some(review) = requested_review {
+            self.clean_review = Some(review);
+        }
+        let mut cancel_review = false;
+        let mut apply_review = false;
+        if let Some(review) = &self.clean_review {
+            egui::Frame::group(ui.style()).show(ui, |ui| {
+                ui.strong("Confirm exact cache-file review");
+                let categories = review.categories.iter().collect::<Vec<_>>();
+                let files = categories.iter().fold(0_usize, |total, category| total.saturating_add(category.candidates.len()));
+                let size = categories.iter().fold(0_u64, |total, category| total.saturating_add(category.bytes));
+                ui.label(format!("Move exactly these {files} reviewed files ({}) to Recycle Bin / Trash?", bytes(size)));
+                cache_path_rows(ui, &categories, "selected-cleanup-confirmation");
+                ui.label("This immutable list is the selection sent to Trash. New files are excluded. Age, file identity and recognized browser activity are checked again; changed or locked entries are not forced. Cancel cannot reverse a Trash request already admitted to the OS.");
+                ui.horizontal(|ui| {
+                    apply_review = ui.add_enabled(!busy, egui::Button::new("Confirm these exact cache files for Trash")).clicked();
+                    cancel_review = ui.add_enabled(!busy, egui::Button::new("Cancel cleanup review")).clicked();
+                });
+            });
+        }
+        if cancel_review {
+            self.clean_review = None;
+        } else if apply_review && let Some(review) = self.clean_review.take() {
+            self.trash.start(ui.ctx(), move |cancel, progress| {
+                clean_drive::clean_reviewed_categories(&review.categories, true, &cancel, progress)
+            });
         }
     }
     fn encrypt(&mut self, ui: &mut Ui) {
@@ -475,11 +646,11 @@ impl FileTools {
                     self.reset_crypt_result();
                 }
             });
-            picker(ui, "source file", &mut self.source, 0);
+            self.pick_field(ui, "source file", PathField::CryptSource, 0);
             if let Some(path) = dropped(ui).first() {
-                self.source = path.to_string_lossy().into_owned();
+                let _ = self.admit_path(PathField::CryptSource, path);
             }
-            picker(ui, "new output filename", &mut self.output, 2);
+            self.pick_field(ui, "new output filename", PathField::CryptOutput, 2);
             if self.source != previous_source || self.output != previous_output {
                 self.reset_crypt_result();
             }
@@ -496,7 +667,8 @@ impl FileTools {
                 &mut self.offer_trash,
                 "Offer to move original to Trash after success (separate confirmation)",
             );
-            let valid = !self.source.is_empty()
+            let valid = self.path_input_error.is_none()
+                && !self.source.is_empty()
                 && !self.output.is_empty()
                 && !self.password.is_empty()
                 && (self.decrypt || self.password == self.confirmation);
@@ -768,6 +940,236 @@ mod input_state_tests {
             );
             tools.shutdown();
         }
+    }
+}
+
+#[cfg(test)]
+mod verification56_tests {
+    use super::*;
+    #[test]
+    fn cleanup_review_display_distinguishes_exact_os_names_and_escaped_controls() {
+        let parent = std::env::temp_dir().join("oxbox-clean-display-only");
+        let ordinary = parent.join("ordinary cache.bin");
+        assert_eq!(cache_path_display(&ordinary), ordinary.to_str().unwrap());
+        let newline = parent.join("line\ncache.bin");
+        let literal = parent.join("line\\ncache.bin");
+        assert_ne!(cache_path_display(&newline), cache_path_display(&literal));
+        assert!(!cache_path_display(&newline).contains('\n'));
+        let carriage = parent.join("line\rcache.bin");
+        let literal_carriage = parent.join("line\\rcache.bin");
+        assert_ne!(
+            cache_path_display(&carriage),
+            cache_path_display(&literal_carriage)
+        );
+        assert!(!cache_path_display(&carriage).contains('\r'));
+        #[cfg(windows)]
+        let invalid = {
+            use std::os::windows::ffi::OsStringExt;
+            [0xD800_u16, 0xD801_u16].map(|unit| parent.join(std::ffi::OsString::from_wide(&[unit])))
+        };
+        #[cfg(unix)]
+        let invalid = {
+            use std::os::unix::ffi::OsStringExt;
+            [0xFF_u8, 0xFE_u8].map(|byte| parent.join(std::ffi::OsString::from_vec(vec![byte])))
+        };
+        #[cfg(any(windows, unix))]
+        {
+            let replacement = parent.join("\u{FFFD}");
+            assert_ne!(
+                cache_path_display(&invalid[0]),
+                cache_path_display(&invalid[1])
+            );
+            for path in invalid {
+                assert_ne!(cache_path_display(&path), cache_path_display(&replacement));
+                assert!(!cache_path_display(&path).contains('\n'));
+                assert!(!cache_path_display(&path).contains('\r'));
+            }
+        }
+    }
+
+    fn unrepresentable_path() -> PathBuf {
+        #[cfg(windows)]
+        {
+            use std::os::windows::ffi::OsStringExt;
+            PathBuf::from(std::ffi::OsString::from_wide(&[
+                67, 58, 92, 103, 101, 110, 101, 114, 97, 116, 101, 100, 92, 0xD800,
+            ]))
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            PathBuf::from(std::ffi::OsString::from_vec(
+                b"/generated/invalid-\xff".to_vec(),
+            ))
+        }
+        #[cfg(not(any(windows, unix)))]
+        {
+            PathBuf::from("generated\ninvalid")
+        }
+    }
+    #[test]
+    fn utility_string_picker_fields_refuse_unrepresentable_paths_and_clear_old_admission() {
+        for field in [
+            PathField::Checksum,
+            PathField::ArchiveInput,
+            PathField::ArchiveOutput,
+            PathField::CryptSource,
+            PathField::CryptOutput,
+        ] {
+            for invalid in [
+                unrepresentable_path(),
+                std::env::temp_dir().join("generated\npath"),
+                std::env::temp_dir().join("generated\rpath"),
+            ] {
+                let original = std::env::temp_dir()
+                    .join("previous-selected-file")
+                    .display()
+                    .to_string();
+                let mut tools = FileTools::default();
+                *tools.path_field(field) = original.clone();
+                tools.hash.result = Some("previous digest".into());
+                tools.archive.result = Some(PathBuf::from("previous archive"));
+                tools.track_original_cleanup(
+                    std::path::Path::new("old-source"),
+                    std::path::Path::new("old-output"),
+                );
+                assert!(
+                    tools.admit_path(field, &invalid).is_err(),
+                    "{field:?} accepted an unrepresentable picker path"
+                );
+                assert_eq!(*tools.path_field(field), original);
+                assert!(tools.path_input_error.is_some());
+                match field {
+                    PathField::Checksum => assert!(tools.hash.result.is_none()),
+                    PathField::ArchiveInput | PathField::ArchiveOutput => {
+                        assert!(tools.archive.result.is_none())
+                    }
+                    PathField::CryptSource | PathField::CryptOutput => {
+                        assert!(tools.original_cleanup.is_none())
+                    }
+                }
+                tools.shutdown();
+            }
+        }
+    }
+    #[test]
+    fn utility_string_drop_fields_refuse_unrepresentable_paths_without_retargeting() {
+        #[derive(Debug)]
+        struct ModelDrop(PathBuf);
+        impl egui::DroppedFile for ModelDrop {
+            fn path(&self) -> &std::path::Path {
+                &self.0
+            }
+            fn bytes(&self) -> Result<Vec<u8>, String> {
+                Err("model must not read file bytes".into())
+            }
+        }
+        for (id, field) in [
+            ("verify-checksum", PathField::Checksum),
+            ("archive", PathField::ArchiveInput),
+            ("encrypt-files", PathField::CryptSource),
+        ] {
+            let original = std::env::temp_dir()
+                .join("old-selected-file")
+                .display()
+                .to_string();
+            let mut tools = FileTools {
+                archive_extract: true,
+                ..Default::default()
+            };
+            *tools.path_field(field) = original.clone();
+            let context = egui::Context::default();
+            let mut output = context.run_ui(
+                egui::RawInput {
+                    dropped_files: vec![std::sync::Arc::new(ModelDrop(unrepresentable_path()))],
+                    ..Default::default()
+                },
+                |ui| tools.show(ui, id),
+            );
+            output.textures_delta.clear();
+            assert_eq!(
+                *tools.path_field(field),
+                original,
+                "{id} retargeted an invalid drop"
+            );
+            assert!(tools.path_input_error.is_some());
+            assert!(!tools.hash.running() && !tools.archive.running() && !tools.crypt.running());
+            tools.shutdown();
+        }
+    }
+    #[test]
+    fn cleanup_exact_candidate_paths_can_be_reviewed_before_any_trash() {
+        let directory = tempfile::tempdir().unwrap();
+        let cache = directory.path().join("generated-cache");
+        std::fs::create_dir(&cache).unwrap();
+        let candidate = cache.join("exact-reviewed-cache-file.bin");
+        std::fs::write(&candidate, b"generated fixture").unwrap();
+        let old = std::time::SystemTime::now() - std::time::Duration::from_secs(3 * 86400);
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&candidate)
+            .unwrap()
+            .set_times(
+                std::fs::FileTimes::new()
+                    .set_modified(old)
+                    .set_accessed(old),
+            )
+            .unwrap();
+        let roots = [clean_drive::CleanRoot {
+            id: "generated-review".into(),
+            name: "Generated test cache".into(),
+            path: cache,
+            older_than_day: true,
+            read_only: false,
+            file_prefix: None,
+        }];
+        let review = clean_drive::scan_roots(
+            &roots,
+            &oxbox_core::jobs::CancelToken::default(),
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(
+            review[0].candidates,
+            vec![candidate.clone()],
+            "fixture must yield an exact reviewed file"
+        );
+        let mut tools = FileTools::default();
+        tools.cleanup.result = Some(review);
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut frame = |events| {
+            let mut output = context.run_ui(
+                egui::RawInput {
+                    events,
+                    ..Default::default()
+                },
+                |ui| tools.show(ui, "clean-drive"),
+            );
+            output.textures_delta.clear();
+            output.platform_output.accesskit_update.unwrap().nodes
+        };
+        let nodes = frame(Vec::new());
+        let review_button = nodes.iter().find(|(_,node)|node.role()==egui::accesskit::Role::Button&&node.label()==Some("Review exact file paths for Generated test cache")).map(|(id,_)|*id).expect("Clean Drive needs a control to inspect actual candidate paths, not only category counts");
+        let nodes = frame(vec![egui::Event::AccessKitActionRequest(
+            egui::accesskit::ActionRequest {
+                action: egui::accesskit::Action::Click,
+                target_node: review_button,
+                target_tree: egui::accesskit::TreeId::ROOT,
+                data: None,
+            },
+        )]);
+        let expected = candidate.display().to_string();
+        assert!(
+            nodes.iter().any(|(_, node)| node
+                .label()
+                .or_else(|| node.value())
+                .is_some_and(|text| text.contains(&expected))),
+            "exact reviewed candidate path must be visible"
+        );
+        assert!(!tools.trash.running());
+        assert!(candidate.exists());
+        tools.shutdown();
     }
 }
 

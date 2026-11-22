@@ -24,6 +24,21 @@ enum Pending {
     RestoreStartup(startup::RecoveryReview),
     RestoreRegistry(registry::RecoveryReview),
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PathField {
+    StorageRoot,
+    Recovery,
+    Backup,
+}
+impl PathField {
+    fn label(self) -> &'static str {
+        match self {
+            Self::StorageRoot => "Selected analysis folder",
+            Self::Recovery => "Selected recovery backup",
+            Self::Backup => "Selected new recovery backup",
+        }
+    }
+}
 #[derive(Default)]
 pub struct SystemMaintenance {
     read: Task<ReadResult>,
@@ -37,6 +52,7 @@ pub struct SystemMaintenance {
     backup: String,
     recovery: String,
     pending: Option<Pending>,
+    path_input_error: Option<(PathField, String)>,
 }
 fn bytes(value: u64) -> String {
     if value >= 1_073_741_824 {
@@ -53,14 +69,11 @@ fn text(ui: &mut Ui, label: &str, value: &mut String) -> bool {
         .labelled_by(label.id)
         .changed()
 }
-fn default_backup(host: &Host, prefix: &str) -> String {
+fn default_backup(directory: &std::path::Path, prefix: &str) -> oxbox_core::CoreResult<String> {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |time| time.as_nanos());
-    host.data_dir()
-        .join(format!("{prefix}-{stamp}.json"))
-        .display()
-        .to_string()
+    crate::host::path_text(&directory.join(format!("{prefix}-{stamp}.json")))
 }
 #[cfg(test)]
 fn is_owned_startup_command(name: &str, command: &str, executable: &std::path::Path) -> bool {
@@ -98,6 +111,86 @@ fn current_app_identity() -> oxbox_core::CoreResult<(PathBuf, PathBuf)> {
     ))
 }
 impl SystemMaintenance {
+    fn path_field(&mut self, field: PathField) -> &mut String {
+        match field {
+            PathField::StorageRoot => &mut self.root,
+            PathField::Recovery => &mut self.recovery,
+            PathField::Backup => &mut self.backup,
+        }
+    }
+    fn clear_path_outcomes(&mut self) {
+        self.read.abandon();
+        self.action.abandon();
+        self.storage = None;
+        self.pending = None;
+    }
+    fn path_edited(&mut self, field: PathField) {
+        if self
+            .path_input_error
+            .as_ref()
+            .is_some_and(|(failed, _)| *failed == field)
+        {
+            self.path_input_error = None;
+        }
+    }
+    fn accept_path(
+        &mut self,
+        field: PathField,
+        path: &std::path::Path,
+    ) -> oxbox_core::CoreResult<()> {
+        let selected = crate::host::path_text(path);
+        match selected {
+            Ok(selected) => {
+                if field == PathField::Backup {
+                    // A new destination does not change the reviewed entry.
+                    self.action.abandon();
+                } else {
+                    self.clear_path_outcomes();
+                }
+                *self.path_field(field) = selected;
+                self.path_edited(field);
+                Ok(())
+            }
+            Err(error) => {
+                self.clear_path_outcomes();
+                self.path_input_error = Some((
+                    field,
+                    format!(
+                        "{}: {error}. Previous selection was kept; review it again before starting work.",
+                        field.label()
+                    ),
+                ));
+                Err(error)
+            }
+        }
+    }
+    fn begin_review(
+        &mut self,
+        directory: &std::path::Path,
+        prefix: &str,
+        pending: Pending,
+    ) -> oxbox_core::CoreResult<()> {
+        let backup = default_backup(directory, prefix);
+        self.clear_path_outcomes();
+        match backup {
+            Ok(backup) => {
+                self.backup = backup;
+                self.pending = Some(pending);
+                self.path_edited(PathField::Backup);
+                Ok(())
+            }
+            Err(error) => {
+                self.path_input_error = Some((
+                    PathField::Backup,
+                    format!(
+                        "{}: {error}. A recovery filename could not be generated exactly. No change is armed; use a Unicode profile directory.",
+                        PathField::Backup.label()
+                    ),
+                ));
+                Err(error)
+            }
+        }
+    }
     pub fn tick(&mut self) {
         self.read.poll();
         self.action.poll();
@@ -134,6 +227,9 @@ impl SystemMaintenance {
         if let Some(message) = &self.action.result {
             crate::accessibility::status(ui, message);
         }
+        if let Some((_, error)) = &self.path_input_error {
+            crate::accessibility::alert(ui, error);
+        }
         if id != "storage-analyzer" {
             ui.small("Cancel prevents further requested work; a setting change already admitted to the OS may have completed. Refresh the entry and keep its recovery backup. No other application is stopped.");
         }
@@ -143,12 +239,14 @@ impl SystemMaintenance {
         ui.label("Analyze an explicitly selected local folder without deleting or changing files. Logical file sizes can differ from allocated disk space; hard-linked paths can be counted more than once. Links and other mounted file systems are skipped.");
         let mut changed = false;
         ui.add_enabled_ui(!self.read.running(), |ui| {
-            changed |= text(ui, "Folder to analyze", &mut self.root);
+            if text(ui, "Folder to analyze", &mut self.root) {
+                self.path_edited(PathField::StorageRoot);
+                changed = true;
+            }
             if ui.button("Choose analysis folder…").clicked()
                 && let Some(path) = crate::host::dialogs::file(ui.ctx()).pick_folder()
             {
-                self.root = path.display().to_string();
-                changed = true;
+                changed |= self.accept_path(PathField::StorageRoot, &path).is_ok();
             }
             ui.horizontal(|ui| {
                 let label = ui.label("Maximum entries");
@@ -260,7 +358,7 @@ impl SystemMaintenance {
                 let disable = ui.add_enabled(entry.enabled && !self.action.running() && !self.read.running(), egui::Button::new("Review disabling…"));
                 crate::accessibility::name(&disable, &format!("Review disabling startup {}: {}", entry.name, entry.location));
                 if disable.clicked() {
-                    self.backup = default_backup(host, "startup-backup"); self.pending = Some(Pending::Disable(entry.clone()));
+                    let _ = self.begin_review(host.data_dir(), "startup-backup", Pending::Disable(entry.clone()));
                 }
             });
         }
@@ -298,8 +396,11 @@ impl SystemMaintenance {
                     &format!("Review removing executable mapping {}", entry.location),
                 );
                 if remove.clicked() {
-                    self.backup = default_backup(host, "registry-backup");
-                    self.pending = Some(Pending::Remove(entry.clone()));
+                    let _ = self.begin_review(
+                        host.data_dir(),
+                        "registry-backup",
+                        Pending::Remove(entry.clone()),
+                    );
                 }
             });
         }
@@ -312,13 +413,15 @@ impl SystemMaintenance {
         let mut changed = false;
         ui.add_enabled_ui(!self.read.running() && !self.action.running(), |ui| {
             changed = text(ui, "Recovery backup (.json)", &mut self.recovery);
+            if changed {
+                self.path_edited(PathField::Recovery);
+            }
             if ui.button("Choose recovery backup…").clicked()
                 && let Some(path) = crate::host::dialogs::file(ui.ctx())
                     .add_filter("Oxbox recovery", &["json"])
                     .pick_file()
             {
-                self.recovery = path.display().to_string();
-                changed = true;
+                changed |= self.accept_path(PathField::Recovery, &path).is_ok();
             }
         });
         if changed {
@@ -369,7 +472,23 @@ impl SystemMaintenance {
                 Pending::RestoreRegistry(review) => { ui.label(&review.description); },
             }
             let needs_backup = matches!(pending, Pending::Disable(_) | Pending::Remove(_));
-            if needs_backup { ui.add_enabled_ui(!self.action.running(), |ui| { text(ui, "New exclusive recovery backup", &mut self.backup); if ui.button("Choose new backup filename…").clicked() && let Some(path) = crate::host::dialogs::file(ui.ctx()).set_file_name("oxbox-recovery.json").save_file() { self.backup = path.display().to_string(); } }); ui.small("The backup must be new. If the entry changes or backup verification fails, the reviewed operation is refused. Keep the backup after any error or cancellation."); }
+            if needs_backup {
+                ui.add_enabled_ui(!self.action.running(), |ui| {
+                    if text(ui, "New exclusive recovery backup", &mut self.backup) {
+                        self.path_edited(PathField::Backup);
+                    }
+                    if ui.button("Choose new backup filename…").clicked()
+                        && let Some(path) = crate::host::dialogs::file(ui.ctx())
+                            .set_file_name("oxbox-recovery.json")
+                            .save_file()
+                    {
+                        let _ = self.accept_path(PathField::Backup, &path);
+                    }
+                });
+                ui.small("The backup must be new. If the entry changes or backup verification fails, the reviewed operation is refused. Keep the backup after any error or cancellation.");
+            }
+            // A refused picker invalidates this frame's cloned review too.
+            if self.pending.is_none() { return; }
             ui.horizontal(|ui| {
                 if ui.add_enabled(!self.action.running() && (!needs_backup || !self.backup.is_empty()), egui::Button::new("Confirm reviewed change")).clicked() {
                     let backup = PathBuf::from(&self.backup);
@@ -396,18 +515,158 @@ impl SystemMaintenance {
             self.action.abandon();
             self.pending = None;
             self.recovery.clear();
+            self.path_input_error = None;
         }
     }
     pub fn shutdown(&mut self) {
         self.read.shutdown();
         self.action.shutdown();
         self.pending = None;
+        self.path_input_error = None;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn unrepresentable_path() -> PathBuf {
+        #[cfg(windows)]
+        {
+            use std::os::windows::ffi::OsStringExt;
+            PathBuf::from(std::ffi::OsString::from_wide(&[b'x' as u16, 0xd800]))
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            PathBuf::from(std::ffi::OsString::from_vec(vec![b'x', 0xff]))
+        }
+        #[cfg(not(any(windows, unix)))]
+        {
+            PathBuf::from("generated\ninvalid")
+        }
+    }
+    fn generated_review(directory: &std::path::Path) -> startup::RecoveryReview {
+        let filename = directory.join("generated-review-only.json");
+        let data: Vec<_> = "C:\\Generated\\fixture.exe\0"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        let backup = serde_json::json!({"schema":1,"purpose":"oxbox-startup","source":{"Run":{"key":"Software\\Microsoft\\Windows\\CurrentVersion\\Run","name":"Generated fixture","kind":1,"data":data}}});
+        std::fs::write(&filename, serde_json::to_vec(&backup).unwrap()).unwrap();
+        startup::review_recovery(&filename).unwrap()
+    }
+    #[test]
+    fn verification56_system_picker_refusal_preserves_fields_and_revokes_reviewed_outcomes() {
+        let directory = tempfile::tempdir().unwrap();
+        let review = generated_review(directory.path());
+        for field in [
+            PathField::StorageRoot,
+            PathField::Recovery,
+            PathField::Backup,
+        ] {
+            for invalid in [
+                unrepresentable_path(),
+                PathBuf::from("generated\ninvalid"),
+                PathBuf::from("generated\rinvalid"),
+            ] {
+                let mut tools = SystemMaintenance::default();
+                *tools.path_field(field) = "Generated valid old path".into();
+                tools.pending = Some(Pending::RestoreStartup(review.clone()));
+                tools.read.result = Some(ReadResult::StartupRecovery(review.clone()));
+                tools.action.result = Some("Generated old completion".into());
+                tools.storage = Some(storage::StorageReport {
+                    root: directory.path().into(),
+                    total_bytes: 0,
+                    total_files: 0,
+                    directories: 0,
+                    skipped: 0,
+                    visited: 0,
+                    truncated: false,
+                    large_files: vec![],
+                    categories: vec![],
+                });
+                assert!(
+                    tools.accept_path(field, &invalid).is_err(),
+                    "{field:?} admitted an unrepresentable picker path"
+                );
+                assert_eq!(tools.path_field(field).as_str(), "Generated valid old path");
+                assert!(tools.path_input_error.is_some());
+                assert!(
+                    tools.pending.is_none()
+                        && tools.read.result.is_none()
+                        && tools.action.result.is_none()
+                        && tools.storage.is_none(),
+                    "refused selection must revoke stale review and queued results"
+                );
+                let mut host = Host::new(directory.path().join("generated-host")).unwrap();
+                let id = if matches!(field, PathField::StorageRoot) {
+                    "storage-analyzer"
+                } else {
+                    "startup-manager"
+                };
+                let nodes = crate::accessibility::test_tree(|ui| {
+                    crate::jobs::register_context(ui.ctx()).close();
+                    assert!(tools.show(ui, id, &mut host));
+                });
+                assert!(
+                    nodes
+                        .iter()
+                        .any(|node| node.role() == egui::accesskit::Role::Alert
+                            && node
+                                .label()
+                                .is_some_and(|label| label.contains("Selected "))),
+                    "refusal must remain visible as a named field error"
+                );
+                host.shutdown();
+                let valid = directory.path().join("画像 with spaces ");
+                tools.accept_path(field, &valid).unwrap();
+                assert_eq!(tools.path_field(field).as_str(), valid.to_str().unwrap());
+                assert!(tools.path_input_error.is_none());
+                if field == PathField::Backup {
+                    tools.pending = Some(Pending::RestoreStartup(review.clone()));
+                    tools.accept_path(field, &valid).unwrap();
+                    assert!(
+                        tools.pending.is_some(),
+                        "a valid new backup destination must keep the reviewed entry available for confirmation"
+                    );
+                }
+                tools.shutdown();
+            }
+        }
+    }
+    #[test]
+    fn verification56_default_backup_refusal_does_not_open_or_reuse_a_review() {
+        let directory = tempfile::tempdir().unwrap();
+        let review = generated_review(directory.path());
+        for invalid in [
+            unrepresentable_path(),
+            PathBuf::from("generated\nprofile"),
+            PathBuf::from("generated\rprofile"),
+        ] {
+            let mut tools = SystemMaintenance {
+                backup: "Generated previous backup".into(),
+                pending: Some(Pending::RestoreStartup(review.clone())),
+                ..Default::default()
+            };
+            tools.action.result = Some("Generated previous completion".into());
+            assert!(
+                tools
+                    .begin_review(
+                        &invalid,
+                        "startup-backup",
+                        Pending::RestoreStartup(review.clone())
+                    )
+                    .is_err()
+            );
+            assert_eq!(tools.backup, "Generated previous backup");
+            assert!(tools.pending.is_none() && tools.action.result.is_none());
+            assert!(
+                tools.path_input_error.is_some(),
+                "an unusable profile must have a visible error rather than an empty or lossy backup"
+            );
+            tools.shutdown();
+        }
+    }
     #[test]
     fn startup_manager_own_command_is_delegated_to_settings() {
         let exe = std::path::Path::new("C:\\Apps\\Oxbox\\oxbox-native.exe");

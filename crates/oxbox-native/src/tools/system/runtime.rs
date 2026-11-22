@@ -32,6 +32,15 @@ pub fn lock<T>(value: &Mutex<T>) -> CoreResult<MutexGuard<'_, T>> {
         .lock()
         .map_err(|_| error("System state is unavailable. Restart Oxbox."))
 }
+fn acquire_cancellable<T>(
+    cancel: &oxbox_core::jobs::CancelToken,
+    acquire: impl FnOnce() -> CoreResult<T>,
+) -> CoreResult<T> {
+    cancel.check()?;
+    let acquired = acquire()?;
+    cancel.check()?;
+    Ok(acquired)
+}
 pub fn unix_now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -279,7 +288,13 @@ impl Shared {
         options: PresentationOptions,
         start: bool,
     ) -> CoreResult<String> {
-        self.presentation_change_reserved(directory, options, start, self.reserve())
+        self.presentation_change_reserved(
+            directory,
+            options,
+            start,
+            self.reserve(),
+            &oxbox_core::jobs::CancelToken::default(),
+        )
     }
     pub fn presentation_change_reserved(
         &self,
@@ -287,8 +302,9 @@ impl Shared {
         options: PresentationOptions,
         start: bool,
         permit: u64,
+        cancel: &oxbox_core::jobs::CancelToken,
     ) -> CoreResult<String> {
-        self.with_reserved(permit, |state| {
+        self.with_reserved_cancellable(permit, cancel, |state| {
             if state.presentation.status().active {
                 return Err(error(
                     "Stop the current presentation before changing preferences.",
@@ -346,11 +362,46 @@ impl Shared {
         }
         work(&mut state)
     }
+    pub fn with_reserved_cancellable<T>(
+        &self,
+        permit: u64,
+        cancel: &oxbox_core::jobs::CancelToken,
+        work: impl FnOnce(&mut State) -> CoreResult<T>,
+    ) -> CoreResult<T> {
+        // The owning Task can be cancelled while it waits for this gate.
+        // Keep the original permit and recheck the token at admission.
+        let mut state = acquire_cancellable(cancel, || lock(&self.state))?;
+        if self.stopping.load(Ordering::Acquire) || self.reserve() != permit {
+            return Err(CoreError::Cancelled);
+        }
+        work(&mut state)
+    }
+    pub fn perform_reserved_cancellable(
+        &self,
+        action: Action,
+        permit: u64,
+        cancel: &oxbox_core::jobs::CancelToken,
+    ) -> CoreResult<String> {
+        cancel.check()?;
+        self.perform_reserved_inner(action, permit, Some(cancel))
+    }
     pub fn perform(&self, action: Action) -> CoreResult<String> {
         self.perform_reserved(action, self.reserve())
     }
     pub fn perform_reserved(&self, action: Action, permit: u64) -> CoreResult<String> {
-        let mut state = lock(&self.state)?;
+        self.perform_reserved_inner(action, permit, None)
+    }
+    fn perform_reserved_inner(
+        &self,
+        action: Action,
+        permit: u64,
+        cancel: Option<&oxbox_core::jobs::CancelToken>,
+    ) -> CoreResult<String> {
+        let mut state = if let Some(cancel) = cancel {
+            acquire_cancellable(cancel, || lock(&self.state))?
+        } else {
+            lock(&self.state)?
+        };
         if (self.stopping.load(Ordering::Acquire) || self.reserve() != permit) && !action.recovery()
         {
             return Err(CoreError::Cancelled);
@@ -689,6 +740,83 @@ impl Drop for Runtime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cancelled_task_waiting_for_system_gate_cannot_arm_or_dispatch() {
+        for power_action in [true, false] {
+            let shared = Arc::new(Shared::default());
+            let cancel = oxbox_core::jobs::CancelToken::default();
+            let worker_cancel = cancel.clone();
+            let worker_shared = shared.clone();
+            let dispatched = Arc::new(AtomicBool::new(false));
+            let worker_dispatched = dispatched.clone();
+            let (checked, outer_checked) = std::sync::mpsc::channel();
+            let held = shared.state.lock().unwrap();
+            let worker = std::thread::spawn(move || {
+                // Acknowledge entry into the real admission helper's acquire
+                // callback: its first check has already passed, and the main
+                // thread still holds the gate. No timing sleep is needed.
+                let mut state = acquire_cancellable(&worker_cancel, || {
+                    checked.send(()).unwrap();
+                    lock(&worker_shared.state)
+                })?;
+                if power_action {
+                    state.timer.arm(100, 60, PowerAction::Shutdown)?;
+                } else {
+                    worker_dispatched.store(true, Ordering::Release);
+                }
+                Ok::<_, CoreError>("generated dispatch".to_owned())
+            });
+            outer_checked
+                .recv_timeout(Duration::from_secs(1))
+                .expect("fake Task must pass its first cancellation check");
+            cancel.cancel();
+            drop(held);
+            assert_eq!(worker.join().unwrap().unwrap_err().code(), "cancelled");
+            assert!(lock(&shared.state).unwrap().timer.status().is_none());
+            assert!(!dispatched.load(Ordering::Acquire));
+        }
+
+        let shared = Shared::default();
+        let cancel = oxbox_core::jobs::CancelToken::default();
+        cancel.cancel();
+        assert_eq!(
+            shared
+                .perform_reserved_cancellable(
+                    Action::Sleep {
+                        seconds: 60,
+                        action: PowerAction::Sleep,
+                    },
+                    shared.reserve(),
+                    &cancel,
+                )
+                .unwrap_err()
+                .code(),
+            "cancelled"
+        );
+        assert_eq!(
+            shared
+                .with_reserved_cancellable::<()>(shared.reserve(), &cancel, |_| {
+                    panic!("cancelled dispatch must not reach the backend")
+                })
+                .unwrap_err()
+                .code(),
+            "cancelled"
+        );
+        assert!(lock(&shared.state).unwrap().timer.status().is_none());
+        let cancel = oxbox_core::jobs::CancelToken::default();
+        shared
+            .perform_reserved_cancellable(
+                Action::Sleep {
+                    seconds: 60,
+                    action: PowerAction::Sleep,
+                },
+                shared.reserve(),
+                &cancel,
+            )
+            .unwrap();
+        assert!(lock(&shared.state).unwrap().timer.status().is_some());
+        shared.perform(Action::SleepCancel).unwrap();
+    }
     #[test]
     fn preparing_consecutive_tray_toggles_preserves_both_accepted_commands() {
         let shared = Shared::default();

@@ -33,6 +33,7 @@ pub struct FileMaintenance {
     shred_draft: Option<String>,
     confirmation: String,
     acknowledged: bool,
+    path_input_error: Option<String>,
 }
 impl FileMaintenance {
     pub fn tick(&mut self) {
@@ -80,31 +81,31 @@ impl FileMaintenance {
         Ok(self
             .paths
             .lines()
-            .map(str::trim)
-            .filter(|line| !line.is_empty())
+            .filter(|line| !line.trim().is_empty())
             .map(PathBuf::from)
             .collect())
     }
     fn selected_files(&mut self, ui: &mut egui::Ui, busy: bool) {
         ui.add_enabled_ui(!busy, |ui| {
             let label = ui.label("Selected files · one absolute path per line");
-            ui.add(
-                egui::TextEdit::multiline(&mut self.paths)
-                    .desired_rows(4)
-                    .desired_width(f32::INFINITY),
-            )
-            .labelled_by(label.id);
+            if ui
+                .add(
+                    egui::TextEdit::multiline(&mut self.paths)
+                        .desired_rows(4)
+                        .desired_width(f32::INFINITY),
+                )
+                .labelled_by(label.id)
+                .changed()
+            {
+                self.path_input_error = None;
+            }
             ui.horizontal(|ui| {
                 if ui.button("Choose files…").clicked()
                     && let Some(paths) = host::dialogs::file(ui.ctx())
                         .set_title("Select explicit regular files")
                         .pick_files()
                 {
-                    self.paths = paths
-                        .iter()
-                        .map(|path| path.to_string_lossy())
-                        .collect::<Vec<_>>()
-                        .join("\n");
+                    self.accept_paths(&paths);
                 }
                 if ui.button("Clear selected files").clicked() {
                     self.paths.clear();
@@ -120,15 +121,30 @@ impl FileMaintenance {
                         .collect::<Vec<_>>()
                 });
                 if !dropped.is_empty() {
-                    self.paths = dropped
-                        .iter()
-                        .map(|path| path.to_string_lossy())
-                        .collect::<Vec<_>>()
-                        .join("\n");
+                    self.accept_paths(&dropped);
                 }
             }
         });
+        if let Some(error) = &self.path_input_error {
+            crate::accessibility::alert(ui, error);
+        }
         ui.small("Up to 256 local regular files. No folder recursion, symbolic/reparse links, hard links or system files. Remote and unrecognized filesystems are refused.");
+        ui.small("The path field uses one Unicode path per line, up to 128 KiB total. Picker/drop filenames containing CR or LF, or non-Unicode names, are explicitly refused. Spaces within each nonblank path are preserved.");
+    }
+    fn accept_paths(&mut self, paths: &[PathBuf]) {
+        match selected_paths_text(paths) {
+            Ok(text) => {
+                self.paths = text;
+                self.path_input_error = None;
+            }
+            Err(error) => {
+                self.rename_preview.abandon();
+                self.shred_review.abandon();
+                self.confirmation.clear();
+                self.acknowledged = false;
+                self.path_input_error = Some(format!("Selection unchanged: {error}"));
+            }
+        }
     }
     pub fn show(&mut self, ui: &mut egui::Ui, id: &str, host: &mut Host) -> bool {
         if !matches!(id, "batch-rename" | "file-shred") {
@@ -473,10 +489,69 @@ fn confirm(ui: &egui::Ui, title: &str, description: &str) -> bool {
         .show()
         == rfd::MessageDialogResult::Yes
 }
+fn selected_paths_text(paths: &[PathBuf]) -> CoreResult<String> {
+    if paths.len() > batch_rename::MAX_FILES {
+        return Err(CoreError::InvalidInput(
+            "select at most 256 explicit files".into(),
+        ));
+    }
+    let text = paths.iter().map(|path| {
+        let value = path.to_str().ok_or_else(|| CoreError::InvalidInput("non-Unicode filenames cannot be represented by this path field".into()))?;
+        if value.contains(['\n', '\r']) {
+            return Err(CoreError::InvalidInput("filenames containing line breaks cannot be represented by this one-path-per-line field".into()));
+        }
+        Ok(value)
+    }).collect::<CoreResult<Vec<_>>>()?.join("\n");
+    if text.len() > 128 * 1024 {
+        return Err(CoreError::InvalidInput(
+            "selected path text exceeds 128 KiB".into(),
+        ));
+    }
+    Ok(text)
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn selected_file_paths_preserve_trailing_spaces_instead_of_targeting_a_neighbor() {
+        let selected = std::env::temp_dir().join("generated-selected-file ");
+        let mut tools = FileMaintenance::default();
+        tools.accept_paths(std::slice::from_ref(&selected));
+        assert_eq!(tools.paths().unwrap(), vec![selected]);
+    }
+    #[test]
+    fn picked_paths_that_cannot_roundtrip_a_line_field_are_refused() {
+        let newline = std::env::temp_dir().join("generated\nselected.txt");
+        assert!(selected_paths_text(&[newline]).is_err());
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            let invalid = PathBuf::from(std::ffi::OsString::from_vec(
+                b"/generated/invalid-\xff".to_vec(),
+            ));
+            assert!(selected_paths_text(&[invalid]).is_err());
+        }
+    }
+    #[test]
+    fn refused_picker_paths_preserve_selection_but_revoke_old_shred_admission() {
+        let original = std::env::temp_dir().join("previous-generated-selection");
+        let mut tools = FileMaintenance::default();
+        tools.accept_paths(std::slice::from_ref(&original));
+        tools.confirmation = "DELETE".into();
+        tools.acknowledged = true;
+        tools.accept_paths(&[std::env::temp_dir().join("cannot\nrepresent")]);
+        assert_eq!(tools.paths().unwrap(), vec![original]);
+        assert!(tools.confirmation.is_empty());
+        assert!(!tools.acknowledged);
+        assert!(
+            tools
+                .path_input_error
+                .as_deref()
+                .unwrap()
+                .starts_with("Selection unchanged:")
+        );
+    }
     fn related_text(
         nodes: &[(egui::accesskit::NodeId, egui::accesskit::Node)],
         id: egui::accesskit::NodeId,

@@ -260,10 +260,14 @@ fn validate_local_drive(path: &Path) -> CoreResult<()> {
     Ok(())
 }
 
-pub fn find_executable(name: &str) -> CoreResult<PathBuf> {
-    if !["ffmpeg", "ffprobe", "tesseract"].contains(&name) {
+fn validate_provider_name(name: &str) -> CoreResult<()> {
+    if !["ffmpeg", "ffprobe", "tesseract", "pactl"].contains(&name) {
         return Err(invalid("unknown local media provider"));
     }
+    Ok(())
+}
+pub fn find_executable(name: &str) -> CoreResult<PathBuf> {
+    validate_provider_name(name)?;
     let executable = if cfg!(target_os = "windows") {
         format!("{name}.exe")
     } else {
@@ -352,6 +356,24 @@ pub fn run_text(
     let bytes = run_bytes(executable, args, cancel, timeout, max_text)?;
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
+/// Linux audio status parsing needs stable English output. Keep this environment
+/// override local to the owned child rather than changing the parent process.
+#[cfg(target_os = "linux")]
+pub(crate) fn run_text_c_locale(
+    executable: &Path,
+    args: &[String],
+    cancel: &CancelToken,
+    timeout: Duration,
+    max_text: usize,
+) -> CoreResult<String> {
+    let bytes = run_command_bytes(
+        command(executable).args(args).env("LC_ALL", "C"),
+        cancel,
+        timeout,
+        max_text,
+    )?;
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
 /// The same bounded owned-process runner without lossy text conversion. Binary
 /// consumers such as the strict ECB XML importer retain their UTF-8 validation.
 pub(crate) fn run_bytes(
@@ -361,10 +383,17 @@ pub(crate) fn run_bytes(
     timeout: Duration,
     max_text: usize,
 ) -> CoreResult<Vec<u8>> {
+    run_command_bytes(command(executable).args(args), cancel, timeout, max_text)
+}
+fn run_command_bytes(
+    command: &mut Command,
+    cancel: &CancelToken,
+    timeout: Duration,
+    max_text: usize,
+) -> CoreResult<Vec<u8>> {
     cancel.check()?;
     let mut child = ManagedChild::spawn(
-        command(executable)
-            .args(args)
+        command
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped()),
@@ -485,8 +514,20 @@ where
         },
     }
 }
+/// Provider argument vectors use Unicode strings. Reject an unrepresentable
+/// selection before I/O rather than targeting a different replacement filename.
+pub(crate) fn provider_path_text(path: &Path) -> CoreResult<String> {
+    path.to_str()
+        .filter(|value| !value.contains(['\r', '\n']))
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            invalid("provider input paths must be valid Unicode on one line; choose another path")
+        })
+}
 pub fn file_input(path: &Path) -> CoreResult<Vec<String>> {
+    provider_path_text(path)?;
     let path = canonical_local_path(path)?;
+    let argument = provider_path_text(&path)?;
     if !path.is_file() {
         return Err(invalid("choose a regular media file"));
     }
@@ -496,7 +537,7 @@ pub fn file_input(path: &Path) -> CoreResult<Vec<String>> {
         "-protocol_whitelist".into(),
         "file,pipe".into(),
         "-i".into(),
-        path.to_string_lossy().into_owned(),
+        argument,
     ])
 }
 fn spawn_ffmpeg(args: &[String], plan: &OutputPlan, recording: bool) -> CoreResult<ManagedChild> {
@@ -1118,5 +1159,84 @@ mod tests {
             output.canonicalize().unwrap()
         );
         assert_eq!(std::fs::read(output).unwrap(), b"WAV fixture");
+    }
+}
+
+#[cfg(test)]
+mod verification56_path_tests {
+    use super::*;
+
+    #[test]
+    fn verification56_audio_provider_name_is_admitted_without_searching_path_or_devices() {
+        assert!(
+            validate_provider_name("pactl").is_ok(),
+            "the bounded mute runner must be able to resolve its existing provider"
+        );
+        for unknown in [
+            "../pactl",
+            "pactl --help",
+            "https://example.invalid/pactl",
+            "other-provider",
+        ] {
+            assert!(validate_provider_name(unknown).is_err());
+        }
+    }
+
+    #[test]
+    fn verification56_provider_path_guard_rejects_ambiguous_text_without_filesystem_access() {
+        assert_eq!(
+            provider_path_text(Path::new("generated unchanged path.mp4")).unwrap(),
+            "generated unchanged path.mp4"
+        );
+        for path in [
+            Path::new("generated\nname.mp4"),
+            Path::new("generated\rname.mp4"),
+        ] {
+            assert_eq!(
+                provider_path_text(path).unwrap_err().code(),
+                "invalid_input"
+            );
+        }
+        #[cfg(unix)]
+        let invalid = {
+            use std::os::unix::ffi::OsStringExt;
+            PathBuf::from(std::ffi::OsString::from_vec(b"generated-\xff.mp4".to_vec()))
+        };
+        #[cfg(windows)]
+        let invalid = {
+            use std::os::windows::ffi::OsStringExt;
+            PathBuf::from(std::ffi::OsString::from_wide(&[
+                0x0061, 0xd800, 0x002e, 0x006d, 0x0070, 0x0034,
+            ]))
+        };
+        #[cfg(any(unix, windows))]
+        assert_eq!(
+            provider_path_text(&invalid).unwrap_err().code(),
+            "invalid_input"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn verification56_media_input_never_aliases_a_non_unicode_file_to_its_replacement_neighbor() {
+        use std::os::unix::ffi::OsStringExt;
+        let directory = tempfile::tempdir().unwrap();
+        let selected = directory
+            .path()
+            .join(std::ffi::OsString::from_vec(b"generated-\xff.mp4".to_vec()));
+        let neighbor = directory.path().join("generated-\u{fffd}.mp4");
+        fs::write(&selected, b"generated selected file").unwrap();
+        fs::write(&neighbor, b"generated different neighbor").unwrap();
+        let result = file_input(&selected);
+        assert!(
+            result.is_err(),
+            "provider received a lossy filename for a different existing file: {result:?}"
+        );
+        assert_eq!(result.unwrap_err().code(), "invalid_input");
+        assert_eq!(fs::read(&selected).unwrap(), b"generated selected file");
+        assert_eq!(
+            fs::read(&neighbor).unwrap(),
+            b"generated different neighbor"
+        );
     }
 }

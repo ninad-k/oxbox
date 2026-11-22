@@ -55,8 +55,8 @@ cargo test -p oxbox-native --locked
 cargo clippy -p oxbox-core -p oxbox-native --all-targets --locked -- -D warnings
 ```
 
-The AccessKit regressions inspect the actual generated trees for all 49 default native forms (13 utilities,
-14 media and 22 system), plus selected expanded states and two-row fixtures. The system-form test closes
+The AccessKit regressions inspect the actual generated trees for all 56 default native forms (13 utilities,
+14 media, 22 system and seven maintenance), plus selected expanded states and two-row fixtures. The system-form test closes
 task admission before rendering; it neither starts OS-reading jobs nor performs OS effects. Media fixtures
 do not open a device or observe the real clipboard. Password tests use generated sentinel text only.
 Texture updates are consumed without a GPU. Passing these tests proves those tree properties, not native speech,

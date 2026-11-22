@@ -16,6 +16,7 @@ struct QrResult {
     code: GeneratedCode,
     asset: Asset,
 }
+
 pub struct ImageTools {
     providers: Providers,
     qr_text: String,
@@ -295,100 +296,150 @@ impl ImageTools {
             ui,
             "Resize and convert local images in a batch. EXIF orientation is applied and original files are preserved.",
         );
-        ui.horizontal(|ui| {
-            if ui.button("Add images…").clicked()
-                && let Some(paths) = crate::host::dialogs::file(ui.ctx())
-                    .add_filter("Images", &["png", "jpg", "jpeg", "webp"])
-                    .pick_files()
-            {
-                for path in paths {
-                    if !self.resize_paths.contains(&path) {
-                        self.resize_paths.push(path);
+        let previous = (
+            self.resize_paths.clone(),
+            self.resize_folder.clone(),
+            self.resize_mode,
+            self.percent.to_bits(),
+            self.width,
+            self.height,
+            self.format,
+            self.quality,
+        );
+        let busy = self.resize_job.running();
+        ui.add_enabled_ui(!busy, |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("Add images…").clicked()
+                    && let Some(paths) = crate::host::dialogs::file(ui.ctx())
+                        .add_filter("Images", &["png", "jpg", "jpeg", "webp"])
+                        .pick_files()
+                {
+                    for path in paths {
+                        if !self.resize_paths.contains(&path) {
+                            self.resize_paths.push(path);
+                        }
                     }
                 }
-            }
-            if ui.button("Clear selection").clicked() {
-                self.resize_paths.clear();
-            }
-        });
-        let mut remove = None;
-        egui::ScrollArea::vertical()
-            .max_height(140.0)
-            .show(ui, |ui| {
-                for (index, path) in self.resize_paths.iter().enumerate() {
-                    ui.horizontal(|ui| {
-                        ui.label(path.display().to_string());
-                        if ui.small_button("Remove").clicked() {
-                            remove = Some(index);
-                        }
-                    });
+                if ui.button("Clear selection").clicked() {
+                    self.resize_paths.clear();
                 }
             });
-        if let Some(index) = remove {
-            self.resize_paths.remove(index);
-        }
-        widgets::choice(
-            ui,
-            "Resize mode",
-            &mut self.resize_mode,
-            &["Percentage", "Fit within bounds", "Exact dimensions"],
-        );
-        if self.resize_mode == 0 {
-            ui.horizontal(|ui| {
-                let label = ui.label("Percentage");
-                ui.add(
-                    egui::DragValue::new(&mut self.percent)
-                        .range(0.1..=1000.0)
-                        .suffix("%"),
+            let mut remove = None;
+            egui::ScrollArea::vertical()
+                .max_height(140.0)
+                .show(ui, |ui| {
+                    for (index, path) in self.resize_paths.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.label(path.display().to_string());
+                            if ui.small_button("Remove").clicked() {
+                                remove = Some(index);
+                            }
+                        });
+                    }
+                });
+            if let Some(index) = remove {
+                self.resize_paths.remove(index);
+            }
+            widgets::choice(
+                ui,
+                "Resize mode",
+                &mut self.resize_mode,
+                &["Percentage", "Fit within bounds", "Exact dimensions"],
+            );
+            if self.resize_mode == 0 {
+                ui.horizontal(|ui| {
+                    let label = ui.label("Percentage");
+                    ui.add(
+                        egui::DragValue::new(&mut self.percent)
+                            .range(0.1..=1000.0)
+                            .suffix("%"),
+                    )
+                    .labelled_by(label.id);
+                });
+            } else {
+                widgets::number(ui, "Width (pixels)", &mut self.width, 1..=32768);
+                widgets::number(ui, "Height (pixels)", &mut self.height, 1..=32768);
+            }
+            widgets::choice(
+                ui,
+                "Output format",
+                &mut self.format,
+                &["PNG", "JPEG", "WebP"],
+            );
+            if self.format == 1 {
+                widgets::number(ui, "JPEG quality", &mut self.quality, 1..=100);
+            }
+            let path_changed = widgets::folder(ui, "Destination folder", &mut self.resize_folder);
+            if busy {
+                // AccessKit value actions can reach disabled text fields. Restore
+                // the admitted model before any invalidation or new-job action.
+                let (paths, folder, mode, percent, width, height, format, quality) = previous;
+                self.resize_paths = paths;
+                self.resize_folder = folder;
+                self.resize_mode = mode;
+                self.percent = f64::from_bits(percent);
+                self.width = width;
+                self.height = height;
+                self.format = format;
+                self.quality = quality;
+                return;
+            }
+            if path_changed
+                || previous
+                    != (
+                        self.resize_paths.clone(),
+                        self.resize_folder.clone(),
+                        self.resize_mode,
+                        self.percent.to_bits(),
+                        self.width,
+                        self.height,
+                        self.format,
+                        self.quality,
+                    )
+            {
+                self.resize_job.abandon();
+                self.preview_job.abandon();
+                self.resize_results.clear();
+                self.resize_preview = Preview::default();
+            }
+            if ui
+                .add_enabled(
+                    !self.resize_paths.is_empty()
+                        && !self.resize_folder.is_empty()
+                        && !self.resize_job.running(),
+                    egui::Button::new("Resize images"),
                 )
-                .labelled_by(label.id);
-            });
-        } else {
-            widgets::number(ui, "Width (pixels)", &mut self.width, 1..=32768);
-            widgets::number(ui, "Height (pixels)", &mut self.height, 1..=32768);
-        }
-        widgets::choice(
-            ui,
-            "Output format",
-            &mut self.format,
-            &["PNG", "JPEG", "WebP"],
-        );
-        if self.format == 1 {
-            widgets::number(ui, "JPEG quality", &mut self.quality, 1..=100);
-        }
-        widgets::folder(ui, "Destination folder", &mut self.resize_folder);
-        if ui
-            .add_enabled(
-                !self.resize_paths.is_empty()
-                    && !self.resize_folder.is_empty()
-                    && !self.resize_job.running(),
-                egui::Button::new("Resize images"),
-            )
-            .clicked()
-        {
-            let request = ResizeRequest {
-                paths: self.resize_paths.clone(),
-                output_dir: PathBuf::from(&self.resize_folder),
-                mode: match self.resize_mode {
-                    0 => ResizeMode::Percent {
-                        percent: self.percent,
+                .clicked()
+            {
+                let request = ResizeRequest {
+                    paths: self.resize_paths.clone(),
+                    output_dir: PathBuf::from(&self.resize_folder),
+                    mode: match self.resize_mode {
+                        0 => ResizeMode::Percent {
+                            percent: self.percent,
+                        },
+                        1 => ResizeMode::Fit {
+                            width: self.width,
+                            height: self.height,
+                        },
+                        _ => ResizeMode::Exact {
+                            width: self.width,
+                            height: self.height,
+                        },
                     },
-                    1 => ResizeMode::Fit {
-                        width: self.width,
-                        height: self.height,
-                    },
-                    _ => ResizeMode::Exact {
-                        width: self.width,
-                        height: self.height,
-                    },
-                },
-                format: [OutputFormat::Png, OutputFormat::Jpeg, OutputFormat::Webp][self.format],
-                jpeg_quality: self.quality as u8,
-            };
-            self.resize_job.start(ui.ctx(), move |cancel, progress| {
-                resize::resize_batch(&request, &cancel, progress)
-            });
-        }
+                    format: [OutputFormat::Png, OutputFormat::Jpeg, OutputFormat::Webp]
+                        [self.format],
+                    jpeg_quality: self.quality as u8,
+                };
+                self.resize_job.abandon();
+                self.preview_job.abandon();
+                self.resize_results.clear();
+                self.resize_preview = Preview::default();
+                self.resize_job.start(ui.ctx(), move |cancel, progress| {
+                    resize::resize_batch(&request, &cancel, progress)
+                });
+            }
+        });
         self.resize_job.show(ui);
         widgets::results(ui, &self.resize_results);
         if let Some(path) = self.resize_results.first()
@@ -413,51 +464,89 @@ impl ImageTools {
             "Create an animated GIF from a bounded segment of a local video.",
         );
         self.providers.show(ui);
-        widgets::file(
-            ui,
-            "Input video",
-            &mut self.gif_input,
-            &["mp4", "webm", "mov", "mkv", "avi"],
+        let previous = (
+            self.gif_input.clone(),
+            self.gif_output.clone(),
+            self.gif_start.to_bits(),
+            self.gif_seconds.to_bits(),
+            self.gif_fps,
+            self.gif_width,
         );
-        ui.horizontal(|ui| {
-            let label = ui.label("Start (seconds)");
-            ui.add(egui::DragValue::new(&mut self.gif_start).range(0.0..=604800.0))
-                .labelled_by(label.id);
-        });
-        ui.horizontal(|ui| {
-            let label = ui.label("Duration (seconds)");
-            ui.add(egui::DragValue::new(&mut self.gif_seconds).range(0.1..=60.0))
-                .labelled_by(label.id);
-        });
-        widgets::number(ui, "Frame rate", &mut self.gif_fps, 1..=30);
-        widgets::number(ui, "Width (pixels)", &mut self.gif_width, 16..=1280);
-        widgets::output(
-            ui,
-            "New GIF output",
-            &mut self.gif_output,
-            "Oxbox-animation.gif",
-        );
-        if ui
-            .add_enabled(
-                !self.gif_input.is_empty()
-                    && !self.gif_output.is_empty()
-                    && !self.gif_job.running(),
-                egui::Button::new("Make GIF"),
-            )
-            .clicked()
-        {
-            let input = PathBuf::from(&self.gif_input);
-            let output = PathBuf::from(&self.gif_output);
-            let options = GifOptions {
-                start_seconds: self.gif_start,
-                seconds: self.gif_seconds,
-                fps: self.gif_fps,
-                width: self.gif_width,
-            };
-            self.gif_job.start(ui.ctx(), move |cancel, progress| {
-                make_gif::make(&input, &output, &options, &cancel, progress)
+        let busy = self.gif_job.running();
+        ui.add_enabled_ui(!busy, |ui| {
+            let input_changed = widgets::file(
+                ui,
+                "Input video",
+                &mut self.gif_input,
+                &["mp4", "webm", "mov", "mkv", "avi"],
+            );
+            ui.horizontal(|ui| {
+                let label = ui.label("Start (seconds)");
+                ui.add(egui::DragValue::new(&mut self.gif_start).range(0.0..=604800.0))
+                    .labelled_by(label.id);
             });
-        }
+            ui.horizontal(|ui| {
+                let label = ui.label("Duration (seconds)");
+                ui.add(egui::DragValue::new(&mut self.gif_seconds).range(0.1..=60.0))
+                    .labelled_by(label.id);
+            });
+            widgets::number(ui, "Frame rate", &mut self.gif_fps, 1..=30);
+            widgets::number(ui, "Width (pixels)", &mut self.gif_width, 16..=1280);
+            let output_changed = widgets::output(
+                ui,
+                "New GIF output",
+                &mut self.gif_output,
+                "Oxbox-animation.gif",
+            );
+            if busy {
+                let (input, output, start, seconds, fps, width) = previous;
+                self.gif_input = input;
+                self.gif_output = output;
+                self.gif_start = f64::from_bits(start);
+                self.gif_seconds = f64::from_bits(seconds);
+                self.gif_fps = fps;
+                self.gif_width = width;
+                return;
+            }
+            if input_changed
+                || output_changed
+                || previous
+                    != (
+                        self.gif_input.clone(),
+                        self.gif_output.clone(),
+                        self.gif_start.to_bits(),
+                        self.gif_seconds.to_bits(),
+                        self.gif_fps,
+                        self.gif_width,
+                    )
+            {
+                self.gif_job.abandon();
+                self.gif_result = None;
+            }
+            if ui
+                .add_enabled(
+                    !self.gif_input.is_empty()
+                        && !self.gif_output.is_empty()
+                        && !self.gif_job.running(),
+                    egui::Button::new("Make GIF"),
+                )
+                .clicked()
+            {
+                let input = PathBuf::from(&self.gif_input);
+                let output = PathBuf::from(&self.gif_output);
+                let options = GifOptions {
+                    start_seconds: self.gif_start,
+                    seconds: self.gif_seconds,
+                    fps: self.gif_fps,
+                    width: self.gif_width,
+                };
+                self.gif_job.abandon();
+                self.gif_result = None;
+                self.gif_job.start(ui.ctx(), move |cancel, progress| {
+                    make_gif::make(&input, &output, &options, &cancel, progress)
+                });
+            }
+        });
         self.gif_job.show(ui);
         if let Some(path) = &self.gif_result {
             widgets::note(ui, format!("GIF saved to {}", path.display()));
@@ -473,47 +562,73 @@ impl ImageTools {
             "Convert a local audio or video file using a fixed, reviewed preset.",
         );
         self.providers.show(ui);
-        widgets::file(ui, "Input media", &mut self.convert_input, &[]);
-        widgets::choice(
-            ui,
-            "Output format",
-            &mut self.convert_format,
-            &[
-                "MP4 · video + audio",
-                "WebM · video + audio",
-                "MP3 · audio",
-                "WAV · audio",
-                "FLAC · audio",
-            ],
+        let previous = (
+            self.convert_input.clone(),
+            self.convert_output.clone(),
+            self.convert_format,
         );
-        let format = [
-            MediaFormat::Mp4,
-            MediaFormat::Webm,
-            MediaFormat::Mp3,
-            MediaFormat::Wav,
-            MediaFormat::Flac,
-        ][self.convert_format];
-        widgets::output(
-            ui,
-            "New converted file",
-            &mut self.convert_output,
-            &format!("Oxbox-converted.{}", format.extension()),
-        );
-        if ui
-            .add_enabled(
-                !self.convert_input.is_empty()
-                    && !self.convert_output.is_empty()
-                    && !self.convert_job.running(),
-                egui::Button::new("Convert media"),
-            )
-            .clicked()
-        {
-            let input = PathBuf::from(&self.convert_input);
-            let output = PathBuf::from(&self.convert_output);
-            self.convert_job.start(ui.ctx(), move |cancel, progress| {
-                convert_media::convert(&input, &output, format, &cancel, progress)
-            });
-        }
+        let busy = self.convert_job.running();
+        ui.add_enabled_ui(!busy, |ui| {
+            let input_changed = widgets::file(ui, "Input media", &mut self.convert_input, &[]);
+            widgets::choice(
+                ui,
+                "Output format",
+                &mut self.convert_format,
+                &[
+                    "MP4 · video + audio",
+                    "WebM · video + audio",
+                    "MP3 · audio",
+                    "WAV · audio",
+                    "FLAC · audio",
+                ],
+            );
+            let format = [
+                MediaFormat::Mp4,
+                MediaFormat::Webm,
+                MediaFormat::Mp3,
+                MediaFormat::Wav,
+                MediaFormat::Flac,
+            ][self.convert_format];
+            let output_changed = widgets::output(
+                ui,
+                "New converted file",
+                &mut self.convert_output,
+                &format!("Oxbox-converted.{}", format.extension()),
+            );
+            if busy {
+                (self.convert_input, self.convert_output, self.convert_format) = previous;
+                return;
+            }
+            if input_changed
+                || output_changed
+                || previous
+                    != (
+                        self.convert_input.clone(),
+                        self.convert_output.clone(),
+                        self.convert_format,
+                    )
+            {
+                self.convert_job.abandon();
+                self.convert_result = None;
+            }
+            if ui
+                .add_enabled(
+                    !self.convert_input.is_empty()
+                        && !self.convert_output.is_empty()
+                        && !self.convert_job.running(),
+                    egui::Button::new("Convert media"),
+                )
+                .clicked()
+            {
+                let input = PathBuf::from(&self.convert_input);
+                let output = PathBuf::from(&self.convert_output);
+                self.convert_job.abandon();
+                self.convert_result = None;
+                self.convert_job.start(ui.ctx(), move |cancel, progress| {
+                    convert_media::convert(&input, &output, format, &cancel, progress)
+                });
+            }
+        });
         self.convert_job.show(ui);
         if let Some(path) = &self.convert_result {
             widgets::note(ui, format!("Converted file saved to {}", path.display()));
@@ -804,5 +919,269 @@ mod verification2_tests {
         assert_stale_exports_discarded(&view);
         view.shutdown();
         assert!(shared.clipboard.snapshot("").unwrap().paused);
+    }
+}
+
+#[cfg(test)]
+mod verification56_tests {
+    use super::*;
+    use egui::accesskit::{Action, ActionData, ActionRequest, Node, NodeId, Role, TreeId};
+    use oxbox_core::{CoreError, jobs::CancelToken};
+    use std::{
+        sync::mpsc,
+        time::{Duration, Instant},
+    };
+
+    fn frame(
+        view: &mut ImageTools,
+        context: &egui::Context,
+        id: &str,
+        events: Vec<egui::Event>,
+    ) -> Vec<(NodeId, Node)> {
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| view.show(ui, id, &Shared::default()),
+        );
+        output.textures_delta.clear();
+        output.platform_output.accesskit_update.unwrap().nodes
+    }
+    fn action(target_node: NodeId, action: Action, data: Option<ActionData>) -> egui::Event {
+        egui::Event::AccessKitActionRequest(ActionRequest {
+            action,
+            target_node,
+            target_tree: TreeId::ROOT,
+            data,
+        })
+    }
+    fn input<'a>(view: &'a ImageTools, id: &str) -> &'a str {
+        match id {
+            "resize-images" => &view.resize_folder,
+            "make-gif" => &view.gif_input,
+            _ => &view.convert_input,
+        }
+    }
+    fn generated(id: &str) -> ImageTools {
+        let mut view = ImageTools {
+            resize_folder: "Generated before folder".into(),
+            gif_input: "Generated before video".into(),
+            convert_input: "Generated before media".into(),
+            ..Default::default()
+        };
+        let old = PathBuf::from("generated-previous-output");
+        match id {
+            "resize-images" => {
+                view.resize_results = vec![old.clone()];
+                view.resize_job.result = Some(vec![old]);
+                view.resize_job.error = Some("Generated stale failure".into());
+                view.resize_preview.image = Some(std::sync::Arc::new(image::RgbaImage::new(1, 1)));
+                view.preview_job.result = Some(Asset::new(image::RgbaImage::new(1, 1)));
+            }
+            "make-gif" => {
+                view.gif_result = Some(old.clone());
+                view.gif_job.result = Some(old);
+                view.gif_job.error = Some("Generated stale failure".into());
+            }
+            _ => {
+                view.convert_result = Some(old.clone());
+                view.convert_job.result = Some(old);
+                view.convert_job.error = Some("Generated stale failure".into());
+            }
+        }
+        view
+    }
+    fn outcomes_cleared(view: &ImageTools, id: &str) -> bool {
+        match id {
+            "resize-images" => {
+                view.resize_results.is_empty()
+                    && view.resize_job.result.is_none()
+                    && view.resize_job.error.is_none()
+                    && view.resize_preview.image.is_none()
+                    && view.preview_job.result.is_none()
+            }
+            "make-gif" => {
+                view.gif_result.is_none()
+                    && view.gif_job.result.is_none()
+                    && view.gif_job.error.is_none()
+            }
+            _ => {
+                view.convert_result.is_none()
+                    && view.convert_job.result.is_none()
+                    && view.convert_job.error.is_none()
+            }
+        }
+    }
+    fn wait_job<T: Send + 'static>(job: &mut Task<T>, context: &egui::Context) {
+        let (entered, receiver) = mpsc::sync_channel(1);
+        assert!(job.start(context, move |cancel: CancelToken, _| {
+            entered.send(()).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while cancel.check().is_ok() && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            Err(CoreError::Cancelled)
+        }));
+        receiver.recv_timeout(Duration::from_secs(5)).unwrap();
+    }
+    #[test]
+    fn verification56_file_form_edits_discard_previous_and_queued_results() {
+        let mut failures = Vec::new();
+        for id in ["resize-images", "make-gif", "convert-audio-video"] {
+            let mut view = generated(id);
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let before = input(&view, id).to_string();
+            let field = frame(&mut view, &context, id, vec![])
+                .into_iter()
+                .find_map(|(id, node)| {
+                    (node.role() == Role::TextInput && node.value() == Some(before.as_str()))
+                        .then_some(id)
+                })
+                .unwrap();
+            frame(
+                &mut view,
+                &context,
+                id,
+                vec![action(
+                    field,
+                    Action::SetValue,
+                    Some(ActionData::Value("Generated after input".into())),
+                )],
+            );
+            assert_eq!(
+                input(&view, id),
+                "Generated after input",
+                "fixture must edit the actual form"
+            );
+            let cleared = outcomes_cleared(&view, id);
+            view.shutdown();
+            if !cleared {
+                failures.push(id);
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "edited forms retained old or queued outcomes: {failures:?}"
+        );
+    }
+    #[test]
+    fn verification56_busy_file_forms_preserve_admitted_inputs() {
+        let mut failures = Vec::new();
+        for id in ["resize-images", "make-gif", "convert-audio-video"] {
+            let mut view = generated(id);
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            match id {
+                "resize-images" => wait_job(&mut view.resize_job, &context),
+                "make-gif" => wait_job(&mut view.gif_job, &context),
+                _ => wait_job(&mut view.convert_job, &context),
+            }
+            let before = input(&view, id).to_string();
+            let field = frame(&mut view, &context, id, vec![])
+                .into_iter()
+                .find_map(|(id, node)| {
+                    (node.role() == Role::TextInput && node.value() == Some(before.as_str()))
+                        .then_some(id)
+                })
+                .unwrap();
+            frame(
+                &mut view,
+                &context,
+                id,
+                vec![action(
+                    field,
+                    Action::SetValue,
+                    Some(ActionData::Value("Generated different job".into())),
+                )],
+            );
+            let after = input(&view, id).to_string();
+            view.shutdown();
+            if after != before {
+                failures.push(id);
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "busy forms relabeled admitted jobs: {failures:?}"
+        );
+    }
+    #[test]
+    fn verification56_new_failed_file_attempt_does_not_show_previous_success() {
+        let mut failures = Vec::new();
+        for id in ["resize-images", "make-gif", "convert-audio-video"] {
+            let directory = tempfile::tempdir().unwrap();
+            let missing = directory.path().join("generated-missing-input.mp4");
+            let output = directory.path().join("generated-never-created-output");
+            let mut view = ImageTools {
+                resize_paths: vec![missing.clone()],
+                resize_folder: directory.path().display().to_string(),
+                resize_results: vec![PathBuf::from("generated-old-resize")],
+                gif_input: missing.display().to_string(),
+                gif_output: output.display().to_string(),
+                gif_result: Some(PathBuf::from("generated-old.gif")),
+                convert_input: missing.display().to_string(),
+                convert_output: output.display().to_string(),
+                convert_result: Some(PathBuf::from("generated-old.mp4")),
+                ..Default::default()
+            };
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let label = match id {
+                "resize-images" => "Resize images",
+                "make-gif" => "Make GIF",
+                _ => "Convert media",
+            };
+            let button = frame(&mut view, &context, id, vec![])
+                .into_iter()
+                .find_map(|(id, node)| {
+                    (node.role() == Role::Button && node.label() == Some(label)).then_some(id)
+                })
+                .unwrap();
+            frame(
+                &mut view,
+                &context,
+                id,
+                vec![action(button, Action::Click, None)],
+            );
+            let deadline = Instant::now() + Duration::from_secs(5);
+            loop {
+                view.tick(Some(&context));
+                let running = match id {
+                    "resize-images" => view.resize_job.running(),
+                    "make-gif" => view.gif_job.running(),
+                    _ => view.convert_job.running(),
+                };
+                if !running {
+                    break;
+                }
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            let failed = match id {
+                "resize-images" => view.resize_job.error.is_some(),
+                "make-gif" => view.gif_job.error.is_some(),
+                _ => view.convert_job.error.is_some(),
+            };
+            let stale = match id {
+                "resize-images" => !view.resize_results.is_empty(),
+                "make-gif" => view.gif_result.is_some(),
+                _ => view.convert_result.is_some(),
+            };
+            view.shutdown();
+            assert!(
+                failed,
+                "fixture must fail on the generated missing input before any provider starts"
+            );
+            assert!(!output.exists());
+            if stale {
+                failures.push(id);
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "new failed attempts still show old success: {failures:?}"
+        );
     }
 }

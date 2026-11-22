@@ -94,6 +94,10 @@ rescan before considering its cache; a recognized active browser makes those fin
 process state is checked again before a Trash request. A change in process/path state, an unfamiliar
 browser build or unreliable access timestamps can still limit the report. It is not a lock on the browser.
 
+Use **Review exact file paths…** beside a Clean Drive category to inspect the individual candidates.
+After selecting categories, the final inline review shows an immutable list of the files sent to Trash;
+confirm that list explicitly or cancel it. Changing the selection discards the pending confirmation.
+
 Clean Drive's scan is bounded per category to 50,000 entries and depth 20. A partial result is not eligible
 for cleanup. Apply rechecks the reviewed paths, age and identity before Trash; locked, replaced or linked
 entries fail safely. Review the actual paths even when a category name looks familiar. Cleanup can remove

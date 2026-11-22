@@ -67,7 +67,7 @@ impl PowerView {
         let permit = shared.reserve_action(&action);
         self.task.start(ctx, move |cancel, _| {
             cancel.check()?;
-            shared.perform_reserved(action, permit)
+            shared.perform_reserved_cancellable(action, permit, &cancel)
         });
     }
     fn settings(&mut self, ctx: &egui::Context, shared: Arc<Shared>, airplane: bool) {
@@ -310,7 +310,7 @@ impl PowerView {
                                     let shared = shared.clone();
                                     self.task.start(ui.ctx(), move |cancel, _| {
                                         cancel.check()?;
-                                        shared.with_reserved(permit, |_| {
+                                        shared.with_reserved_cancellable(permit, &cancel, |_| {
                                             shared.mouse.start(request, config)?;
                                             Ok("Started a Mouse Activity session.".into())
                                         })
@@ -409,7 +409,7 @@ impl PowerView {
                                 self.task.start(ui.ctx(), move |cancel, _| {
                                     cancel.check()?;
                                     shared.presentation_change_reserved(
-                                        &directory, options, start, permit,
+                                        &directory, options, start, permit, &cancel,
                                     )
                                 });
                             }
@@ -477,8 +477,7 @@ fn open_settings_reserved(
 ) -> CoreResult<String> {
     // Admission belongs to the original click, even if this task starts later.
     // Check cancellation under the same gate immediately before the OS request.
-    shared.with_reserved(permit, |_| {
-        cancel.check()?;
+    shared.with_reserved_cancellable(permit, cancel, |_| {
         open(airplane)?;
         Ok("System settings opened; choose the setting there.".into())
     })

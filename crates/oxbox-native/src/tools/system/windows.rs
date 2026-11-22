@@ -40,10 +40,15 @@ enum Operation {
     Trash(Vec<PathBuf>),
 }
 impl Operation {
-    fn execute(self, shared: &Shared, permit: u64) -> CoreResult<String> {
+    fn execute(
+        self,
+        shared: &Shared,
+        permit: u64,
+        cancel: &oxbox_core::jobs::CancelToken,
+    ) -> CoreResult<String> {
         match self{
- Self::Core(action)=>shared.perform_reserved(action, permit),
- operation=>shared.with_reserved(permit, |_|match operation{
+ Self::Core(action)=>shared.perform_reserved_cancellable(action, permit, cancel),
+ operation=>shared.with_reserved_cancellable(permit, cancel, |_|match operation{
   Self::Close(targets)=>Ok(format!("Sent normal close requests to {} windows. Complete any save prompts in those applications.",close_apps::close(&targets,true)?)),
   Self::Eject(root)=>{eject_volumes::eject(&root,true)?;Ok("Safe eject request accepted.".into())},
   Self::Profile(id)=>{energy_saver::set(&id,true)?;Ok("Power plan changed. Refresh to inspect the active plan.".into())},
@@ -189,7 +194,7 @@ impl WindowsViews {
         };
         if self.task.start(ui.ctx(), move |cancel, _| {
             cancel.check()?;
-            operation.execute(&shared, permit)
+            operation.execute(&shared, permit, &cancel)
         }) {
             self.on_success_refresh = refresh;
             self.on_success_trash = trash;

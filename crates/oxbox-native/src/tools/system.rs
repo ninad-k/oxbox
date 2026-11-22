@@ -241,7 +241,7 @@ impl SystemTools {
         let permit = shared.reserve_action(&action);
         if self.banner_task.start(ctx, move |cancel, _| {
             cancel.check()?;
-            shared.perform_reserved(action, permit)
+            shared.perform_reserved_cancellable(action, permit, &cancel)
         }) {
             self.tray_error = None;
         } else {

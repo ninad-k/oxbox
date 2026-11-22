@@ -5,6 +5,17 @@ the presence of this changelog does not mean installers have been published.
 
 ## 0.1.0 — draft, 2026-11-21
 
+### 56-tool follow-up — 2026-11-22
+
+- Rechecked every native tool route in three parallel review lanes; the dated verification record
+  distinguishes source, generated/headless tests and pending real-device/manual acceptance.
+- Cancelled system requests recheck cancellation after waiting for shared state before dispatching.
+- File pickers preserve exact supported names, reject ambiguous text conversions and discard stale
+  previews or reviewed actions after refusal. Clean Drive exposes individual paths and a final immutable review.
+- Resize, GIF and media conversion preserve admitted inputs while busy and clear outdated results.
+  Color sampling discards old copyable values after errors or changed sampling parameters.
+- Linux microphone control uses a bounded, cancellable owned provider process.
+
 ### Maintenance and daily workflows — 2026-11-22
 
 - Added Batch Rename with exact preview, no-replace moves and write-ahead guarded Undo.

@@ -135,7 +135,7 @@ impl RecordingUi {
             }
             if !photo{widgets::number(ui,"Maximum duration (seconds)",&mut self.seconds,1..=86400);}
             let output=if photo{&mut self.output_photo}else if audio{&mut self.output_audio}else if screen{&mut self.output_screen}else{&mut self.output_video};
-            widgets::output(ui,"New output file",output,if photo{"Oxbox-photo.png"}else if audio{"Oxbox-recording.wav"}else{"Oxbox-recording.mp4"});
+            if widgets::output(ui,"New output file",output,if photo{"Oxbox-photo.png"}else if audio{"Oxbox-recording.wav"}else{"Oxbox-recording.mp4"}) && photo { self.photo.abandon(); self.photo_result=None; self.preview=Preview::default(); }
             ui.checkbox(&mut self.consent,if audio{"I consent to recording this microphone"}else if screen{"I consent to recording this screen/window/area"}else{"I consent to opening this camera"});
             let available=!output.trim().is_empty()&&self.consent&&(!screen||!cfg!(target_os="macos"))&&(!screen||self.source!=2||cfg!(target_os="windows"));
             if ui.add_enabled(available,egui::Button::new(if photo{"Take photo"}else{"Start recording"})).clicked(){
@@ -208,7 +208,7 @@ impl RecordingUi {
         {
             self.microphone.start(ui.ctx(), |cancel, _| {
                 cancel.check()?;
-                mute_microphone::status()
+                mute_microphone::status_with_cancel(&cancel)
             });
         }
         if let Some(muted) = self.muted {
@@ -239,7 +239,7 @@ impl RecordingUi {
             {
                 self.microphone.start(ui.ctx(), move |cancel, _| {
                     cancel.check()?;
-                    mute_microphone::set_muted(!muted)
+                    mute_microphone::set_muted_with_cancel(!muted, &cancel)
                 });
             }
         }

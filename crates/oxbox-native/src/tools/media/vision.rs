@@ -263,12 +263,16 @@ impl VisionUi {
             ui,
             "Measure a pixel as HEX, RGB, HSL and CMYK. Screen capture happens only after your explicit sampling action.",
         );
+        let old_source = self.color_source;
         widgets::choice(
             ui,
             "Pixel source",
             &mut self.color_source,
             &["Local image", "Display coordinates", "Cursor · Windows"],
         );
+        if old_source != self.color_source {
+            self.invalidate_sample();
+        }
         if self.color_source == 0 {
             if widgets::file(
                 ui,
@@ -294,10 +298,16 @@ impl VisionUi {
                     .max(0.0) as u32;
                 self.x = self.x.min(image.width().saturating_sub(1));
                 self.y = self.y.min(image.height().saturating_sub(1));
-                self.apply_color(color_picker::sample_image(image, self.x, self.y));
+                let sample = color_picker::sample_image(image, self.x, self.y);
+                self.invalidate_sample();
+                self.apply_color(sample);
             }
+            let coordinates = (self.x, self.y);
             widgets::number(ui, "Pixel X", &mut self.x, 0..=32767);
             widgets::number(ui, "Pixel Y", &mut self.y, 0..=32767);
+            if coordinates != (self.x, self.y) {
+                self.invalidate_sample();
+            }
             if ui
                 .add_enabled(
                     self.color_preview.image.is_some(),
@@ -306,9 +316,12 @@ impl VisionUi {
                 .clicked()
                 && let Some(image) = &self.color_preview.image
             {
-                self.apply_color(color_picker::sample_image(image, self.x, self.y));
+                let sample = color_picker::sample_image(image, self.x, self.y);
+                self.invalidate_sample();
+                self.apply_color(sample);
             }
         } else if self.color_source == 1 {
+            let selection = (self.monitor, self.x, self.y);
             if ui.button("Find displays").clicked() {
                 self.targets.start(ui.ctx(), |cancel, _| {
                     cancel.check()?;
@@ -332,6 +345,9 @@ impl VisionUi {
             self.targets.show(ui);
             widgets::number(ui, "Physical pixel X", &mut self.x, 0..=32767);
             widgets::number(ui, "Physical pixel Y", &mut self.y, 0..=32767);
+            if selection != (self.monitor, self.x, self.y) {
+                self.invalidate_sample();
+            }
             if ui
                 .add_enabled(
                     self.monitors.get(self.monitor).is_some() && !self.color_job.running(),
@@ -344,6 +360,7 @@ impl VisionUi {
                 let x = self.x;
                 let y = self.y;
                 let quit = shared.quit.clone();
+                self.invalidate_sample();
                 host.hide(ui.ctx());
                 self.hidden = true;
                 self.color_job.start(ui.ctx(), move |cancel, _| {
@@ -366,6 +383,7 @@ impl VisionUi {
                 .clicked()
             {
                 let quit = shared.quit.clone();
+                self.invalidate_sample();
                 host.hide(ui.ctx());
                 self.hidden = true;
                 self.color_job.start(ui.ctx(), move |cancel, _| {
@@ -424,13 +442,21 @@ impl VisionUi {
             });
         }
     }
+    fn invalidate_sample(&mut self) {
+        self.color_job.abandon();
+        self.color = None;
+        self.error = None;
+    }
     fn apply_color(&mut self, value: oxbox_core::CoreResult<ColorValue>) {
         match value {
             Ok(value) => {
                 self.color = Some(value);
                 self.error = None;
             }
-            Err(error) => self.error = Some(error.to_string()),
+            Err(error) => {
+                self.color = None;
+                self.error = Some(error.to_string());
+            }
         }
     }
     pub fn tick(&mut self, ctx: Option<&egui::Context>, host: &mut Host) {
@@ -447,6 +473,9 @@ impl VisionUi {
             self.barcodes = results;
         }
         if let Some(targets) = self.targets.result.take() {
+            if self.color_source == 1 {
+                self.invalidate_sample();
+            }
             self.monitors = targets;
             self.monitor = 0;
         }
@@ -780,5 +809,146 @@ mod community_tests {
         assert_eq!(view.ocr_language, "eng");
         assert_old_recognition_discarded(&view);
         view.shutdown();
+    }
+
+    fn color_frame(
+        view: &mut VisionUi,
+        host: &mut Host,
+        context: &egui::Context,
+        events: Vec<egui::Event>,
+    ) -> Vec<(egui::accesskit::NodeId, egui::accesskit::Node)> {
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                view.show(ui, "measure-color", host, &Shared::default());
+            },
+        );
+        output.textures_delta.clear();
+        output.platform_output.accesskit_update.unwrap().nodes
+    }
+
+    #[test]
+    fn verification56_failed_image_color_sample_removes_previous_copyable_value() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut view = VisionUi {
+            x: 99,
+            color: Some(color_picker::color(255, 0, 0)),
+            ..Default::default()
+        };
+        view.color_preview.image = Some(generated_pixels());
+        let button = color_frame(&mut view, &mut host, &context, vec![])
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::Button
+                    && node.label() == Some("Sample image pixel"))
+                .then_some(id)
+            })
+            .unwrap();
+        let nodes = color_frame(
+            &mut view,
+            &mut host,
+            &context,
+            vec![ocr_action(button, egui::accesskit::Action::Click, None)],
+        );
+        assert!(
+            view.error.is_some(),
+            "fixture must reach real out-of-bounds image sampling"
+        );
+        let old_value = view.color.is_some();
+        let copyable = nodes.iter().any(|(_, node)| {
+            node.role() == egui::accesskit::Role::Button && node.label() == Some("Copy HEX")
+        });
+        view.shutdown();
+        host.shutdown();
+        assert!(
+            !old_value && !copyable,
+            "failed sampling kept the previous copyable color"
+        );
+    }
+
+    #[test]
+    fn verification56_color_coordinate_edit_discards_previous_and_queued_sample() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut view = VisionUi {
+            x: 1,
+            color: Some(color_picker::color(255, 0, 0)),
+            ..Default::default()
+        };
+        view.color_job.result = Some(color_picker::color(0, 255, 0));
+        view.color_preview.image = Some(generated_pixels());
+        let field = color_frame(&mut view, &mut host, &context, vec![])
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::SpinButton
+                    && node.numeric_value() == Some(1.0))
+                .then_some(id)
+            })
+            .unwrap();
+        color_frame(
+            &mut view,
+            &mut host,
+            &context,
+            vec![ocr_action(
+                field,
+                egui::accesskit::Action::SetValue,
+                Some(egui::accesskit::ActionData::NumericValue(2.0)),
+            )],
+        );
+        assert_eq!(
+            view.x, 2,
+            "fixture must edit the real pixel coordinate control"
+        );
+        let discarded = view.color.is_none() && view.color_job.result.is_none();
+        view.shutdown();
+        host.shutdown();
+        assert!(
+            discarded,
+            "edited coordinates retained a previous or queued copyable sample"
+        );
+    }
+
+    #[test]
+    fn verification56_display_refresh_discards_previous_and_queued_sample_for_old_monitor() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let target = |id| screenshot::TargetInfo {
+            kind: CaptureKind::Monitor,
+            id,
+            name: format!("Generated display {id}"),
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 2,
+            scale_factor: 1.0,
+        };
+        let mut view = VisionUi {
+            color_source: 1,
+            monitors: vec![target(1)],
+            color: Some(color_picker::color(255, 0, 0)),
+            ..Default::default()
+        };
+        view.targets.result = Some(vec![target(2)]);
+        view.color_job.result = Some(color_picker::color(0, 255, 0));
+        view.tick(None, &mut host);
+        assert_eq!(
+            view.monitors[0].id, 2,
+            "fixture must replace the actual display list"
+        );
+        let discarded = view.color.is_none() && view.color_job.result.is_none();
+        view.shutdown();
+        host.shutdown();
+        assert!(
+            discarded,
+            "new display identity kept a sample from the old monitor"
+        );
     }
 }

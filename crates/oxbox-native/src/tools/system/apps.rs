@@ -63,6 +63,37 @@ pub fn validate(sets: &[AppSet]) -> CoreResult<()> {
     Ok(())
 }
 impl AppSetsView {
+    fn accept_paths(&mut self, kind: LaunchKind, paths: &[std::path::PathBuf]) -> CoreResult<()> {
+        // Validate the whole admitted batch before appending its first entry.
+        let selected = paths
+            .iter()
+            .take(32usize.saturating_sub(self.draft.entries.len()))
+            .map(|path| {
+                crate::host::path_text(path).map(|target| LaunchEntry {
+                    kind,
+                    target,
+                    args: vec![],
+                })
+            })
+            .collect::<CoreResult<Vec<_>>>();
+        self.pending_launch = None;
+        self.pending_delete = None;
+        self.task.abandon();
+        self.message = None;
+        match selected {
+            Ok(selected) => {
+                self.draft.entries.extend(selected);
+                self.error = None;
+                Ok(())
+            }
+            Err(error) => {
+                self.error = Some(format!(
+                    "Selected application/file paths: {error}. The saved set and draft were kept; review them before launching."
+                ));
+                Err(error)
+            }
+        }
+    }
     pub fn poll(&mut self) {
         self.task.poll();
     }
@@ -114,13 +145,7 @@ impl AppSetsView {
                         .set_title(label)
                         .pick_files()
                 {
-                    for path in paths.into_iter().take(32 - self.draft.entries.len()) {
-                        self.draft.entries.push(LaunchEntry {
-                            kind,
-                            target: path.to_string_lossy().into_owned(),
-                            args: vec![],
-                        });
-                    }
+                    let _ = self.accept_paths(kind, &paths);
                 }
             }
         });
@@ -339,7 +364,7 @@ fn launch_saved_set(
     // Admission is synchronized with shutdown, without holding system state
     // across an external file handler. Per-target checks stop the remaining list.
     // Cancellation cannot revoke an OS call admitted immediately before it.
-    shared.with_reserved(permit, |_| Ok(()))?;
+    shared.with_reserved_cancellable(permit, cancel, |_| Ok(()))?;
     launch_apps::launch_with_cancel(set, cancel, open)
 }
 
@@ -353,6 +378,72 @@ fn persist(candidate: &mut Stored, host: &Host, shared: &Shared) -> CoreResult<(
 #[cfg(test)]
 mod accessibility_tests {
     use super::*;
+    #[test]
+    fn verification56_app_set_picker_refuses_a_lossy_or_multiline_batch_without_partial_edits() {
+        let directory = tempfile::tempdir().unwrap();
+        #[cfg(windows)]
+        let unrepresentable = {
+            use std::os::windows::ffi::OsStringExt;
+            std::path::PathBuf::from(std::ffi::OsString::from_wide(&[b'x' as u16, 0xd800]))
+        };
+        #[cfg(unix)]
+        let unrepresentable = {
+            use std::os::unix::ffi::OsStringExt;
+            std::path::PathBuf::from(std::ffi::OsString::from_vec(vec![b'x', 0xff]))
+        };
+        #[cfg(not(any(windows, unix)))]
+        let unrepresentable = std::path::PathBuf::from("generated\ninvalid");
+        for invalid in [
+            unrepresentable,
+            directory.path().join("generated\ninvalid"),
+            directory.path().join("generated\rinvalid"),
+        ] {
+            let mut view = AppSetsView::default();
+            view.draft.name = "Generated previous set".into();
+            view.draft.entries.push(LaunchEntry {
+                kind: LaunchKind::File,
+                target: directory.path().join("old.txt").to_str().unwrap().into(),
+                args: vec![],
+            });
+            let previous = serde_json::to_value(&view.draft).unwrap();
+            view.pending_launch = Some(view.draft.clone());
+            view.pending_delete = Some(view.draft.id.clone());
+            view.task.result = Some("Generated old launch completion".into());
+            view.message = Some("Generated previous success".into());
+            assert!(
+                view.accept_paths(
+                    LaunchKind::File,
+                    &[directory.path().join("valid-first.txt"), invalid]
+                )
+                .is_err()
+            );
+            assert_eq!(
+                serde_json::to_value(&view.draft).unwrap(),
+                previous,
+                "no earlier path from a refused batch may be appended"
+            );
+            assert!(
+                view.pending_launch.is_none()
+                    && view.pending_delete.is_none()
+                    && view.task.result.is_none()
+                    && view.message.is_none()
+            );
+            assert!(
+                view.error
+                    .as_deref()
+                    .is_some_and(|error| error.contains("Selected application/file paths"))
+            );
+            let valid = directory.path().join("画像 with spaces ");
+            view.accept_paths(LaunchKind::File, std::slice::from_ref(&valid))
+                .unwrap();
+            assert_eq!(
+                view.draft.entries.last().unwrap().target,
+                valid.to_str().unwrap()
+            );
+            assert!(view.error.is_none());
+            view.shutdown();
+        }
+    }
 
     #[test]
     fn two_application_targets_have_distinct_named_remove_actions() {

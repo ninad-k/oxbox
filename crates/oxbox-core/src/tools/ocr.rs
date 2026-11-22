@@ -18,6 +18,16 @@ pub fn validate_language(language: &str) -> CoreResult<()> {
     }
     Ok(())
 }
+fn tesseract_arguments(input: &Path, language: &str) -> CoreResult<Vec<String>> {
+    Ok(vec![
+        super::media_provider::provider_path_text(input)?,
+        "stdout".into(),
+        "-l".into(),
+        language.into(),
+        "--psm".into(),
+        "3".into(),
+    ])
+}
 pub fn recognize(
     path: &Path,
     provider: &str,
@@ -38,18 +48,11 @@ pub fn recognize(
         "tesseract" => {
             let mut folder = super::media_provider::TemporaryFolder::new(&std::env::temp_dir())?;
             let input = folder.file("ocr.png")?;
+            let args = tesseract_arguments(&input, language)?;
             image
                 .save_with_format(&input, image::ImageFormat::Png)
                 .map_err(|error| CoreError::InvalidInput(error.to_string()))?;
             let executable = super::media_provider::find_executable("tesseract")?;
-            let args = vec![
-                input.to_string_lossy().into_owned(),
-                "stdout".into(),
-                "-l".into(),
-                language.into(),
-                "--psm".into(),
-                "3".into(),
-            ];
             super::media_provider::run_text(
                 &executable,
                 &args,
@@ -159,5 +162,39 @@ mod tests {
         for invalid in ["../secret", "--help", "", "eng/file"] {
             assert!(validate_language(invalid).is_err());
         }
+    }
+
+    #[test]
+    fn verification56_tesseract_temporary_argument_refuses_ambiguous_path_without_launching() {
+        assert_eq!(
+            tesseract_arguments(Path::new("generated temporary folder /ocr.png"), "eng").unwrap()
+                [0],
+            "generated temporary folder /ocr.png"
+        );
+        assert_eq!(
+            tesseract_arguments(Path::new("generated\nfolder/ocr.png"), "eng")
+                .unwrap_err()
+                .code(),
+            "invalid_input"
+        );
+        #[cfg(unix)]
+        let invalid = {
+            use std::os::unix::ffi::OsStringExt;
+            std::path::PathBuf::from(std::ffi::OsString::from_vec(
+                b"generated-\xff/ocr.png".to_vec(),
+            ))
+        };
+        #[cfg(windows)]
+        let invalid = {
+            use std::os::windows::ffi::OsStringExt;
+            std::path::PathBuf::from(std::ffi::OsString::from_wide(&[
+                0x0061, 0xd800, 0x002f, 0x006f, 0x0063, 0x0072, 0x002e, 0x0070, 0x006e, 0x0067,
+            ]))
+        };
+        #[cfg(any(unix, windows))]
+        assert_eq!(
+            tesseract_arguments(&invalid, "eng").unwrap_err().code(),
+            "invalid_input"
+        );
     }
 }

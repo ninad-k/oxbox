@@ -15,7 +15,7 @@ draft; [release gates](RELEASE.md) identify what still needs verification.
 | Clean up or reuse a workflow | [Maintenance, recovery, presets and Quick Actions](MAINTENANCE.md) |
 | Test safely | [Testing](TESTING.md), [troubleshooting](TROUBLESHOOTING.md) |
 | Get help or report a problem | [Support](../SUPPORT.md), [private security reports](../SECURITY.md) |
-| See the functional review and its limits | [49-tool source review](FEATURE_REVIEW.md), [second native feature pass](verification/2026-11-22-native-feature-pass.md), [dated validation](VALIDATION.md) |
+| See the functional review and its limits | [56-tool source verification](verification/2026-11-22-56-tool-pass.md), [49-tool source review](FEATURE_REVIEW.md), [dated validation](VALIDATION.md) |
 | Check the current expansion and installers | [Maintenance/workflow receipt](verification/2026-11-22-maintenance-workflows.md), [release checklist](RELEASE.md) |
 | Change tool metadata or icons | [Catalogue maintenance](../catalog/README.md) |
 | Work on the public website | [GitHub Pages source and deployment](../website/README.md) |

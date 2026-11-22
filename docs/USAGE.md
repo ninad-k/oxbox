@@ -10,6 +10,9 @@ use All tools or a category to browse the 56-tool catalog. The original outlined
 The [maintenance and workflow guide](MAINTENANCE.md) covers the seven new tools, per-OS cleanup rules,
 startup/registry recovery, file-shred limits, screenshot annotations, pasted-text cleanup, safe saved
 presets and search Quick Actions. Its safety limits apply before any corresponding change is confirmed.
+Path text fields preserve spaces in a selected filename. Pickers refuse names that cannot be represented
+exactly as Unicode text or contain line breaks; the previous selection remains visible with an error.
+Choose another supported name rather than assuming that a refused selection replaced the previous one.
 Closing the launcher hides it; **Quit Oxbox** in the sidebar/tray or **Ctrl/Cmd+Q** inside the app exits and stops background work.
 
 Search with **Ctrl/Cmd+K** or **/**, press **Enter** to open the first result, and **Escape** to return.

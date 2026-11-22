@@ -3,11 +3,20 @@
 This is a source and regression-test review by an AI agent working separately from the native UI,
 privacy and installer lanes. It is **not an independent human security attestation**, penetration test,
 whole-dependency proof, or approval to publish a release. The required human review remains open.
-All 49 catalogue routes are preserved. No live user Trash, uninstall, device, display or power operation
+All original 49 catalogue routes are preserved in the current 56-tool catalogue. No live user Trash, uninstall, device, display or power operation
 was performed; process fixtures never access devices or the network. Read-only upstream metadata and
 advisory lookups are research, not production runtime-network acceptance.
 
 ## Scope and method
+
+### Complete 56-tool follow-up
+
+The [parallel route review](verification/2026-11-22-56-tool-pass.md) accounts for every canonical ID.
+New tests reproduce cancelled shared-gate admission, lossy path conversions, ambiguous cleanup labels,
+missing individual-path review, stale media/color outcomes and unbounded Linux microphone subprocesses.
+Generated inputs and injected effects keep real user data, devices and OS settings outside these tests.
+Dependency manifests and the lockfile are unchanged. Final source/CI/binary receipts remain separate
+from independent human security approval and adversarial filesystem/runtime acceptance.
 
 ### Maintenance expansion `c30a179`
 
