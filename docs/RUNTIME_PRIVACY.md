@@ -6,7 +6,32 @@ network feature is separately opted-in, manually requested ECB currency refresh,
 The approved native migration removes the embedded browser from the production host. Finite network observations
 do not establish a universal zero-network guarantee; the historical browser investigation is retained below.
 
-## Current native candidate 67f0715 — 2026-11-22
+## Current maintenance candidate c30a179 — 2026-11-22
+
+Source `c30a179a573424b178def065a3c5c0f5c9397074`, Rust 1.95.0, Windows EXE **14,381,056 bytes**, SHA-256
+`006769afce34f73fd4b1b9eee2216356e3f8ac7f39101d8fcf1587a74d8cb841`. The selected graph still contains
+no embedded browser host; dependency manifests and the read-only endpoint observer are unchanged.
+The following are **three separate observations**, not continuous full-tool or universal network coverage.
+
+| Local evidence directory under `target/native-privacy-qa/` | Duration / successful samples | Scope / last sampled owned processes | Maximum / p95 sampling gap |
+|---|---|---|---|
+| `run-maintenance` | **300.103 s / 6,001** | Starts before launch and covers part of the generated-tool GUI pass; **1** remains at the end. No Quit claim. | 86.029 / 62.719 ms |
+| `run-maintenance-quit` | **90.037 s / 1,800** | Begins with an app alive; includes hide/reactivation and a brief second activation process; **1** remains at the end. Despite the directory name, this window does not cover completed Quit. | 79.249 / 62.698 ms |
+| `run-maintenance-final` | **60.031 s / 1,200** | Separate restart and explicit Quit; first/last owned samples **9.402 / 49.964 s**, **0** at the end, about **10.06 s** of post-Quit samples. No active provider/destructive job. | 87.802 / 62.801 ms |
+
+All three completed normally, observed the target, retained the exact hash, and had **zero sample/marker
+errors**. Every row had zero owned TCP rows and UDP bindings; TCP/UDP maxima and sums were zero. The
+new GUI pass used generated files/text/extension metadata and no network opt-in, live browser scan,
+clipboard history, screen capture, hardware/provider, Trash, shred or registry/startup mutation. Later
+GUI work is not retroactively covered by an earlier finite window.
+
+Owner-PID snapshots can miss short flows and OS-broker/DNS/provider traffic. UDP bindings are not packet
+counts. No packet capture, DNS/ETW trace, addresses or ports were recorded. DNS attribution, actual
+providers, all-tool effects and macOS/Linux runtime privacy remain open; zero rows are bounded evidence.
+
+<a id="current-native-candidate-67f0715--2026-11-22"></a>
+
+## Previous native candidate 67f0715 — 2026-11-22
 
 Source `67f0715452fb601394f45d3296675d3b85df3fb5`, built with Rust 1.95.0, was observed using the exact
 13,577,216-byte Windows executable, SHA-256

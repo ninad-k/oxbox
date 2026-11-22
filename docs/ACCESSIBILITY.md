@@ -3,6 +3,15 @@
 This record separates source/tree checks from assistive-technology and real-device acceptance. It applies
 to the eframe 0.37 native host. It is not a WCAG conformance statement or a screen-reader certification.
 
+Maintenance source `c30a179` adds seven named native forms (56 catalogue routes total), guarded review/
+recovery branches, numeric annotation controls alongside drag input, and neutral polite cancellation
+status. Windows native tests **112/112** and macOS/Linux **114/114** passed in CI. Current-binary Windows
+checks used Ctrl+K/Enter, accessible value edits, real file pickers and visible form/preview/export states.
+The tool's modal focus-reporting/geometry quirks required fresh screenshots and keyboard file-name entry;
+they are automation observations, not screen-reader passes. Actual assistive technology, full keyboard-only,
+IME/Unicode labels, high contrast and DPI/monitor acceptance stay open. See the
+[current scoped record](verification/2026-11-22-maintenance-workflows.md).
+
 Source `67f0715` adds actual Windows checks for all **49 default native forms** on its exact production
 EXE: Ctrl+K search, accessible field edits and tile activation, matching headings, Back controls and named
 operations. Timer custom-duration preview and QR stale-preview/export-control invalidation were exercised

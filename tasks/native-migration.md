@@ -56,17 +56,19 @@ headless/fake-backend tests do not close native manual acceptance. See the
 
 | Stable tool ID | Native form | Core coverage | Manual acceptance |
 |---|---|---|---|
-| `batch-rename` | `maintenance/files.rs` | Exact plans, no-replace moves, write-ahead/recovery, guarded Undo | Pending; use disposable fixtures |
-| `file-shred` | `maintenance/files.rs` | Typed acknowledgement, identity/hard-link guards, bounded writes, partial cancellation; fake effects | Pending; never use personal data |
-| `startup-manager` | `maintenance/system.rs` | Per-OS current-user scope, exclusive backup, immutable recovery review, stale entry refusal; fake effects | Pending on each OS |
-| `storage-analyzer` | `maintenance/system.rs` | Generated trees, limits, categories and cancellation; read-only | Pending on each OS |
-| `registry-review` | `maintenance/system.rs` | Narrow HKCU App Paths eligibility, backup, stale review/restore; fake registry | Pending on Windows; unavailable elsewhere |
-| `browser-review` | `maintenance/browser.rs` | Generated extension metadata, bounded traversal, cancellation; no private browser state | Pending on each supported browser/OS |
-| `maintenance-review` | `maintenance.rs` | Named idle routing and existing cleanup models; no automatic mutation | Pending on each OS |
+| `batch-rename` | `maintenance/files.rs` | Exact plans, no-replace moves, write-ahead/recovery, guarded Undo | Windows generated preview observed; real Apply/Undo and other OSes pending |
+| `file-shred` | `maintenance/files.rs` | Typed acknowledgement, identity/hard-link guards, bounded writes, partial cancellation; fake effects | Windows unarmed default observed; real permanent effects not run |
+| `startup-manager` | `maintenance/system.rs` | Per-OS current-user scope, exclusive backup, immutable recovery review, stale entry refusal; fake effects | Windows default observed; actual changes/recovery on each OS pending |
+| `storage-analyzer` | `maintenance/system.rs` | Generated trees, limits, categories and cancellation; read-only | Windows generated 38-byte file result observed; broader/other-OS runtime pending |
+| `registry-review` | `maintenance/system.rs` | Narrow HKCU App Paths eligibility, backup, stale review/restore; fake registry | Windows default observed; live scan/changes/recovery pending; unavailable elsewhere |
+| `browser-review` | `maintenance/browser.rs` | Generated extension metadata, bounded traversal, cancellation; no private browser state | Windows generated manifest/name/permission result observed; live profiles/other OSes pending |
+| `maintenance-review` | `maintenance.rs` | Named idle routing and existing cleanup models; no automatic mutation | Windows default and cleanup navigation observed; actual scans/reminders/other OSes pending |
 
 Existing tools also gain screenshot annotations, explicit text cleanup, safe resize/checksum/timer/unit
 presets, Quick Actions and new per-OS application review. Their tests cover generated data and native
 control/state models; they do not establish device, actual deletion, OS mutation or screen-reader passes.
+The exact `c30a179` Windows EXE and all-platform CI are recorded in the
+[maintenance/workflow receipt](../docs/verification/2026-11-22-maintenance-workflows.md).
 
 ## Original parallel ownership
 

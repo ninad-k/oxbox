@@ -69,10 +69,12 @@ Primary references:
 - [x] Implement preview/recovery, safe presets, Quick Actions, annotation and explicit text cleanup.
 - [x] Implement per-OS maintenance scopes with fake-effect tests, exact review and documented limits.
 - [x] Add the maintenance/recovery guide, generated feature index and task-led GitHub Pages sections.
-- [ ] Complete final source/CI/build and current-binary Windows GUI/runtime verification.
-- [ ] Refresh the six verified Windows draft assets and record their downloaded hashes.
+- [x] Record final source/CI/build and bounded current-binary Windows GUI/runtime evidence.
+- [x] Refresh the six verified Windows draft assets and record their downloaded hashes.
 - [ ] Complete new per-tool native effect, assistive-technology and other-OS runtime acceptance.
 - [ ] Clean-machine install/login/upgrade/uninstall: intentionally pending by user instruction.
 
 Source checkboxes describe implementation only. [The expansion matrix](native-migration.md#maintenance-and-productivity-expansion--2026-11-22)
 and [dated validation](../docs/VALIDATION.md) record independent automated/manual/release evidence.
+Source `c30a179` passed all five CI jobs; the [scoped receipt](../docs/verification/2026-11-22-maintenance-workflows.md)
+records current-binary generated-data GUI, endpoint windows, downloaded hashes and the still-open gates.

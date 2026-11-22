@@ -9,6 +9,20 @@ advisory lookups are research, not production runtime-network acceptance.
 
 ## Scope and method
 
+### Maintenance expansion `c30a179`
+
+Three parallel implementation/review lanes and the integrator added generated/fake-effect coverage for
+rename/recovery, permanent file processing, current-user startup/registry changes, bounded local reports,
+image flattening, text cleanup and presets. Reproduced fixes cover real cleanup file identity, per-item
+browser activity, immutable recovery bytes, shared resize bounds, exact own-startup delegation on all
+three OSes and post-Quit persistence admission. No new direct dependency or application network path
+was added. Windows **279 core / 112 native** and all-platform strict CI passed; live destructive effects,
+adversarial final filesystem races and independent human review remain unaccepted. The
+[maintenance guide](MAINTENANCE.md) documents exact scopes, backups and SSD/cancellation limitations;
+the [dated receipt](verification/2026-11-22-maintenance-workflows.md) distinguishes tests from actual GUI evidence.
+
+### Preserved baseline review
+
 Inspected shared filesystem/path guards, duplicate scanning and cleanup, ZIP/TAR/7z extraction limits,
 cache cleanup, exclusive media outputs, image resizing, encryption boundaries, local provider discovery,
 FFmpeg/Tesseract argument construction and child ownership. Inspected the native file confirmation and

@@ -1,17 +1,33 @@
 # Preparing a native v0.1 release
 
-The native migration uses exact eframe 0.37.0 and Rust 1.95, with all 49 tool routes. Version 0.1.0 is a
+The native migration uses exact eframe 0.37.0 and Rust 1.95, with 56 tool routes preserving the original 49. Version 0.1.0 is a
 release target. The existing release must stay an **unpublished draft** until the acceptance gates pass.
 Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the native application.
 
-The current 2026-11-22 review candidate is source `67f0715`, including the
+## Current maintenance/workflow candidate `c30a179`
+
+Source `c30a179a573424b178def065a3c5c0f5c9397074` passed all five jobs in
+[CI 45011422402](https://github.com/ninad-k/oxbox/actions/runs/45011422402): Windows **279 core / 112 native**,
+macOS ARM **274 / 114**, Linux **273 / 114**, zero failed/ignored tests, strict Clippy and production builds.
+The exact Windows EXE and generated-data GUI/runtime scope are recorded in the
+[maintenance verification receipt](verification/2026-11-22-maintenance-workflows.md).
+
+Release ID `453727915` targets `c30a179` and remains **draft / prerelease**, with no actual version tag.
+All six replacement assets were downloaded, byte/hash-matched and statically inspected after verified
+backup of the preceding `67f0715` assets and notes. MSI **6,017,024 bytes**, NSIS **4,245,923 bytes**, both
+unsigned. The user explicitly keeps clean-machine install/login/upgrade/uninstall pending. Other manual,
+hardware/accessibility/privacy and independent human security/attribution/signing gates below remain open.
+
+## Previous 49-tool candidate `67f0715`
+
+The preceding 2026-11-22 review candidate was source `67f0715`, including the
 [second bounded 49-tool verification](verification/2026-11-22-native-feature-pass.md). All five CI jobs pass:
 Windows 226 core / 94 native, macOS ARM 220 / 95 and Linux 219 / 95, with zero failed or ignored tests,
 plus strict Clippy, native production builds, Rust 1.95, UI and packaging. Its exact Windows EXE opened all
 49 default native forms; Timer/QR state checks and generated-provider Cancel, hide/restoration and active
 Quit also passed. Two separate bounded endpoint observations are recorded in
 [VALIDATION.md](VALIDATION.md). These checks do not establish full native effect/hardware acceptance.
-Release ID `453727915` now targets `67f0715` and remains **draft / prerelease**. All six refreshed assets
+At that verification, release ID `453727915` targeted `67f0715` and remained **draft / prerelease**. All six refreshed assets
 were downloaded, byte/hash-matched and statically inspected. Earlier `a7c91bd` startup, IANA/EAN-13 and
 Quit measurements remain historical evidence for their own executable.
 Earlier `7132daa`, `54dd593`, `d8d1d1e` and the failed-CI `1ae368c` candidate remain historical evidence.

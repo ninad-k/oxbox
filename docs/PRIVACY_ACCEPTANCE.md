@@ -6,6 +6,20 @@ The release remains a draft while the open gates in [RELEASE.md](RELEASE.md) rem
 
 ## Scope and evidence
 
+The current maintenance source is `c30a179`, EXE SHA-256
+`006769afce34f73fd4b1b9eee2216356e3f8ac7f39101d8fcf1587a74d8cb841`.
+[Three separate bounded endpoint observations](RUNTIME_PRIVACY.md#current-maintenance-candidate-c30a179--2026-11-22)
+passed with zero owned TCP/UDP rows; only the final restart/Quit window ends with no owned processes.
+These supplement the older `67f0715` table below; its provider/49-form results retain their own hash scope.
+
+New privacy boundaries: Browser Review reads extension metadata only after an explicit scan; its GUI check
+used a generated root. Screenshot capture defaults to memory-only review, with explicit flattened export;
+the new GUI case opened a generated PNG instead of capturing a private desktop. Text cleanup accepts
+explicit input and leaves history paused. Presets exclude content/paths/credentials/active sessions.
+Startup/registry backups contain commands/paths and should stay private. File Shred requires separate
+permanent-action confirmation and does not guarantee SSD, snapshot or backup erasure. See
+[the guide](MAINTENANCE.md) and [current verification receipt](verification/2026-11-22-maintenance-workflows.md).
+
 Review date: 2026-11-22. Production host: `crates/oxbox-native` (eframe), with tool logic in
 `crates/oxbox-core`. The retained Tauri/WebView2 host is historical and is not part of the native binary.
 [RUNTIME_PRIVACY.md](RUNTIME_PRIVACY.md) retains the renderer investigation and exact measured artifacts.

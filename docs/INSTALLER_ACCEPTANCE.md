@@ -4,9 +4,25 @@ The MSI and NSIS packages remain unsigned, unpublished review artifacts. Package
 inspection and compiler success do not establish successful installation, login startup, upgrade or removal.
 Keep the release draft until the relevant gates in [RELEASE.md](RELEASE.md) pass.
 
-## Current community candidate `67f0715`
+## Current maintenance candidate `c30a179`
 
-The latest six-asset draft uses the rebuilt source `67f0715452fb601394f45d3296675d3b85df3fb5`, exact
+The six-asset draft targets `c30a179a573424b178def065a3c5c0f5c9397074`, exact Rust 1.95.0 and EXE SHA-256
+`006769afce34f73fd4b1b9eee2216356e3f8ac7f39101d8fcf1587a74d8cb841` (**14,381,056 bytes**).
+MSI **6,017,024 bytes** and NSIS **4,245,923 bytes** remain unsigned. Local static reports `run-8qZqa7`
+and `run-9c13uh`, plus re-downloaded static report `run-Uy2Bos`, passed beneath `target/installer-verification/`.
+All six downloaded names, lengths and hashes match the reviewed staging manifest; extracted MSI payload
+and generated NSIS/compiler-output checks pass. PE imports/version and Common Controls v6 manifest
+were inspected; `asInvoker` and `uiAccess=false` remain set. See the
+[full artifact receipt](VALIDATION.md#maintenance-and-workflow-candidate-c30a179).
+
+The draft refresh preserved verified old assets/notes and a journal. It created no real version tag and
+published nothing. GUI/runtime testing used a hash-matched copied EXE with a disposable profile, not
+installation. The user keeps clean-machine install/login/upgrade/uninstall pending; independent NSIS
+payload extraction, signing and human review remain open. No acceptance row below is closed by extraction.
+
+## Previous community candidate `67f0715`
+
+The preceding six-asset draft used the rebuilt source `67f0715452fb601394f45d3296675d3b85df3fb5`, exact
 Rust 1.95.0 and EXE SHA-256 `6606f3d4e172e75bbebbe4201d92b5989fca15ab51b2769cac0893dbac412069`.
 Both the local set and all six re-downloaded assets pass byte-size/hash checks and the no-install verifier:
 `target/installer-verification/run-ndm3cr/report.json` and `run-nExJgA/report.json`. All five MSI payloads,

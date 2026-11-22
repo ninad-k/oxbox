@@ -2,6 +2,9 @@
 
 This file records observed evidence, not planned results. Release gates remain open until explicitly recorded.
 
+Latest: [maintenance/workflow candidate `c30a179`](#maintenance-and-workflow-candidate-c30a179), preserving
+the original 49 tools and expanding the catalogue to 56. Earlier source/host evidence below stays historical.
+
 ## 2026-11-21 implementation session
 
 - Host: Windows, Rust 1.100.0; workspace minimum Rust 1.93.
@@ -618,3 +621,60 @@ No release was published or installer executed.
 The clean-machine gate remains pending at the user's request. Full native effect/hardware/provider and
 cross-OS runtime, screen-reader/IME/DPI, independent NSIS extraction, signing, human security/attribution
 and the known Linux GLib finding remain open. The release must remain an unpublished draft.
+
+## Maintenance and workflow candidate c30a179
+
+- Functional source: **`c30a179a573424b178def065a3c5c0f5c9397074`**, pushed to `codex/native-renderer`.
+  The [dated verification receipt](verification/2026-11-22-maintenance-workflows.md) records tests-first
+  failures, reproduced fixes, new 56-tool scope, generated-data GUI checks and explicit limits.
+- Exact Rust **1.95.0** local checks: formatting, native and full-workspace all-target Clippy with warnings
+  denied passed; **279 core / 112 native** tests, zero failed/ignored. Combined-host compatibility passed
+  **12 legacy / 112 native** tests. Svelte check 0 errors/warnings; UI **39**, packaging **18**, observer **3**,
+  website **4**, production UI/site builds and generated community feature index passed. The local
+  documentation link scan covered **405 links / 76 Markdown files**, none missing.
+- [CI 45011422402](https://github.com/ninad-k/oxbox/actions/runs/45011422402) passed all five jobs:
+  Windows **279 core / 112 native**, macOS ARM **274 / 114**, Linux **273 / 114**, no failures/ignored tests;
+  strict Clippy, native release builds and actual Rust 1.95 checks passed. [Pages 45011422424](https://github.com/ninad-k/oxbox/actions/runs/45011422424)
+  built and deployed source `c30a179`; the public page returned HTTP 200 with 56 tools/workflows/maintenance.
+- No dependency manifest or lockfile change. Cargo audit: zero vulnerability entries, eight maintenance
+  warnings plus the existing GLib 0.18.5 `RUSTSEC-2024-0429` unsoundness warning. pnpm audit: zero advisories.
+  Windows native notices: **355 packages / zero missing texts / three human attribution reviews**.
+- Native wrapper production build passed: Windows EXE **14,381,056 bytes**, SHA-256
+  **`006769afce34f73fd4b1b9eee2216356e3f8ac7f39101d8fcf1587a74d8cb841`**. PE Windows GUI/version 0.1.0,
+  static CRT/native system imports, Common Controls v6/asInvoker/uiAccess=false manifest and unsigned
+  status were inspected. GUI tests used a byte-matched copy with an explicit disposable profile.
+- Windows GUI: seven new default forms plus changed cleanup controls opened. Calculator 96; timer 10m
+  and preset save/apply remained stopped; generated 38-byte storage and one extension manifest results
+  passed; exact rename preview and 25-byte text-cleanup preview appeared. A generated 320x160 image
+  received an 80x40 solid redaction and was saved through native pickers. Pixel verification: **3,200 opaque
+  black / 48,000 unchanged outside / zero unexpected pixels**. No live capture/history/clipboard copy,
+  browser account scan, destructive action, startup/registry change or hardware/provider effect ran.
+  Close-to-tray, same-editor reactivation and explicit Quit were observed; the QA processes are gone.
+- Three strict same-hash endpoint windows passed: **300.103 s / 6,001 samples**, **90.037 / 1,800**,
+  **60.031 / 1,200**, zero query/marker errors and owned TCP/UDP maxima/sums. The first two end with an
+  app alive; only the third restart/Quit window ends with zero, about 10.06 seconds after last ownership.
+  [Exact gaps, scope and exclusions](RUNTIME_PRIVACY.md#current-maintenance-candidate-c30a179--2026-11-22)
+  remain distinct; no DNS/OS-broker/provider or universal offline claim is inferred.
+
+The existing release **453727915** was refreshed to `c30a179` and remains **draft / prerelease**. The
+explicit `v0.1.0` draft label is preserved; no real Git version tag or public release was created. Six old
+assets and prior notes were backed up and hash-verified before replacement. All six new remote assets
+were re-downloaded, length/SHA-256 matched and statically inspected. Local reports `run-8qZqa7` and
+`run-9c13uh`, and downloaded report `run-Uy2Bos`, passed beneath `target/installer-verification/`.
+`target/maintenance-draft-refresh/maintenance-remote-assets.json` records the final source, draft flag,
+asset identities, backup, exact notes and downloaded verification. The refresh executed no installer or
+MSI custom action; independent NSIS payload extraction remains open.
+
+| Draft asset | Bytes | SHA-256 |
+|---|---:|---|
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 6,017,024 | `6313139db8d53975debf6739b3c05b1406ccd8d018067d2e3d709b1bea9e9361` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,245,923 | `3c76b1fcee651d2cad9eddc85c3a540fb69dc225fe5016735968281057f5943c` |
+| `SHA256SUMS.txt` | 447 | `0fc8e1297cee4274b6da527980ae011a54a50c96475876dc53c03b4a51696a61` |
+| `THIRD_PARTY_NOTICES.txt` | 3,696,014 | `6f22422e0098e8dc70702a06d63a321627d695fd0e9fbb952a137c8a85c792d2` |
+| `LICENSE-MIT` | 1,076 | `dff2f23bad58d45b0830bf91f27ef278996da5ca00f1ab198969c854e8060f4f` |
+| `LICENSE-APACHE` | 11,358 | `c95bae1d1ce0235ecccd3560b772ec1efb97f348a79f0fbe0a634f0c2ccefe2c` |
+
+Clean-machine install/login/opt-out/upgrade/uninstall is intentionally pending. Actual destructive/OS
+effects, all-tool native manual acceptance, real screen readers/IME/contrast/DPI, hardware/providers,
+other-OS runtime/packages, DNS attribution, signing and independent human security/license review remain
+open. This source/CI/package receipt does not close them or claim complete CCleaner feature parity.
