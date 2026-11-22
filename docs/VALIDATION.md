@@ -368,3 +368,40 @@ A narrow follow-up adds polite completion and contextual provider errors; its ac
 first, then all **65 Windows native tests** and strict Clippy passed. The reusable observer's validity function
 also now rejects phase-marker failures, with three guard/behavior tests passing. Candidate `54dd593` remains
 historical evidence; replacement artifacts and observations must identify the follow-up source/hash separately.
+
+### Final review candidate `d8d1d1e`
+
+[CI run 44982236463](https://github.com/ninad-k/oxbox/actions/runs/44982236463) passed all five jobs:
+Windows **208 core + 65 native**, macOS ARM and Linux **201 core + 66 native** each, zero failed/ignored,
+strict Clippy, native release builds, Rust 1.95 minimum and legacy UI/packaging checks. Both real process-tree
+regressions and the consumed-provider completion/error regression explicitly pass on all three systems.
+
+Exact Rust 1.95.0 Windows production artifacts:
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Native EXE | 13,524,480 | `af363cd668e412f111bdfb37de39738ff35089e993585b19725932ba2de74b26` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 5,709,824 | `e2f9ab781123b37957bbc6ab2ed50edd30cdae296b52698ba3db86ccaafe3c1d` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,024,370 | `38f8eb7e5c72770d25c8e99bbeef3b0f5eb7457a5bbcc790dc99215d40e28360` |
+
+- The no-install verifier passed all five extracted MSI payload hashes, lifecycle properties/cleanup scope,
+  generated NSIS guards and actual compiler-output identity. Original icons/version and 24 Windows-system
+  DLL imports were verified, without WebView2 or VC redistributable imports. All artifacts remain unsigned.
+- Final Windows notices SHA-256 is `6f22422e0098e8dc70702a06d63a321627d695fd0e9fbb952a137c8a85c792d2`;
+  inventory remains 355 packages / zero missing texts / three human reviews. Manifest SHA-256 is
+  `fb7142dcea1b5effad32ab62547edaf8ee15d0aca3340e11a1d1eeac716d87c3`.
+- Two separate final-EXE endpoint windows completed: **240.050 s / 4,800 samples** for generated-provider
+  completion and normal Quit; **240.064 s / 4,799 samples** for Quit during a controlled inert job. All owned
+  TCP/UDP sums and maxima were zero, query/marker failures were zero, hashes unchanged and final process
+  counts zero. Exact gaps/timings/exclusions are in [runtime privacy](RUNTIME_PRIVACY.md).
+- Windows UI Automation observed the provider completion Status, Working state and named fields. The long
+  generated child disappeared over 15 seconds before its natural exit, with input unchanged and no output/
+  staging files left. This is a bounded app lifecycle check, not actual media/provider or screen-reader acceptance.
+- Release ID `453727915` now targets `d8d1d1e`. All six uploaded assets were independently downloaded and
+  hash-matched to their final inputs. Postcondition: draft true, prerelease true, exactly six native review
+  assets, no version tag pushed and no release published.
+
+Clean-machine installation/login/upgrade/uninstall remains pending at the user's request. Independent NSIS
+extraction, full devices/monitor/IME/screen-reader/runtime matrix, real-provider/DNS coverage, human security/
+attribution review and the documented Linux GLib finding remain open. No final universal privacy or release
+acceptance is inferred from these bounded checks.

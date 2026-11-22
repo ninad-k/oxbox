@@ -12,7 +12,7 @@ Review date: 2026-11-22. Production host: `crates/oxbox-native` (eframe), with t
 
 | Boundary | Evidence | Acceptance and limits |
 | --- | --- | --- |
-| Native startup and ordinary local UI | Previously accepted exact production-B observation: SHA-256 `257b5b20f92724cc18dcf4e2167917d4d53385974f1521c87940ee1d72f9840c`; 360.154 s, 7,201 owner-PID endpoint samples, normal startup, Unit Converter, direct Quit and post-exit observation. | Zero owned TCP rows, including listeners/loopback, or UDP bindings were observed. This is bounded historical artifact evidence, not DNS coverage or acceptance of later source changes. |
+| Native startup and ordinary local UI | Exact final source-d8 executable observations below: separate 240.050 s provider-completion and 240.064 s controlled-job/Quit windows. Earlier production-B evidence is retained in RUNTIME_PRIVACY.md. | Zero owned TCP rows, including listeners/loopback, or UDP bindings were observed in both final windows. These are bounded artifact observations, not DNS coverage or universal acceptance of other actions/providers. |
 | Intentional application networking | Source review of `tools/currency.rs` and native currency controls. | The only application HTTP feature is a fixed ECB HTTPS feed, separately opted in and manually refreshed. Startup/ticks do not refresh. Opening an explicitly selected help link delegates to the user's external browser. Neither action was invoked during this privacy review. |
 | Provider discovery | Source review of `media_provider.rs` and native provider controls. | Checks run only after **Check local providers**. Providers are not downloaded, installed or bundled. Relative `PATH` entries, Windows UNC/device paths and remote/unknown Windows drive types are rejected before probing files. Windows reparse aliases are rejected conservatively; put the actual local provider `bin` directory in `PATH`. |
 | Provider file inputs/outputs | Source review and pure path-policy regression fixtures. | Conversion/GIF inputs must resolve to regular files; provider staging/output folders use the same Windows local-path checks. FFmpeg receives literal arguments, a fixed demuxer whitelist and `file,pipe` protocol whitelist before `-i`. Windows network/device paths and reparse redirects are refused before canonicalization. A protocol whitelist alone does not constrain SMB paths opened through the OS `file` protocol. |
@@ -87,16 +87,132 @@ all-TCP (including listeners/loopback) and UDP maxima/sums, and a final executab
 A normal-completion flag without any observed target process is not a valid target observation. These
 snapshot validity checks do not close DNS, packet, OS-broker, short-flow or provider gates.
 
-Guard-only tests (`node --test scripts/observe-native-endpoints.test.mjs`) use generated non-executable
-file contents and reject outside/UNC paths, existing evidence and hash mismatches before sampling.
-They do not perform a runtime observation. This promoted script is a reproducibility aid; the earlier
+Tests (`node --test scripts/observe-native-endpoints.test.mjs`) use generated non-executable file contents
+and reject outside/UNC paths, existing evidence and hash mismatches before sampling. A separate test
+extracts only the pure validity function through PowerShell's AST and checks six fake fact sets. It
+refuses query/marker failures, incomplete windows, a missing target or a changed hash. These tests do
+not perform a runtime observation. This promoted script is a reproducibility aid; the earlier
 accepted B run used its retained ignored predecessor, not the later script revision.
 
-## Safe provider and profile checks still to execute
+## Source 54dd593 fake-provider observation
+
+On 2026-11-22, the first live use of the published observer began before a Root-controlled launch of
+source `54dd593`, executable SHA-256
+`428b28603ec2c16d825e833250fba1cb1a1dd06d2d9d6ef1f78b6e4253c94273` (13,523,456 bytes).
+Root used a fresh `--profile` and a child-only `PATH` prefix containing two generated fixture executables.
+Their identical SHA-256 was
+`f96734523203849447f1db67dc6a9f1a5b88f5e65635f49e4a179b3c225519e4`.
+The fixture's normal version mode waits 500 ms and prints fixed text; it never opens a device or socket.
+
+| Measurement | Result |
+| --- | --- |
+| UTC interval | 2026-11-22 03:39:15.235 to 03:45:15.418 |
+| Duration / successful samples | 360.095 s / 7,199 of 7,199 |
+| Query / marker failures | 0 / 0 |
+| First / last sampled ownership | 33.158 / 203.955 s |
+| Sampled ownership span / after last ownership | 170.797 / approximately 156.140 s |
+| Requested interval; actual p95 / maximum gap | 50 ms; 62.815 / 136.954 ms |
+| Maximum owned processes / at end | 3 / 0 |
+| Observed own-process names | `oxbox-native.exe`, `ffmpeg.exe`, `conhost.exe`, `tesseract.exe` |
+| Samples with multiple owned processes | 37 |
+| Every-row all-TCP maximum and sum | 0 and 0, including listeners/loopback |
+| Every-row UDP-binding maximum and sum | 0 and 0 |
+| Executable hash at end | Unchanged |
+
+Root separately observed Settings/control naming, generated Japanese/café text preservation, Unit
+Converter output/error semantics, both explicitly requested fixed provider versions with the expected
+fixture paths, and Ctrl+Q followed by disappearance of the native process. Phase labels are coarse
+annotations and can lag the actual action; ownership timing comes from samples, not the phase names.
+The sampler performed no GUI action or app launch. The complete run was independently checked from
+all raw rows, requiring zero query **and marker** failures and the unchanged executable hash.
+
+Only fake version checks were exercised. No actual provider conversion/decoding, camera, microphone,
+recording, screen capture, clipboard collection or ECB request occurred. DNS, packets, OS brokers,
+short-lived flows and macOS/Linux limits remain open. Raw aggregate evidence is retained locally in
+ignored `target/native-privacy-qa/run-review-provider-native/`; no addresses, ports or command lines
+are exported.
+
+This is source-54 evidence, **not exact-binary acceptance of the later provider-completion accessibility
+fix**. After the run, the observer's validity predicate was corrected to require zero marker failures;
+the original raw run/summary was preserved. Its independent strict assessment already had zero marker
+failures, so that correction does not change this run's result.
+
+## Exact final d8 executable: separate completion and active-Quit windows
+
+Both observations used source `d8d1d1eb1c1f26cc54ebc80b623e0c9e09a17ad5`, the exact executable
+SHA-256 `af363cd668e412f111bdfb37de39738ff35089e993585b19725932ba2de74b26` (13,524,480 bytes),
+and published observer SHA-256
+`9ecd93ed4f70b9717173d3075c4301668be3b3c50476cd0bc47781163631fdf0`.
+Each began before a separate Root-controlled launch with a fresh isolated profile and child-only fixture
+`PATH`. Executable, observer and fixture hashes were checked before/after; no host environment or OS
+security/privacy setting was changed. These are **two separate windows**, not one continuous trace.
+
+| Measurement | Provider completion / normal Quit | Controlled active-job Quit |
+| --- | --- | --- |
+| UTC interval | 03:53:30.654–03:57:30.800, 2026-11-22 | 04:00:50.210–04:04:50.328, 2026-11-22 |
+| Duration / successful rows | 240.050 s / 4,800 of 4,800 | 240.064 s / 4,799 of 4,799 |
+| Query / marker failures | 0 / 0 | 0 / 0 |
+| First / last sampled ownership | 31.307 / 157.259 s | 39.250 / 214.989 s |
+| After last sampled ownership | Approximately 82.791 s | Approximately 25.075 s |
+| Actual p95 / maximum sample gap | 62.782 / 91.348 ms | 62.664 / 133.524 ms |
+| Maximum owned processes / at end | 3 / 0 | 3 / 0 |
+| Samples with multiple owned processes | 264 | 276 |
+| Every-row all-TCP maximum / sum | 0 / 0, including listeners/loopback | 0 / 0, including listeners/loopback |
+| Every-row UDP-binding maximum / sum | 0 / 0 | 0 / 0 |
+| Final executable hash | Unchanged | Unchanged |
+
+The completion window observed `oxbox-native.exe`, `ffmpeg.exe`, `conhost.exe` and `tesseract.exe`.
+The generated version-only fixtures each waited approximately three seconds and printed a fixed
+version. Their SHA-256 was
+`0a842e2fd462e46b00ef8dc1e59cc9e55ac7f62ddcdaf728358755a1cf276a1d`.
+Root separately verified both fixture paths/versions and the actual accessible **Status** text
+“Checked 2 local providers,” followed by normal Ctrl+Q exit.
+
+An attempted active-Quit check in that first window remains **inconclusive**. The child was observed alive
+at 03:55:57.544, but the post-proof Quit action was over eleven seconds later; both three-second probes
+could finish first. Samples containing multiple owned processes ended at 150.307 s while the native
+cohort lasted to 157.259 s. Neither cumulative process names nor an earlier Working state proves that
+a child was active when Quit was requested.
+
+The second window resolves that timing uncertainty with a different, explicitly reviewed no-effect
+fixture, SHA-256 `dda7ce47a02ef816ec8dd53e458cbc71048b5b4500600021a280124e2fb852a9`.
+Its version mode prints fixed text; every nonversion invocation only waits 30 seconds and prints a
+constant. It never opens input/output files, decodes media, accesses a device/socket or explicitly launches
+another program. The job window observed `oxbox-native.exe`, `ffmpeg.exe` and the Windows `conhost.exe` helper.
+Root supplied a generated 51-byte inert `.mp4` input and an absent output path; no actual FFmpeg codec
+or physical device was involved.
+
+Root's retained before/after JSON shows the controlled child created at **04:04:11.271519 UTC**, alive
+alongside the UI Working state at **04:04:13.7156599**, and both app/provider absent after Ctrl+Q by
+**04:04:26.0774154**. Its earliest possible natural 30-second completion was **04:04:41.271519**:
+it was already absent approximately **15.194 seconds earlier**. Sampled multiple-process ownership
+spanned 201.096–214.834 s, and all owned processes disappeared after 214.989 s. This is a **bounded
+active-job Quit pass**, supported by process timing rather than a natural fixture completion.
+
+The generated input remained 51 bytes with SHA-256
+`d02ec550191f3ea6ff2c7e6f2bc15e45bbb081524114ee0162c4ae20294a0c8f`.
+The output remained absent, and the fixture folder contained only the input afterward: no staging
+directory remained. This tests managed-job cancellation/cleanup, not successful media conversion.
+
+Raw rows, pins and independent strict assessments are retained in ignored
+`target/native-privacy-qa/run-review-final-provider-native/` and `run-review-final-active-job/`.
+The latter also retains `root-before-long-job-quit.json` and `root-after-long-job-quit.json`; their actual
+fields were checked when deriving the active-Quit assessment. Every successful raw row was aggregated
+independently, with zero all-TCP/UDP sums/maxima, zero failures and final hash consistency required.
+
+No camera, microphone, recording, screen capture, clipboard collection, actual media-provider decoding
+or ECB request was invoked. DNS, packets, OS-broker activity, short-lived flows, actual provider binaries
+and macOS/Linux runtime behavior remain outside these observations. No universal zero-network claim is made.
+
+## Remaining safe provider and profile checks
 
 Root owns all GUI control and app launches. Use a new isolated `--profile` directory and preserve existing
 profiles. No camera/microphone/private capture/clipboard monitoring, power action or real network request
 is authorized by these checks.
+
+Version dispatch/completion and managed-job Quit/cleanup now have the bounded fixture evidence above.
+The plans below describe broader provider/decoding and profile checks; the completed mock checks must
+not be substituted for actual provider, DNS or hardware acceptance.
 
 - Use a generated local fake `ffmpeg`/`tesseract` executable in a per-child `PATH`, without mutating the
   user's environment. It should recognize only the expected version/fixture invocations, write only
@@ -172,12 +288,20 @@ free of defects. [FFmpeg MOV input options](https://ffmpeg.org/ffmpeg-formats.ht
   all three meaningful assertion failures were observed in `target/accessibility-privacy-context-red.log`
   before their fixes. Initial compile-only attempts are not counted as behavior evidence. All three
   are green in the coordinated run below.
-- Exact Rust 1.95.0 integrated Windows validation: **208/208 core tests** (106.16 s), **64/64 native tests**
+- Initial coordinated Rust 1.95.0 Windows validation before the provider-completion-status follow-up:
+  **208/208 core tests** (106.16 s), **64/64 native tests**
   (0.31 s), zero failed/ignored. This includes the new path/cancellation/manifest/KDF/password fixtures.
   Strict all-target clippy and format checks also passed. Root retained logs in
   `target/review-clippy.log` and `target/review-rust-tests.log`.
+  The later source-d8 build/CI record is maintained in [VALIDATION.md](VALIDATION.md); the two exact-binary
+  source-d8 observations above are separate from that initial test-count record.
 - Observer guard tests: two Windows tests failed before the script existed, then passed after the
   strict path/hash/new-output guards were implemented. No observation was started by these tests.
+- After the completed source-54 live run, an extracted pure-validity regression reproduced the missing
+  marker-error check: a fake one-marker-failure observation was incorrectly accepted while the other
+  five cases behaved correctly. Adding the marker-failure condition made **3/3 observer tests green**
+  (2.53 s). Logs: `target/observer-validity-red.log` and `target/observer-validity-green.log`. The test
+  parsed/executed only that function, not the sampler.
 - No new dependency, host setting change, live device/clipboard action or app launch was made by this lane.
 
 Update this log with exact test results and runtime evidence as checks complete. Do not promote the

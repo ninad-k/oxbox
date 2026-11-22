@@ -70,71 +70,78 @@ exercise each tool, device, OS effect, confirmation, GPU path or screen-reader i
 
 - **Core models/fixtures**: the tool's existing core unit/fake-backend/fixture coverage. This does not imply
   real device, destructive, power, clipboard, pointer, camera or network effects ran during tests.
-- **H13**: one headless utilities test renders all 13 utility routes, verifies legacy settings/cache bytes are
-  preserved, and verifies imported currency networking starts off. It does not click tool actions.
-- **H14**: one headless media test renders all 14 media routes without devices or clipboard monitoring.
-- The 22 system routes have compiled source and separate native lifecycle/configuration regressions;
-  no headless all-system-form rendering test is claimed. The native suite also covers tasks, settings,
-  instance handling and bundled icon bindings. Counts/results belong to the integrator's dated records.
+- **H13**: one headless utilities test renders all 13 default routes and checks control names, verifies legacy
+  settings/cache bytes are preserved and imported currency networking starts off. It does not click tool actions.
+- **H14**: one headless media test renders all 14 default routes and checks control names, without devices or clipboard monitoring.
+- **H22**: one headless system test renders all 22 default routes and checks control names with task admission
+  closed before rendering. No OS-reading/changing job runs. Separate lifecycle/configuration regressions remain;
+  none of these checks prove every expanded state, device or native manual behavior.
 - **Pending**: complete per-tool native manual acceptance is still open here, including rows with bounded
   observations above. Update a row only with dated revision/platform/scaling/provider evidence in
   docs/VALIDATION.md; legacy results do not transfer.
 
 | Stable tool ID | Native routing module | Source | Automated scope | Native manual |
 |---|---|---|---|---|
-| `transform-text` | [utilities/text.rs](../crates/oxbox-native/src/tools/utilities/text.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `clipboard-history` | [media/clipboard.rs](../crates/oxbox-native/src/tools/media/clipboard.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `unit-converter` | [utilities/text.rs](../crates/oxbox-native/src/tools/utilities/text.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `break-time` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `timer-stopwatch` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `world-time` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `verify-checksum` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `find-duplicates` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `archive` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `clean-drive` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `screenshot` | [media/capture.rs](../crates/oxbox-native/src/tools/media/capture.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `resize-images` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `qr-code` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `system-monitor` | [system/monitor.rs](../crates/oxbox-native/src/tools/system/monitor.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `network-usage` | [system/monitor.rs](../crates/oxbox-native/src/tools/system/monitor.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `do-not-sleep` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `sleep-timer` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `lock-screen` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `hide-desktop` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `encrypt-files` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `mouse-activity` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `window-on-top` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `window-manager` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `show-desktop` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `close-apps` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `focus-window` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `switch-resolution` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `eject-volumes` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `energy-saver` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `hidden-files` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `cpu-temperature` | [system/monitor.rs](../crates/oxbox-native/src/tools/system/monitor.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `launch-app-sets` | [system/apps.rs](../crates/oxbox-native/src/tools/system/apps.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `uninstall-apps` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `presentation-mode` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `do-not-disturb` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `airplane-mode` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; debug compiles | Core models/fixtures; native form not headless-tested | Pending |
-| `alarm` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `date-countdown` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
-| `mute-microphone` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `record-audio` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `record-screen` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `make-gif` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `convert-audio-video` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `take-photo` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `take-video` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `recognize-text` | [media/vision.rs](../crates/oxbox-native/src/tools/media/vision.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `barcode-reader` | [media/vision.rs](../crates/oxbox-native/src/tools/media/vision.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `measure-color` | [media/vision.rs](../crates/oxbox-native/src/tools/media/vision.rs) | Implemented; debug compiles | Core models/fixtures; H14 | Pending |
-| `currency-converter` | [utilities/currency.rs](../crates/oxbox-native/src/tools/utilities/currency.rs) | Implemented; debug compiles | Core models/fixtures; H13 | Pending |
+| `transform-text` | [utilities/text.rs](../crates/oxbox-native/src/tools/utilities/text.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `clipboard-history` | [media/clipboard.rs](../crates/oxbox-native/src/tools/media/clipboard.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `unit-converter` | [utilities/text.rs](../crates/oxbox-native/src/tools/utilities/text.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `break-time` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `timer-stopwatch` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `world-time` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `verify-checksum` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `find-duplicates` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `archive` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `clean-drive` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `screenshot` | [media/capture.rs](../crates/oxbox-native/src/tools/media/capture.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `resize-images` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `qr-code` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `system-monitor` | [system/monitor.rs](../crates/oxbox-native/src/tools/system/monitor.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `network-usage` | [system/monitor.rs](../crates/oxbox-native/src/tools/system/monitor.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `do-not-sleep` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `sleep-timer` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `lock-screen` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `hide-desktop` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `encrypt-files` | [utilities/files.rs](../crates/oxbox-native/src/tools/utilities/files.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `mouse-activity` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `window-on-top` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `window-manager` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `show-desktop` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `close-apps` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `focus-window` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `switch-resolution` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `eject-volumes` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `energy-saver` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `hidden-files` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `cpu-temperature` | [system/monitor.rs](../crates/oxbox-native/src/tools/system/monitor.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `launch-app-sets` | [system/apps.rs](../crates/oxbox-native/src/tools/system/apps.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `uninstall-apps` | [system/windows.rs](../crates/oxbox-native/src/tools/system/windows.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `presentation-mode` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `do-not-disturb` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `airplane-mode` | [system/power.rs](../crates/oxbox-native/src/tools/system/power.rs) | Implemented; native CI builds | Core models/fixtures; H22 | Pending |
+| `alarm` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `date-countdown` | [utilities/time.rs](../crates/oxbox-native/src/tools/utilities/time.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
+| `mute-microphone` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `record-audio` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `record-screen` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `make-gif` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `convert-audio-video` | [media/images.rs](../crates/oxbox-native/src/tools/media/images.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `take-photo` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `take-video` | [media/recording.rs](../crates/oxbox-native/src/tools/media/recording.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `recognize-text` | [media/vision.rs](../crates/oxbox-native/src/tools/media/vision.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `barcode-reader` | [media/vision.rs](../crates/oxbox-native/src/tools/media/vision.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `measure-color` | [media/vision.rs](../crates/oxbox-native/src/tools/media/vision.rs) | Implemented; native CI builds | Core models/fixtures; H14 | Pending |
+| `currency-converter` | [utilities/currency.rs](../crates/oxbox-native/src/tools/utilities/currency.rs) | Implemented; native CI builds | Core models/fixtures; H13 | Pending |
 
 Every row retains the platform list and provider caveat in catalog/tools.json. Unsupported targets must
 show the existing limitation, not a mock success. Recheck copies/exports, stale async results, confirmation,
 Cancel/Stop, hide/navigation/restart and Quit behavior where relevant before marking a manual row complete.
+
+## Final review verification
+
+The final review source `d8d1d1e` passed [all-platform native CI](https://github.com/ninad-k/oxbox/actions/runs/44982236463).
+Windows MSI/NSIS were rebuilt, inspected, uploaded to the existing draft and downloaded/hash-verified.
+Separate final-Windows observations cover generated provider completion and Quit during an inert provider job.
+[Exact evidence and remaining gates](../docs/VALIDATION.md#final-review-candidate-d8d1d1e). Every full manual row above remains pending.
 
 ## Installed startup default
 

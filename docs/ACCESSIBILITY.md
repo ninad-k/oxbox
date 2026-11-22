@@ -47,6 +47,12 @@ the unnamed Appearance combo box and the search field's description-only naming 
 Literal Unicode injection is not an IME-composition test. Final-build observations are recorded separately
 in [VALIDATION.md](VALIDATION.md).
 
+The final `d8d1d1e` executable (SHA-256 `af363cd668e412f111bdfb37de39738ff35089e993585b19725932ba2de74b26`)
+confirmed named search/chooser controls, keyboard search/Enter navigation, a Windows Status node reading
+“Checked 2 local providers”, Working status during a controlled job, and Ctrl+Q shutdown. The preceding
+`54dd593` candidate additionally confirmed the repaired Appearance name, Unicode retention, conversion and
+an Alert for invalid input without moving focus. These are Windows UI Automation observations, not speech tests.
+
 ## Remaining manual matrix
 
 - Test Narrator and another supported screen reader: navigation, names, values, focus, dialog return,

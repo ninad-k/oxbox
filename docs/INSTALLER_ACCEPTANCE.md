@@ -91,6 +91,43 @@ warnings; compilation succeeded. No installer/application/custom action was exec
 Independent NSIS extraction, actual installation/login/upgrade/uninstall, signing and human attribution
 review remain pending. This record does not close any clean-machine protocol row below.
 
+## Provider announcement follow-up candidate — 2026-11-22
+
+The current review candidate supersedes the preceding `54dd593` candidate with functional source
+`d8d1d1eb1c1f26cc54ebc80b623e0c9e09a17ad5`. The native change adds accessible provider result/error
+announcements and clears old provider status on a new explicit check. The earlier EXE and all six review
+assets were copied and hash-checked into `target/native-inspection/source-54dd593/` before replacement.
+
+The same exact Rust 1.95.0 production wrapper rebuilt the native crate in 3 minutes 56 seconds and compiled
+both installers successfully, including the guarded NSIS helper. The two stock NSIS warnings described
+above remain. The current six-file review stage is `target/native-release-review/`.
+
+| Current artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `oxbox-native.exe` | 13,524,480 | `af363cd668e412f111bdfb37de39738ff35089e993585b19725932ba2de74b26` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 5,709,824 | `e2f9ab781123b37957bbc6ab2ed50edd30cdae296b52698ba3db86ccaafe3c1d` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,024,370 | `38f8eb7e5c72770d25c8e99bbeef3b0f5eb7457a5bbcc790dc99215d40e28360` |
+| `THIRD_PARTY_NOTICES.txt` | 3,696,014 | `6f22422e0098e8dc70702a06d63a321627d695fd0e9fbb952a137c8a85c792d2` |
+| `SHA256SUMS.txt` | 447 | `fb7142dcea1b5effad32ab62547edaf8ee15d0aca3340e11a1d1eeac716d87c3` |
+
+The current no-install command passed:
+
+```powershell
+node scripts/verify-native-installers.mjs --draft target/native-release-review --expected-exe-sha256 af363cd668e412f111bdfb37de39738ff35089e993585b19725932ba2de74b26
+```
+
+The report is `target/installer-verification/run-h5X6EI/report.json`; artifact, resource and PE reports are
+under `target/native-inspection/source-d8d1d1e/`. All five extracted MSI payload hashes match the pinned
+EXE and resource inputs. The MSI shutdown property, exact cleanup action/order/scope, NSIS running-app
+guard, and NSIS compiler-output identity pass. The 24 native PE imports remain Windows system DLLs with
+no WebView2 loader or VC redistributable import. All native brand/version resource contents match the
+preceding candidate, all six native/setup icon payloads match the original ICO, and the MSI ProductIcon
+is an exact ICO match. Both PE certificate directories and the MSI digital-signature table remain absent.
+
+This inspection executed no app, installer or MSI custom action. Independent NSIS extraction and every
+clean-machine protocol row remain pending. Provider announcement semantics are source/headless-test
+evidence; they do not establish a completed native screen-reader acceptance pass.
+
 ## Available isolation and extraction tooling
 
 On 2026-11-22 the bounded read-only inventory found a non-elevated Windows Home/Core host, no

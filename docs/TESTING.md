@@ -24,9 +24,13 @@ and must be checked separately. See [the 49-row native matrix](../tasks/native-m
 
 - Native tasks: cancel/abandon/late-result handling, latest-only bounded progress, shutdown and joined workers.
 - Native instance/settings transactions and finite bundled icon vectors.
-- Headless route rendering for 13 utilities and 14 media forms, including legacy import preservation/default-off currency.
+- Headless route rendering/name checks for 13 utilities and 14 media forms, including legacy import preservation/default-off currency.
   These tests consume textures_delta without a GPU. They do not click device/destructive controls or prove accessibility.
-  The 22 system forms are source-routed/compiled; no all-system-form headless pass is claimed.
+- Headless default-form/name checks for all 22 system forms with task admission closed before rendering;
+  no OS-reading/changing job runs. Expanded archive/password/provider and two-row fixtures are checked separately.
+- Generated external-provider children exercise timeout/natural-exit pipe inheritance and process-tree cleanup.
+  They do not open devices or network sockets. Password fixtures use generated text; scrypt resource-limit
+  tests reject excessive factors before running their KDF. Actual screen-reader/device/OS acceptance is separate.
 - Text cases, Unicode boundaries, hash vectors, streaming checksums, progress/cancellation.
 - All conversion categories, temperature offsets/absolute zero, SI/binary bytes, round trips, numeric errors.
 - IANA zones and DST transitions; QR raster decoding and invalid barcode checksums.
@@ -77,6 +81,12 @@ and result in [VALIDATION.md](VALIDATION.md). A source implementation and passin
 | Accessibility | Keyboard-only controls, visible focus, labels, errors announced, light/dark/reduced-motion |
 
 ## Cross-platform and release checks
+
+The [installer protocol](INSTALLER_ACCEPTANCE.md), [privacy boundaries](PRIVACY_ACCEPTANCE.md),
+[accessibility matrix](ACCESSIBILITY.md) and [security review](SECURITY_REVIEW.md) provide reproducible,
+scoped follow-up commands. Run `node --test scripts/build-native.test.mjs scripts/license-inventory.test.mjs
+scripts/verify-native-installers.test.mjs` for pure packaging checks, and on Windows
+`node --test scripts/observe-native-endpoints.test.mjs` for observer guards/validity without sampling.
 
 CI runs Rust and UI checks on fresh runners. Native builds need desktop development packages even when tests
 do not launch windows. Review CI results on the public PR; local Windows tests do not prove macOS/Linux builds.

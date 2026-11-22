@@ -69,6 +69,39 @@ All sampling/DNS/OS-broker/provider limitations above remain applicable.
 
 No Windows/Edge policy, firewall, privacy or security setting was changed. The draft must remain unpublished.
 
+## Final native review candidate — 2026-11-22
+
+Source `d8d1d1eb1c1f26cc54ebc80b623e0c9e09a17ad5` was built with exact Rust 1.95.0. The observed Windows
+EXE is 13,524,480 bytes, SHA-256 `af363cd668e412f111bdfb37de39738ff35089e993585b19725932ba2de74b26`;
+the independently extracted final MSI contains the identical executable.
+
+The reusable [observer](../scripts/observe-native-endpoints.ps1) was pinned by script SHA-256
+`9ecd93ed4f70b9717173d3075c4301668be3b3c50476cd0bc47781163631fdf0`. Its validity policy requires normal
+completion, a seen target, unchanged executable hash and zero query/phase-marker failures. Three safe
+guard/policy tests cover invalid paths/hashes, existing evidence and invalid observation facts.
+
+| Separate final-EXE window | Duration / samples | Scope | p95 / maximum gap |
+| --- | --- | --- | --- |
+| Provider completion | 240.050 s / 4,800 | Before startup, launcher/search, generated provider version checks, named completion Status, normal Ctrl+Q and 82.791 s after the last owned sample | 62.782 / 91.348 ms |
+| Quit during an inert provider job | 240.064 s / 4,799 | Before startup, generated local input/output paths, an inert 30-second child job, Ctrl+Q during work and 25.075 s after the last owned sample | 62.664 / 133.524 ms |
+
+Both windows independently completed with **zero owned TCP rows (including listeners/loopback) or UDP
+bindings in every sample**, zero query/marker failures, unchanged hashes and zero owned processes at the end.
+At most three owned processes appeared: native app, generated provider and console host. The completion
+window observed both generated `ffmpeg.exe` and `tesseract.exe`; the job window used only generated `ffmpeg.exe`.
+These are separate windows, not a single continuous trace.
+
+For the active-job check, the child was observed alive with Working status, created at 04:04:11.271519 UTC.
+After Ctrl+Q, root and child were absent by 04:04:26.077415 UTC, over 15 seconds before its earliest natural
+30-second exit. The generated 51-byte input hash stayed unchanged; no output or staging files remained.
+An earlier attempt with short version probes did not establish active-at-Quit timing and is explicitly
+inconclusive for that claim; its ordinary completion/Quit endpoint window remains separately valid.
+
+The generated programs only print fixed text or wait; they never decode media or open files/devices/sockets.
+This verifies bounded app/child ownership and observed endpoints, **not actual FFmpeg/Tesseract behavior**.
+DNS, OS brokers, packets/flows between snapshots, other tools/providers and other-OS runtime acceptance
+remain open. No host security/privacy/network setting was changed. See [privacy boundaries](PRIVACY_ACCEPTANCE.md).
+
 ## Historical embedded browser investigation
 
 The following findings apply to the retained Tauri implementation and its former draft assets, not to the

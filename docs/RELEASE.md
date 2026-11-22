@@ -4,8 +4,8 @@ The native migration uses exact eframe 0.37.0 and Rust 1.95, with all 49 tool ro
 release target. The existing release must stay an **unpublished draft** until the acceptance gates pass.
 Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the native application.
 
-The 2026-11-22 review fixes require a rebuilt candidate and new artifact verification. The earlier `7132daa`
-candidate and its CI/runtime/hash evidence below are historical until the replacement is recorded.
+The 2026-11-22 review candidate is source `d8d1d1e`, rebuilt and attached to the existing draft with downloaded
+asset hashes verified. Earlier `7132daa` and `54dd593` artifacts remain historical evidence.
 The user explicitly left the clean-machine gate pending because no disposable Windows environment is available.
 
 ## Native acceptance gates
@@ -14,8 +14,8 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [x] Pass local core/native tests, all-target clippy with warnings denied, and formatting.
 - [x] Observe the actual decorated Windows native launcher, favorites, search, a conversion, favorite hotkey,
   global shortcut hide, single-instance restoration and Quit. This is a bounded subset of manual acceptance.
-- [ ] Complete review-fix Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks. Earlier source `7132daa`
-  passed [run 44941250679](https://github.com/ninad-k/oxbox/actions/runs/44941250679).
+- [x] Complete review-fix Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks:
+  [run 44982236463](https://github.com/ninad-k/oxbox/actions/runs/44982236463), source `d8d1d1e`.
 - [x] Complete the parallel agent source/regression review and fix reproduced installer, file, provider,
   passphrase and accessibility issues; [security review](SECURITY_REVIEW.md), [privacy](PRIVACY_ACCEPTANCE.md),
   [accessibility](ACCESSIBILITY.md) and [installer protocol](INSTALLER_ACCEPTANCE.md) distinguish scope and open gates.
@@ -24,6 +24,7 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [ ] Complete production runtime observations including owned providers and DNS coverage on all three OSes;
   record observation bounds, rather than claim universal zero traffic from finite samples.
 - [x] Record bounded Windows native production endpoint observations, including a quiet-tray/activation/Quit loop.
+  Final source also has separate generated-provider completion and active-job/Quit windows.
   See [runtime privacy](RUNTIME_PRIVACY.md) for exact intervals and snapshot/DNS limitations.
 - [x] Extract/hash-match the MSI payload; inspect version, original icon, PE imports, sizes and hashes.
   Verify generated NSIS source and successful compiler output; independent NSIS extraction is still open.
@@ -33,10 +34,10 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [ ] Verify macOS Intel/Apple Silicon and Linux packages and supported hardware/session behavior.
 - [ ] Verify keyboard/screen-reader/IME/Unicode, DPI/monitor changes, high contrast and remote/GPU sessions.
 - [ ] Resolve/review dependency findings and outstanding attribution reviews with a human reviewer.
-- [ ] Complete independent file-tool path/deletion/archive and media-provider security review.
-- [ ] Record rebuilt review-fix source, installer checksums and downloaded remote asset hash matches in
-  [VALIDATION.md](VALIDATION.md). The earlier `7132daa` assets were verified and remain draft/prerelease;
-  no version tag has been pushed.
+- [ ] Complete independent human security acceptance and remaining adversarial filesystem/real-provider runtime checks.
+- [x] Record rebuilt review-fix source `d8d1d1e`, installer checksums and all six downloaded remote asset hash
+  matches in [VALIDATION.md](VALIDATION.md). Release ID `453727915` remains draft/prerelease;
+  no version tag has been pushed or release published.
 
 ## Native packaging
 
