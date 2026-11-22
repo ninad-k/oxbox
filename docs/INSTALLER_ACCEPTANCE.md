@@ -4,6 +4,20 @@ The MSI and NSIS packages remain unsigned, unpublished review artifacts. Package
 inspection and compiler success do not establish successful installation, login startup, upgrade or removal.
 Keep the release draft until the relevant gates in [RELEASE.md](RELEASE.md) pass.
 
+## Current community candidate `a7c91bd`
+
+The latest six-asset draft uses the rebuilt source `a7c91bd696af0f80c86029336593e3d37d64f78b`, exact
+Rust 1.95.0 and EXE SHA-256 `1c8715a5b9739ad1142bc91475d552ea0384fbd538651704d4f687da6756c7c3`.
+Both the local set and all six re-downloaded assets pass byte-size/hash checks and the no-install verifier:
+`target/installer-verification/run-PHwlIn/report.json` and `run-xW3O75/report.json`. All five MSI payloads,
+lifecycle/upgrade properties, generated NSIS guards and compiler-output identity match. PE metadata records
+Oxbox 0.1.0, NotSigned and 24 Windows system imports, without WebView/VC runtime redistributable matches.
+
+[The validation record](VALIDATION.md#community-review-candidate-a7c91bd) contains every current artifact
+digest and its separate bounded native UI/runtime evidence. Native app execution used a copied EXE with
+an isolated profile, not installation. Independent NSIS extraction and actual clean-machine install/login/
+upgrade/uninstall remain pending. The lifecycle table below stays open; prior candidates remain historical.
+
 ## Reproducible inspection without installation
 
 Use the existing Node runtime, Windows Installer read-only database API and cached WiX `dark.exe`.

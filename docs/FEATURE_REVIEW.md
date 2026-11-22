@@ -71,6 +71,17 @@ The final source, CI and artifact
 mapping belongs in [VALIDATION.md](VALIDATION.md). Initial REDs, generated fixture passes, source review and
 production runtime observations are different evidence.
 
+Final functional source `a7c91bd` passed [all five CI jobs](https://github.com/ninad-k/oxbox/actions/runs/44987974907):
+Windows 225 core / 81 native, macOS ARM 219 / 82, Linux 218 / 82, zero failed/ignored. The follow-up also
+corrected Darwin exited-group cleanup and replaced the mouse test's fixed scheduling assumption with a
+bounded worker acknowledgement. Original raw-byte coverage remains enabled; macOS additionally passes
+eight fast provider exits. Strict Clippy and native production builds pass on all three systems.
+
+The exact Windows release binary was observed separately with a fresh isolated profile: exact IANA search
+and clock creation, 12-digit EAN-13 preview, and normal Quit passed. No clipboard/export/device/provider or
+destructive action was invoked. Its finite 240.073-second endpoint window and hash mapping are recorded in
+[runtime privacy](RUNTIME_PRIVACY.md); this bounded subset does not close the 49-tool manual matrix.
+
 The earlier `d8d1d1e` all-platform CI and bounded Windows GUI/provider observations remain evidence for
 that exact source/artifact. They are not silently transferred to these newer functional changes.
 [Privacy acceptance](PRIVACY_ACCEPTANCE.md) records the hashes, separate windows, completion Status and

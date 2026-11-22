@@ -3,6 +3,12 @@
 This record separates source/tree checks from assistive-technology and real-device acceptance. It applies
 to the eframe 0.37 native host. It is not a WCAG conformance statement or a screen-reader certification.
 
+Source `a7c91bd` also has a bounded Windows native UI observation on the exact release EXE: named launcher
+search, Ctrl+K / Enter navigation, IANA field/combo values, world-clock actions, EAN-13 inputs and local image
+preview, and normal Quit. Its durable original-file cleanup status has a real-poll/headless regression and
+polite completion semantics. [Exact artifact evidence](VALIDATION.md#community-review-candidate-a7c91bd)
+does not close speech, full keyboard traversal, IME, DPI or the other manual cases below.
+
 ## 2026-11-22 source review
 
 The review reproduced missing accessible names for the appearance selector, capture selectors, numeric

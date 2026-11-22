@@ -5,6 +5,10 @@ grant publication permissions or replace the [release checklist](RELEASE.md).
 
 ## Triage
 
+GitHub loads issue forms and repository-facing policies from its default branch. The native review branch
+contains their updates; activate them through the reviewed merge and update the contribution/base-branch
+instructions at the same time. Do not treat files on this branch as proof that new issue forms are live.
+
 Check whether a report concerns the native app, retained Tauri host, browser preview, static site or installer.
 Ask for a commit and OS/session before inferring a current native regression from a legacy screenshot.
 Use the canonical tool ID and a small generated fixture. Redirect security details to

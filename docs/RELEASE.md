@@ -4,12 +4,12 @@ The native migration uses exact eframe 0.37.0 and Rust 1.95, with all 49 tool ro
 release target. The existing release must stay an **unpublished draft** until the acceptance gates pass.
 Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the native application.
 
-The subsequent [49-tool functional follow-up](FEATURE_REVIEW.md) passes local Rust 1.95 checks (221 core,
-81 native), UI/site/packaging regressions and contributor-document consistency. Its replacement CI/artifact
-mapping must be recorded before treating it as the draft's source; the preceding mapping below remains historical.
-
-The 2026-11-22 review candidate is source `d8d1d1e`, rebuilt and attached to the existing draft with downloaded
-asset hashes verified. Earlier `7132daa` and `54dd593` artifacts remain historical evidence.
+The current 2026-11-22 review candidate is source `a7c91bd`, including the
+[49-tool functional follow-up](FEATURE_REVIEW.md). All five CI jobs pass: Windows 225 core / 81 native,
+macOS ARM 219 / 82 and Linux 218 / 82, plus strict Clippy, native production builds, Rust 1.95, UI and packaging.
+Its Windows installers were rebuilt, inspected, attached to the existing draft and downloaded/hash-verified.
+A separate exact-binary Windows observation covers startup, IANA search, EAN-13 preview and normal Quit.
+Earlier `7132daa`, `54dd593`, `d8d1d1e` and the failed-CI `1ae368c` candidate remain historical evidence.
 The user explicitly left the clean-machine gate pending because no disposable Windows environment is available.
 
 ## Native acceptance gates
@@ -19,18 +19,19 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [x] Observe the actual decorated Windows native launcher, favorites, search, a conversion, favorite hotkey,
   global shortcut hide, single-instance restoration and Quit. This is a bounded subset of manual acceptance.
 - [x] Complete review-fix Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks:
-  [run 44982236463](https://github.com/ninad-k/oxbox/actions/runs/44982236463), source `d8d1d1e`.
+  [run 44987974907](https://github.com/ninad-k/oxbox/actions/runs/44987974907), source `a7c91bd`.
 - [x] Complete the parallel agent source/regression review and fix reproduced installer, file, provider,
   passphrase and accessibility issues; [security review](SECURITY_REVIEW.md), [privacy](PRIVACY_ACCEPTANCE.md),
-  [accessibility](ACCESSIBILITY.md) and [installer protocol](INSTALLER_ACCEPTANCE.md) distinguish scope and open gates.
+  [accessibility](ACCESSIBILITY.md), [functional review](FEATURE_REVIEW.md) and [installer protocol](INSTALLER_ACCEPTANCE.md) distinguish scope and open gates.
 - [ ] Complete native per-tool manual acceptance, including progress, cancellation, destructive confirmations,
   provider failures, power/desktop/recording restoration and hidden notifications.
 - [ ] Complete production runtime observations including owned providers and DNS coverage on all three OSes;
   record observation bounds, rather than claim universal zero traffic from finite samples.
 - [x] Record bounded Windows native production endpoint observations, including a quiet-tray/activation/Quit loop.
-  Final source also has separate generated-provider completion and active-job/Quit windows.
+  Current `a7c91bd` has a 240.073-second local-tools/Quit window. Historical `d8d1d1e` has separate generated-provider completion and active-job/Quit windows.
   See [runtime privacy](RUNTIME_PRIVACY.md) for exact intervals and snapshot/DNS limitations.
-- [x] Extract/hash-match the MSI payload; inspect version, original icon, PE imports, sizes and hashes.
+- [x] Extract/hash-match the current MSI payload; inspect version, PE imports, sizes and hashes. Original icon
+  resources remain unchanged; the earlier six-resource digest check retains its historical artifact scope.
   Verify generated NSIS source and successful compiler output; independent NSIS extraction is still open.
 - [ ] Test actual native MSI/NSIS clean install/uninstall and independently inspect NSIS payloads.
 - [ ] Verify first-installed-launch startup default, quiet login-to-tray, opt-out/upgrade preservation, paths with spaces,
@@ -39,7 +40,7 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [ ] Verify keyboard/screen-reader/IME/Unicode, DPI/monitor changes, high contrast and remote/GPU sessions.
 - [ ] Resolve/review dependency findings and outstanding attribution reviews with a human reviewer.
 - [ ] Complete independent human security acceptance and remaining adversarial filesystem/real-provider runtime checks.
-- [x] Record rebuilt review-fix source `d8d1d1e`, installer checksums and all six downloaded remote asset hash
+- [x] Record rebuilt review-fix source `a7c91bd`, installer checksums and all six downloaded remote asset hash
   matches in [VALIDATION.md](VALIDATION.md). Release ID `453727915` remains draft/prerelease;
   no version tag has been pushed or release published.
 

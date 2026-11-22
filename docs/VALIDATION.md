@@ -467,3 +467,66 @@ cross-platform results must be recorded against the follow-up source rather than
 
 GitHub's private vulnerability reporting was found disabled during the community check. It was enabled and
 the repository API returned `enabled: true` on 2026-11-22, making the existing private-report policy actionable.
+
+### Community review candidate `a7c91bd`
+
+[CI run 44987974907](https://github.com/ninad-k/oxbox/actions/runs/44987974907) passed all five jobs:
+
+| Platform | Core tests | Native tests | Clippy / production build |
+| --- | ---: | ---: | --- |
+| Windows x64 | 225 | 81 | Passed |
+| macOS ARM | 219 | 82 | Passed |
+| Linux x64 | 218 | 82 | Passed |
+
+All have zero failed or ignored tests. Rust 1.95 minimum, Svelte zero errors/warnings, 39 UI tests, 18 pure
+packaging regressions and the 49-tool generated index also pass. Logs explicitly confirm receipt/real age,
+durable cleanup status, IANA search, raw-byte/text, mouse acknowledgement and inherited-pipe cleanup tests.
+macOS additionally passes the eight-fast-exit case. The earlier failed run remains documented above.
+
+The production wrapper rebuilt source `a7c91bd696af0f80c86029336593e3d37d64f78b` with exact Rust 1.95.0.
+All unsigned Windows artifacts are pinned separately from the preceding `1ae368c` and `d8d1d1e` builds:
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Native EXE | 13,581,312 | `1c8715a5b9739ad1142bc91475d552ea0384fbd538651704d4f687da6756c7c3` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 5,734,400 | `16a396fe20f6b89feb1e86dde34c71c88a4c7a947cb92ab81bab703d5ef529b5` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,040,336 | `e30fda0d81985fe8c5ade354c97aa14448d58ec4c7a1703f3cc5d9bc147ca3a9` |
+| `SHA256SUMS.txt` | 452 | `fab42eef64f1b9d1315ff725cc39b46bccd1a91dfe7a2b1fb7965ff905830e53` |
+| `THIRD_PARTY_NOTICES.txt` | 3,696,014 | `6f22422e0098e8dc70702a06d63a321627d695fd0e9fbb952a137c8a85c792d2` |
+
+Static checks passed for the local and downloaded installers: all five extracted MSI payloads match the
+reviewed inputs; lifecycle/upgrade properties and generated NSIS guards/compiler identity match. Version
+metadata is Oxbox 0.1.0, signature NotSigned, and 24 Windows system DLL imports have no WebView or VC runtime
+redistributable matches. The original icon source is unchanged; its historical six-resource comparison was
+not repeated for this binary. No installer or MSI custom action was executed. Evidence is
+`target/community-native-final-artifacts.json` and verifier reports `run-PHwlIn` / `run-xW3O75` below
+`target/installer-verification/`.
+
+The exact EXE copy was run with a fresh explicit profile. Windows UI Automation and visible rendering
+confirmed the empty favorites Dashboard, 49-tool library, keyboard search/Enter, exact `America/New_York`
+selection, a saved clock showing EST / UTC−05:00, and an EAN-13 preview from `590123412345`. Save/Copy were
+not clicked. Normal sidebar Quit closed the process; no installed startup choice was changed.
+
+A separate **240.073-second / 4,800-sample** endpoint window began before launch and ended after Quit.
+All owned TCP/UDP sums/maxima, query/marker failures and final process counts were zero; app/script hashes
+were unchanged. First/last ownership was 25.451 / 155.318 seconds, leaving 84.755 seconds after last ownership.
+p95/maximum gaps were 62.715 / 99.123 ms. An independent all-row check agrees with the summary. Only the native
+EXE appeared. `target/native-privacy-qa/run-community-native/` retains pins, original rows/summary and strict
+assessment; `target/native-qa/community-review/` retains generated-input UI/Quit proof. No providers, devices,
+clipboard collection, file export, OS/destructive effect or ECB refresh was invoked. DNS, brokers, packets,
+short flows and other-platform/provider acceptance remain outside this observation.
+
+Release ID `453727915` targets `a7c91bd`, remains **draft / prerelease**, and contains exactly six native
+assets. All six were downloaded to `target/remote-community-final/` and byte-size/SHA-256 matched before
+the downloaded MSI/NSIS checks passed. No version tag or public release was created. The public Pages
+deployment from `1ae368c` remains valid for its unchanged 49-tool catalogue and source-branch links.
+
+Clean-machine install/login/upgrade/uninstall remains pending at the user's request. Full per-tool manual,
+hardware/providers, screen-reader/IME/DPI, DNS/broker and other-OS runtime, independent NSIS extraction,
+signing and human security/attribution/dependency gates remain open. These results do not certify every feature
+on every device or authorize publishing the draft.
+
+The final documentation pass verified 267 local file references across 22 contributor/architecture/
+acceptance documents and checked the generated feature index again. New issue forms remain staged in the
+native branch until its reviewed merge into the default branch; private vulnerability reporting itself is
+enabled now. Documentation-only evidence updates do not change the functional source or installer mapping.

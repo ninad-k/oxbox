@@ -15,6 +15,10 @@ If a problem remains, open an issue using the appropriate template:
 Use disposable fixtures. Redact usernames, personal paths, clipboard contents and recordings before posting
 logs or screenshots. Report vulnerabilities privately through [SECURITY.md](SECURITY.md).
 
+The native review branch includes new documentation and validation issue forms. GitHub activates forms from
+the repository's default branch after merge; meanwhile, use the available bug/blank issue with the context
+listed above. The private vulnerability-report channel is already enabled.
+
 Windows installers remain in an unpublished draft; [release status](docs/RELEASE.md) lists the outstanding
 manual, platform and installer checks. A source implementation or CI pass does not certify every device
 and OS configuration. There is no guaranteed support response time for ordinary community questions.

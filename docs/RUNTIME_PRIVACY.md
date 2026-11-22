@@ -6,6 +6,30 @@ network feature is separately opted-in, manually requested ECB currency refresh,
 The approved native migration removes the embedded browser from the production host. Finite network observations
 do not establish a universal zero-network guarantee; the historical browser investigation is retained below.
 
+## Current community candidate — 2026-11-22
+
+Source `a7c91bd696af0f80c86029336593e3d37d64f78b`, Rust 1.95.0 Windows EXE SHA-256
+`1c8715a5b9739ad1142bc91475d552ea0384fbd538651704d4f687da6756c7c3` (13,581,312 bytes), completed a
+separate **240.073-second / 4,800-sample** observation with the published read-only endpoint observer.
+The script hash remained `9ecd93ed4f70b9717173d3075c4301668be3b3c50476cd0bc47781163631fdf0`.
+
+The window ran from 05:13:58.8828345 to 05:17:59.0498734 UTC, before startup through isolated-profile
+World Time / EAN-13 interactions, normal Quit and post-exit observation. The independent all-row assessment
+found **zero** owned TCP rows/bindings of every recorded class and UDP bindings (both maxima and sums),
+zero query/marker failures, stable executable/script hashes and no process at the end. Only the native EXE
+appeared, at most one process. First/last ownership was 25.451 / 155.318 seconds; post-last coverage was
+84.755 seconds. Requested interval was 50 ms; p95/maximum gaps were 62.715 / 99.123 ms.
+
+UI evidence independently confirms exact `America/New_York` search, clock creation with EST / UTC−05:00,
+12-digit EAN-13 preview and normal sidebar Quit. Save/Copy were not invoked. No external providers, devices,
+capture, clipboard collection, network refresh, OS settings or destructive tool action was used. An explicit
+profile prevented startup registration. Raw evidence remains under `target/native-privacy-qa/run-community-native/`.
+
+Owner-PID snapshots can miss short flows and do not measure DNS/OS-broker/driver or other-provider traffic.
+This is current bounded Windows evidence, not a universal offline guarantee. Earlier runs below retain their
+own exact hashes/scenarios; generated-provider/active-job evidence is not silently transferred to this binary.
+See [the final artifact mapping](VALIDATION.md#community-review-candidate-a7c91bd) and [remaining gates](RELEASE.md).
+
 ## Native migration — 2026-11-21
 
 The selected renderer is exact eframe 0.37.0 with Rust 1.95. The Windows native normal dependency graph has

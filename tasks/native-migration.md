@@ -157,7 +157,9 @@ acceptance remains open.
 
 The [49-tool functional review](../docs/FEATURE_REVIEW.md) traces all native routes and records reproduced
 fixes with meaningful generated/fake regressions. The Windows integrated follow-up passed 221 core and 80
-native tests before the final cleanup-status regression. [Dated validation](../docs/VALIDATION.md) records
-the final source, CI and artifact evidence. Contributor onboarding, support, catalogue and maintainer guides
+native tests before the final cleanup-status regression. Final source `a7c91bd` passes all-platform CI:
+Windows 225 core / 81 native, macOS ARM 219 / 82 and Linux 218 / 82, with zero failed/ignored. Its Windows
+draft assets were rebuilt/download-verified and its exact EXE passed a bounded IANA/EAN-13/Quit observation.
+[Dated validation](../docs/VALIDATION.md) records the source, hashes, CI and limits. Contributor onboarding, support, catalogue and maintainer guides
 are linked from the [documentation hub](../docs/README.md). Every full manual row remains pending until its
 actual native actions and supported platform/provider behavior have been recorded.
