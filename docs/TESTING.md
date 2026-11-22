@@ -35,6 +35,8 @@ and executable; do not treat proposed safe GUI cases as completed checks.
   authorizes live deletion, registry/startup changes, screen capture or collection of private browser data.
 
 - Native tasks: cancel/abandon/late-result handling, latest-only bounded progress, shutdown and joined workers.
+- Path admission uses malformed OS strings without requiring the host filesystem to create unsupported
+  names; a separate Linux fixture exercises an actual invalid-byte file and its Unicode replacement neighbor.
 - Native instance/settings transactions and finite bundled icon vectors.
 - Headless route rendering/name checks for 13 utilities and 14 media forms, including legacy import preservation/default-off currency.
   These tests consume textures_delta without a GPU. They do not click device/destructive controls or prove accessibility.

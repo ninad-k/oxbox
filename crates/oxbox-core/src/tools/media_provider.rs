@@ -1216,7 +1216,45 @@ mod verification56_path_tests {
         );
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
+    #[test]
+    fn verification56_media_input_refuses_unrepresentable_raw_path_before_io_and_keeps_unicode_neighbor()
+     {
+        let directory = tempfile::tempdir().unwrap();
+        #[cfg(unix)]
+        let malformed_name = {
+            use std::os::unix::ffi::OsStringExt;
+            std::ffi::OsString::from_vec(b"generated-\xff.mp4".to_vec())
+        };
+        #[cfg(windows)]
+        let malformed_name = {
+            use std::os::windows::ffi::OsStringExt;
+            let mut units = "generated-".encode_utf16().collect::<Vec<_>>();
+            units.push(0xd800);
+            units.extend(".mp4".encode_utf16());
+            std::ffi::OsString::from_wide(&units)
+        };
+        let selected = directory.path().join(malformed_name);
+        let neighbor = directory.path().join("generated-\u{fffd}.mp4");
+        fs::write(&neighbor, b"generated different neighbor").unwrap();
+
+        // APFS need not permit creation of the malformed name. Exercise the
+        // actual entry point without asking the OS to create/read that name.
+        // Moving its raw text guard after canonicalize would return an I/O
+        // error instead, so the stable code also checks preflight ordering.
+        let error = file_input(&selected).unwrap_err();
+        assert_eq!(error.code(), "invalid_input");
+        assert_eq!(
+            fs::read(&neighbor).unwrap(),
+            b"generated different neighbor"
+        );
+    }
+
+    // This companion additionally proves a real selected file is untouched on
+    // Linux filesystems that support arbitrary non-NUL filename bytes. APFS
+    // rejects that fixture creation with EILSEQ; the raw guard above still runs
+    // on macOS rather than skipping its unsupported-input check.
+    #[cfg(target_os = "linux")]
     #[test]
     fn verification56_media_input_never_aliases_a_non_unicode_file_to_its_replacement_neighbor() {
         use std::os::unix::ffi::OsStringExt;
