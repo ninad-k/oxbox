@@ -122,11 +122,11 @@ impl RecordingUi {
                 widgets::note(ui,match Os::current(){Os::Windows=>"Enter the exact FFmpeg DirectShow device name. To list names yourself: ffmpeg -list_devices true -f dshow -i dummy",Os::Macos=>"Enter a local AVFoundation device index. List devices yourself with ffmpeg -f avfoundation -list_devices true -i \"\".",_=>if audio{"Use the local PulseAudio/PipeWire input name, or default."}else{"Use a local V4L2 path, for example /dev/video0."}});
             }else{
                 widgets::choice(ui,"Capture source",&mut self.source,&["Desktop","Area · physical pixels","Window · Windows"]);
-                if self.source==1{ui.horizontal(|ui|{ui.label("Left (physical X)");ui.add(egui::DragValue::new(&mut self.x));ui.label("Top (physical Y)");ui.add(egui::DragValue::new(&mut self.y));});widgets::number(ui,"Width (pixels)",&mut self.width,1..=16384);widgets::number(ui,"Height (pixels)",&mut self.height,1..=16384);}
+                if self.source==1{ui.horizontal(|ui|{let label=ui.label("Left (physical X)");ui.add(egui::DragValue::new(&mut self.x)).labelled_by(label.id);let label=ui.label("Top (physical Y)");ui.add(egui::DragValue::new(&mut self.y)).labelled_by(label.id);});widgets::number(ui,"Width (pixels)",&mut self.width,1..=16384);widgets::number(ui,"Height (pixels)",&mut self.height,1..=16384);}
                 if self.source==2{
                     widgets::text(ui,"Exact window title",&mut self.title);
                     if ui.button("Find open windows").clicked(){self.windows.start(ui.ctx(),|cancel,_|{cancel.check()?;screenshot::targets()});}
-                    egui::ComboBox::from_id_salt("recording windows").selected_text("Choose a listed window…").show_ui(ui,|ui|{for name in &self.window_names{if ui.selectable_label(self.title==*name,name).clicked(){self.title=name.clone();}}});
+                    egui::ComboBox::from_label("Listed recording window").selected_text("Choose a listed window…").show_ui(ui,|ui|{for name in &self.window_names{if ui.selectable_label(self.title==*name,name).clicked(){self.title=name.clone();}}});
                     self.windows.show(ui);
                 }
                 widgets::number(ui,"Frames per second",&mut self.fps,1..=60);

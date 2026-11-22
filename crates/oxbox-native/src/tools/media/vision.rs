@@ -280,7 +280,7 @@ impl VisionUi {
                         .collect())
                 });
             }
-            egui::ComboBox::from_id_salt("color display")
+            egui::ComboBox::from_label("Display to sample")
                 .selected_text(
                     self.monitors
                         .get(self.monitor)

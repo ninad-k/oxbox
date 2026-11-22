@@ -70,4 +70,56 @@ mod tests {
         assert!(plan(MediaFormat::Mp4).contains(&"mpeg4".to_string()));
         assert_eq!(MediaFormat::Webm.extension(), "webm");
     }
+
+    #[test]
+    fn referencing_manifest_inputs_do_not_enable_manifest_demuxers_or_external_mov_tracks() {
+        let directory = tempfile::tempdir().unwrap();
+        for (name, contents) in [
+            (
+                "fixture.m3u8",
+                "#EXTM3U\n#EXTINF:1,\nfile://oxbox-fixture.invalid/share/segment.ts\n",
+            ),
+            (
+                "fixture.ffconcat",
+                "ffconcat version 1.0\nfile '\\\\oxbox-fixture.invalid\\share\\segment.wav'\n",
+            ),
+            (
+                "fixture.mpd",
+                "<MPD><BaseURL>https://oxbox-fixture.invalid/</BaseURL></MPD>",
+            ),
+        ] {
+            let input = directory.path().join(name);
+            std::fs::write(&input, contents).unwrap();
+            // Only build the literal input plan. Never invoke a provider or open
+            // any reference from these generated manifest contents.
+            let args = super::super::media_provider::file_input(&input).unwrap();
+            let formats = args
+                .windows(2)
+                .find(|pair| pair[0] == "-format_whitelist")
+                .unwrap()[1]
+                .split(',')
+                .collect::<Vec<_>>();
+            for excluded in [
+                "hls",
+                "concat",
+                "dash",
+                "imf",
+                "image2",
+                "sdp",
+                "avisynth",
+                "vapoursynth",
+            ] {
+                assert!(!formats.contains(&excluded), "{name}: {excluded}");
+            }
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair == ["-protocol_whitelist", "file,pipe"])
+            );
+            assert!(
+                !args
+                    .iter()
+                    .any(|arg| ["-enable_drefs", "-use_absolute_path"].contains(&arg.as_str()))
+            );
+        }
+    }
 }

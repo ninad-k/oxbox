@@ -353,7 +353,7 @@ impl WindowsViews {
                         "Focus dimming is stopped."
                     });
                     if let Some(e) = status.error {
-                        ui.label(format!("Error: {e}"));
+                        crate::accessibility::alert(ui, e);
                     }
                 }
                 ui.label("Native click-through shades track the selected window while Oxbox is hidden. Stop/Quit or closing/minimizing the target removes them. Nothing is recorded.");
@@ -485,7 +485,7 @@ impl WindowsViews {
                         ui.label(outcome);
                     }
                     if let Some(e) = &state.error {
-                        ui.label(format!("Error: {e}"));
+                        crate::accessibility::alert(ui, e);
                     }
                 }
             }
@@ -605,8 +605,9 @@ impl WindowsViews {
                 Ok(Read::Apps(uninstall::apps()?))
             });
         }
-        ui.label("Search name or publisher");
-        ui.text_edit_singleline(&mut self.query);
+        let label = ui.label("Search name or publisher");
+        ui.text_edit_singleline(&mut self.query)
+            .labelled_by(label.id);
         let previous = self.app_id.clone();
         egui::ComboBox::from_label("Registered application")
             .selected_text(

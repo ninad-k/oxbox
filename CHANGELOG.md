@@ -5,6 +5,22 @@ the presence of this changelog does not mean installers have been published.
 
 ## 0.1.0 — draft, 2026-11-21
 
+### Release review fixes — 2026-11-22
+
+- Installer running-app checks no longer force-terminate Oxbox and bypass its cleanup. NSIS asks for tray Quit;
+  MSI disables automatic Restart Manager shutdown while retaining files-in-use detection.
+- Duplicate cleanup revalidates selected copies and kept files against the scanned content before any Trash call.
+- Provider discovery rejects unsafe Windows network/device/reparse paths before probing files. Provider checks
+  honor cancellation, and owned process trees are terminated before joining inherited pipes on exit or timeout.
+- Password fields discard undo history so cleared drafts cannot be restored. New age files use scrypt factor 18;
+  decryption accepts through factor 20 and clearly refuses larger factors without changing the original.
+- Added contextual accessible names, live user-action errors/status and quiet passive polling, plus stronger
+  shared control boundaries. Headless name checks cover all 49 default forms and selected expanded/two-row states.
+- Added guarded, reproducible installer/endpoint verification scripts and acceptance records. Existing CI actions
+  are pinned to verified upstream commits, with weekly Dependabot updates for GitHub Actions.
+- The release remains a draft. Clean-machine, DNS/provider/platform, screen-reader/hardware and human review
+  gates remain explicit; the Linux GLib finding has no compatible published 0.18 patch.
+
 ### Installed startup default
 
 - Fresh installed Windows/macOS copies enable current-user login startup on first launch; subsequent logins

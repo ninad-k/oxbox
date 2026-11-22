@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
+    <!-- Keep files-in-use detection without letting Restart Manager force-stop
+         the app while it owns desktop, recording or power leases. -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="DisableShutdown" />
     <DirectoryRef Id="INSTALLDIR">
       <Component Id="OxboxNativeUninstallCleanupMarker" Guid="111EF58D-8190-5B03-B5B5-27E417EE125D" Win64="yes">
         <CreateFolder />

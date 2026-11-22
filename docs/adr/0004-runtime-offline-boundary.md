@@ -91,11 +91,18 @@ existing bundler only for distribution, with WebView installation and updater ar
 | mac-notification-sys 0.6.15, notify-rust 4.19.0 | macOS/Linux notifications |
 | gtk 0.18.2 (Linux) | Native tray provider/event-loop integration; existing GLib advisory remains separately tracked |
 | windows-sys 0.61.2, raw-window-handle 0.6.2 | Native windows, instance coordination and capture identities |
+| libc =0.2.191 (Unix only; additionally approved 2026-11-22) | Typed waitid(WNOWAIT) and process-group cancellation for owned local media providers; the resolved version was already locked transitively |
 
 Existing workspace serialization, paths, core image/clipboard operations and standard-library workers remain
 reusable. Single-instance locking can use standard-library file locking plus platform-local activation IPC.
 Native host implementations now exist; that fact does not certify every event-loop, device or packaging path.
 Any additional dependency, version change, renderer backend or installer tool must return for approval.
+
+The user additionally approved the Unix-only direct libc pin on 2026-11-22 for the provider-child
+ownership fix. It keeps the group leader unreaped until the group has been signalled, preventing a
+PID/PGID reuse gap between observing provider exit and cancelling its descendants. Windows uses the
+existing windows-sys package with a kill-on-close Job Object established while the child is suspended.
+These mechanisms manage ordinary provider descendants; they are not a sandbox for hostile executables.
 
 ## Migration implementation and acceptance
 

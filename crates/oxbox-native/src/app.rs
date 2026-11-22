@@ -342,14 +342,8 @@ impl App {
             Color32::WHITE
         };
         style.visuals.widgets.inactive.weak_bg_fill = style.visuals.widgets.inactive.bg_fill;
-        style.visuals.widgets.inactive.bg_stroke = egui::Stroke::new(
-            1.0,
-            if dark {
-                Color32::from_rgb(45, 57, 74)
-            } else {
-                Color32::from_rgb(211, 219, 231)
-            },
-        );
+        style.visuals.widgets.inactive.bg_stroke =
+            egui::Stroke::new(1.0, crate::accessibility::control_border(dark));
         style.visuals.widgets.hovered.bg_fill = if dark {
             Color32::from_rgb(37, 48, 64)
         } else {
@@ -383,7 +377,7 @@ impl App {
     fn settings_view(&mut self, ui: &mut egui::Ui) {
         ui.heading("Settings");
         ui.separator();
-        ui.label("Appearance");
+        let appearance_label = ui.label("Appearance");
         let old = self.prefs.theme;
         egui::ComboBox::from_id_salt("appearance")
             .selected_text(format!("{:?}", old))
@@ -395,7 +389,9 @@ impl App {
                 ] {
                     ui.selectable_value(&mut self.prefs.theme, theme, name);
                 }
-            });
+            })
+            .response
+            .labelled_by(appearance_label.id);
         if old != self.prefs.theme {
             ui.ctx().set_theme(match self.prefs.theme {
                 Theme::System => egui::ThemePreference::System,
@@ -468,12 +464,7 @@ impl App {
         }
     }
     fn browse(&mut self, ui: &mut egui::Ui) {
-        let search = ui.add(
-            egui::TextEdit::singleline(&mut self.query)
-                .id(egui::Id::unique("search-tools"))
-                .hint_text("Find a tool…  ·  Ctrl/Cmd K")
-                .desired_width(f32::INFINITY),
-        );
+        let search = crate::accessibility::search(ui, &mut self.query);
         let result_ids: Vec<String> = self
             .catalog
             .search(&self.view, &self.query, &self.prefs.favorites)
@@ -848,14 +839,14 @@ impl eframe::App for App {
                 self.media.recording_banner(ui);
                 if let Some(error) = self.error.clone() {
                     ui.horizontal_wrapped(|ui| {
-                        ui.colored_label(ui.visuals().error_fg_color, error);
+                        crate::accessibility::alert(ui, error);
                         if ui.button("Dismiss").clicked() {
                             self.error = None;
                         }
                     });
                 }
                 if let Some(error) = &self.integration.error {
-                    ui.colored_label(ui.visuals().error_fg_color, error);
+                    crate::accessibility::alert(ui, error);
                 }
                 egui::ScrollArea::vertical()
                     .id_salt("main-scroll")

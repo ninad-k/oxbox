@@ -122,6 +122,10 @@ src/ and src-tauri/ trees remain available for parity comparison.
 - [docs/TESTING.md](docs/TESTING.md): automated commands and manual acceptance matrix
 - [docs/RELEASE.md](docs/RELEASE.md): installer and publication checklist
 - [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md): dependency review and primary references
+- [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md): agent review, reproduced fixes and remaining security gates
+- [docs/PRIVACY_ACCEPTANCE.md](docs/PRIVACY_ACCEPTANCE.md): privacy boundaries, provider/KDF limits and DNS coverage
+- [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md): native names, status, contrast and remaining assistive-technology checks
+- [docs/INSTALLER_ACCEPTANCE.md](docs/INSTALLER_ACCEPTANCE.md): package inspection and pending clean-machine protocol
 - [docs/ROADMAP_TOOLS.md](docs/ROADMAP_TOOLS.md): Phase 5 tools, providers and network opt-in
 - [docs/MOUSE_ACTIVITY.md](docs/MOUSE_ACTIVITY.md): Windows pointer sessions, bounded GUI evidence and remaining acceptance
 - [catalog/README.md](catalog/README.md): shared metadata, icon/view adapters and consistency checks

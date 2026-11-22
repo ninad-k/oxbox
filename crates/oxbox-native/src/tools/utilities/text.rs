@@ -14,6 +14,7 @@ pub(super) struct TextTools {
     to: String,
     pub currency_mode: bool,
 }
+
 impl Default for TextTools {
     fn default() -> Self {
         Self {
@@ -155,5 +156,30 @@ impl TextTools {
             }
             Err(error) => issue(ui, error),
         }
+    }
+}
+
+#[cfg(test)]
+mod accessibility_tests {
+    use super::*;
+    use egui::accesskit::{Live, Role};
+
+    #[test]
+    fn invalid_conversion_is_an_announced_named_error() {
+        let mut tools = TextTools {
+            value: "not a number".into(),
+            ..Default::default()
+        };
+        let nodes = crate::accessibility::test_tree(|ui| tools.units(ui));
+        assert!(
+            nodes.iter().any(|node| {
+                node.role() == Role::Alert
+                    && node.live() == Some(Live::Assertive)
+                    && node
+                        .label()
+                        .is_some_and(|label| label.contains("finite number"))
+            }),
+            "conversion errors must be exposed as named live alerts"
+        );
     }
 }

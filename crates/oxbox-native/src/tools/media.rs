@@ -188,6 +188,7 @@ mod tests {
         let mut host = Host::new(directory.path().to_path_buf()).unwrap();
         let mut tools = MediaTools::default();
         let context = egui::Context::default();
+        context.enable_accesskit();
         for id in [
             "screenshot",
             "record-screen",
@@ -210,6 +211,15 @@ mod tests {
             // No renderer is present in this headless test; explicitly consume
             // the texture delta that a real eframe renderer uploads each frame.
             output.textures_delta.clear();
+            let nodes = output
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .into_iter()
+                .map(|(_, node)| node)
+                .collect::<Vec<_>>();
+            crate::accessibility::assert_named_controls(&nodes, id);
             tools.leave_tool(id);
         }
         let mut output = context.run_ui(egui::RawInput::default(), |ui| {

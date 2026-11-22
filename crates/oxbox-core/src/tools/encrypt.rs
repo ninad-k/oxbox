@@ -16,6 +16,10 @@ fn crypt_error(error: impl std::fmt::Display) -> CoreError {
 }
 
 const MAX_HEADER_BYTES: usize = 64 * 1024;
+// age uses scrypt r=8,p=1: its main allocation is approximately 1024 * 2^log_n
+// bytes, plus implementation overhead. Avoid CPU-calibrated unbounded RAM use.
+const ENCRYPT_WORK_FACTOR: u8 = 18;
+const MAX_DECRYPT_WORK_FACTOR: u8 = 20;
 
 /// Limit age's accumulating header parser, then lift only that budget for the
 /// streaming encrypted payload. Cancellation remains active for all reads.
@@ -111,6 +115,8 @@ fn stream_copy(
 
 /// The passphrase is moved into a zeroizing SecretString and is never included in errors.
 /// A create-new output is removed on error/cancellation; source files are never modified.
+/// New files use age scrypt factor 18; decryption refuses factors above 20.
+/// Higher-factor legacy age inputs remain intact but require another compatible tool.
 pub fn transform_file(
     source: &Path,
     output: &Path,
@@ -165,17 +171,27 @@ pub fn transform_file(
                     "this file requires an age identity rather than a passphrase".into(),
                 ));
             }
-            let identity = age::scrypt::Identity::new(passphrase);
+            let mut identity = age::scrypt::Identity::new(passphrase);
+            identity.set_max_work_factor(MAX_DECRYPT_WORK_FACTOR);
             let mut reader = decryptor
                 .decrypt(std::iter::once(&identity as &dyn age::Identity))
-                .map_err(|_| {
-                    CoreError::InvalidInput(
+                .map_err(|error| match error {
+                    age::DecryptError::ExcessiveWork { .. } => CoreError::InvalidInput(format!(
+                        "the age scrypt work factor exceeds Oxbox's safe limit ({MAX_DECRYPT_WORK_FACTOR}; approximately 1 GiB plus overhead); the original is preserved"
+                    )),
+                    _ => CoreError::InvalidInput(
                         "the passphrase is incorrect or the encrypted file is damaged".into(),
-                    )
+                    ),
                 })?;
             stream_copy(&mut reader, &mut writer, total, cancel, progress)?;
         } else {
-            let encryptor = age::Encryptor::with_user_passphrase(passphrase);
+            cancel.check()?;
+            let mut recipient = age::scrypt::Recipient::new(passphrase);
+            recipient.set_work_factor(ENCRYPT_WORK_FACTOR);
+            cancel.check()?;
+            let encryptor =
+                age::Encryptor::with_recipients(std::iter::once(&recipient as &dyn age::Recipient))
+                    .map_err(crypt_error)?;
             cancel.check()?;
             let mut encrypted = encryptor.wrap_output(&mut writer).map_err(crypt_error)?;
             stream_copy(&mut input, &mut encrypted, total, cancel, progress)?;
@@ -215,6 +231,44 @@ pub fn transform_file(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn privacy_excessive_work_is_distinct_without_running_an_expensive_kdf() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("generated-excessive.age");
+        let output = directory.path().join("must-not-leave-plaintext");
+        // Canonical 16-byte salt / 32-byte body and MAC encodings. Factor 99
+        // exceeds even age's maximum possible default (target <64, plus4), so
+        // the baseline also rejects it before scrypt. Only error policy changes.
+        let mut fixture = b"age-encryption.org/v1\n-> scrypt AAAAAAAAAAAAAAAAAAAAAA 99\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n--- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n".to_vec();
+        // Decryptor construction also consumes the 16-byte payload nonce.
+        fixture.extend_from_slice(&[0; 16]);
+        assert!(
+            bounded_decryptor(std::io::Cursor::new(&fixture), &CancelToken::default())
+                .unwrap()
+                .is_scrypt()
+        );
+        std::fs::write(&source, &fixture).unwrap();
+        let passphrase = "generated privacy passphrase sentinel";
+        let error = transform_file(
+            &source,
+            &output,
+            passphrase.into(),
+            true,
+            &CancelToken::default(),
+            &mut |_| {},
+        )
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("work factor exceeds Oxbox's safe limit"),
+            "{error}"
+        );
+        assert!(!error.to_string().contains(passphrase));
+        assert!(!output.exists());
+        assert_eq!(std::fs::read(source).unwrap(), fixture);
+    }
+
     #[test]
     fn release_media_bounds_reject_oversized_age_header_before_reading_it_all() {
         let mut bytes = b"age-encryption.org/v1\n-> scrypt ".to_vec();
@@ -267,6 +321,11 @@ mod tests {
         )
         .unwrap();
         assert!(source.exists());
+        let mut header = BufReader::new(File::open(&encrypted).unwrap()).lines();
+        assert_eq!(header.next().unwrap().unwrap(), "age-encryption.org/v1");
+        let recipient = header.next().unwrap().unwrap();
+        assert!(recipient.starts_with("-> scrypt "));
+        assert!(recipient.ends_with(" 18"), "{recipient}");
         assert!(
             transform_file(
                 &encrypted,

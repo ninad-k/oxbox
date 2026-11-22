@@ -349,12 +349,14 @@ impl ImageTools {
             &["mp4", "webm", "mov", "mkv", "avi"],
         );
         ui.horizontal(|ui| {
-            ui.label("Start (seconds)");
-            ui.add(egui::DragValue::new(&mut self.gif_start).range(0.0..=604800.0));
+            let label = ui.label("Start (seconds)");
+            ui.add(egui::DragValue::new(&mut self.gif_start).range(0.0..=604800.0))
+                .labelled_by(label.id);
         });
         ui.horizontal(|ui| {
-            ui.label("Duration (seconds)");
-            ui.add(egui::DragValue::new(&mut self.gif_seconds).range(0.1..=60.0));
+            let label = ui.label("Duration (seconds)");
+            ui.add(egui::DragValue::new(&mut self.gif_seconds).range(0.1..=60.0))
+                .labelled_by(label.id);
         });
         widgets::number(ui, "Frame rate", &mut self.gif_fps, 1..=30);
         widgets::number(ui, "Width (pixels)", &mut self.gif_width, 16..=1280);

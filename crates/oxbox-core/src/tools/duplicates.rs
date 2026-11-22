@@ -11,7 +11,7 @@ use std::{
     fs::{self, File},
     io::{BufReader, Read},
     path::{Path, PathBuf},
-    time::UNIX_EPOCH,
+    time::{SystemTime, UNIX_EPOCH},
 };
 use walkdir::WalkDir;
 
@@ -20,13 +20,17 @@ use walkdir::WalkDir;
 pub struct DuplicateFile {
     pub path: PathBuf,
     pub modified_ms: u64,
+    #[serde(skip)]
+    modified: Option<SystemTime>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DuplicateGroup {
     pub size: u64,
     pub files: Vec<DuplicateFile>,
+    #[serde(skip)]
+    fingerprint: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -37,9 +41,125 @@ pub struct DuplicateResult {
     pub scanned_files: u64,
 }
 
+/// Verify a duplicate scan again before moving only the reviewed paths to Trash.
+pub fn trash_selected(
+    groups: &[DuplicateGroup],
+    selected: &[PathBuf],
+    cancel: &CancelToken,
+    progress: &mut dyn FnMut(Progress),
+) -> CoreResult<usize> {
+    trash_selected_with(
+        groups,
+        selected,
+        cancel,
+        progress,
+        crate::fs_safe::move_to_trash,
+    )
+}
+
+fn trash_selected_with(
+    groups: &[DuplicateGroup],
+    selected: &[PathBuf],
+    cancel: &CancelToken,
+    progress: &mut dyn FnMut(Progress),
+    trash: impl FnOnce(&[PathBuf]) -> CoreResult<usize>,
+) -> CoreResult<usize> {
+    cancel.check()?;
+    let changed = || {
+        CoreError::InvalidInput("duplicate files changed; scan and review the selection again before moving anything to Trash".into())
+    };
+    if selected.is_empty() {
+        return Err(changed());
+    }
+    let mut checked = Vec::with_capacity(selected.len());
+    for path in selected {
+        cancel.check()?;
+        checked.push(crate::fs_safe::validate_trash_path(path)?);
+    }
+    let chosen: HashSet<_> = checked.iter().cloned().collect();
+    if chosen.len() != checked.len() {
+        return Err(changed());
+    }
+    let affected: Vec<_> = groups
+        .iter()
+        .filter(|group| group.files.iter().any(|file| chosen.contains(&file.path)))
+        .collect();
+    let mut covered = HashSet::new();
+    for group in &affected {
+        if group.files.len() < 2
+            || group.fingerprint.is_empty()
+            || group.files.iter().all(|file| chosen.contains(&file.path))
+        {
+            return Err(changed());
+        }
+        for file in &group.files {
+            if chosen.contains(&file.path) && !covered.insert(&file.path) {
+                return Err(changed());
+            }
+        }
+    }
+    if covered.len() != chosen.len() {
+        return Err(changed());
+    }
+    let total = affected.iter().fold(0_u64, |total, group| {
+        total.saturating_add(group.files.len() as u64)
+    });
+    let mut done = 0;
+    // Re-read both selected copies and the copies that must remain. No OS Trash
+    // call is allowed until every affected group matches its original content.
+    for group in &affected {
+        for file in &group.files {
+            cancel.check()?;
+            validate_snapshot(file, group.size).map_err(|_| changed())?;
+            if hash(&file.path, false, cancel)? != group.fingerprint {
+                return Err(changed());
+            }
+            validate_snapshot(file, group.size).map_err(|_| changed())?;
+            done += 1;
+            progress(Progress {
+                done,
+                total,
+                message: "Revalidating copies and kept files before Trash".into(),
+            });
+        }
+    }
+    // Also catch ordinary changes to earlier files while the other groups were
+    // being read. This is a preflight, not an atomic multi-file transaction.
+    for group in affected {
+        for file in &group.files {
+            cancel.check()?;
+            validate_snapshot(file, group.size).map_err(|_| changed())?;
+        }
+    }
+    cancel.check()?;
+    trash(&checked)
+}
+
+fn validate_snapshot(file: &DuplicateFile, size: u64) -> CoreResult<()> {
+    reject_symlink_components(&file.path)?;
+    let metadata = fs::symlink_metadata(&file.path)?;
+    if !metadata.is_file() || metadata.len() != size || metadata.modified().ok() != file.modified {
+        return Err(CoreError::InvalidInput(
+            "duplicate file no longer matches its scan snapshot".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn hash(path: &Path, prefix_only: bool, cancel: &CancelToken) -> CoreResult<String> {
     reject_symlink_components(path)?;
-    let mut reader = BufReader::new(File::open(path)?);
+    if !fs::symlink_metadata(path)?.is_file() {
+        return Err(CoreError::InvalidInput(
+            "duplicate comparison needs regular files".into(),
+        ));
+    }
+    let file = File::open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(CoreError::InvalidInput(
+            "duplicate comparison needs regular files".into(),
+        ));
+    }
+    let mut reader = BufReader::new(file);
     let mut hasher = blake3::Hasher::new();
     let mut buffer = [0_u8; 64 * 1024];
     loop {
@@ -124,15 +244,18 @@ pub fn find_duplicates(
                 .map_err(|e| CoreError::Io(std::io::Error::other(e.to_string())))?;
             scanned_files += 1;
             if metadata.len() > 0 {
-                let modified_ms = metadata
-                    .modified()
-                    .ok()
+                let modified = metadata.modified().ok();
+                let modified_ms = modified
                     .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
                     .map_or(0, |t| t.as_millis().min(u64::MAX as u128) as u64);
                 sizes
                     .entry(metadata.len())
                     .or_default()
-                    .push(DuplicateFile { path, modified_ms });
+                    .push(DuplicateFile {
+                        path,
+                        modified_ms,
+                        modified,
+                    });
             }
             progress(Progress {
                 done: scanned_files,
@@ -170,11 +293,15 @@ pub fn find_duplicates(
                     message: "Comparing file contents".into(),
                 });
             }
-            for mut files in full.into_values().filter(|g| g.len() > 1) {
+            for (fingerprint, mut files) in full.into_iter().filter(|(_, group)| group.len() > 1) {
                 files.sort_by(|a, b| a.path.cmp(&b.path));
                 wasted_bytes =
                     wasted_bytes.saturating_add(size.saturating_mul((files.len() - 1) as u64));
-                groups.push(DuplicateGroup { size, files });
+                groups.push(DuplicateGroup {
+                    size,
+                    files,
+                    fingerprint,
+                });
             }
         }
     }
@@ -195,6 +322,138 @@ pub fn find_duplicates(
 mod tests {
     use super::*;
     use crate::jobs::CancelToken;
+
+    fn cleanup_fixture() -> (tempfile::TempDir, DuplicateResult, PathBuf, PathBuf) {
+        let directory = tempfile::tempdir().unwrap();
+        let keeper = directory.path().join("keeper.bin");
+        let selected = directory.path().join("selected.bin");
+        fs::write(&keeper, b"aaaa").unwrap();
+        fs::write(&selected, b"aaaa").unwrap();
+        let result = find_duplicates(
+            &[directory.path().to_path_buf()],
+            false,
+            &CancelToken::default(),
+            &mut |_| {},
+        )
+        .unwrap();
+        (
+            directory,
+            result,
+            selected.canonicalize().unwrap(),
+            keeper.canonicalize().unwrap(),
+        )
+    }
+
+    #[test]
+    fn trash_rejects_removed_or_changed_keeper_and_changed_selected_before_any_effect() {
+        for mutation in [
+            "remove-keeper",
+            "change-keeper",
+            "change-selected",
+            "change-both-preserved-mtime",
+        ] {
+            let (_directory, result, selected, keeper) = cleanup_fixture();
+            match mutation {
+                "remove-keeper" => fs::remove_file(&keeper).unwrap(),
+                "change-keeper" => fs::write(&keeper, b"bbbb").unwrap(),
+                "change-both-preserved-mtime" => {
+                    for file in &result.groups[0].files {
+                        fs::write(&file.path, b"bbbb").unwrap();
+                        let handle = fs::OpenOptions::new().write(true).open(&file.path).unwrap();
+                        handle
+                            .set_times(fs::FileTimes::new().set_modified(file.modified.unwrap()))
+                            .unwrap();
+                    }
+                }
+                _ => fs::write(&selected, b"bbbb").unwrap(),
+            }
+            let mut called = false;
+            let outcome = trash_selected_with(
+                &result.groups,
+                std::slice::from_ref(&selected),
+                &CancelToken::default(),
+                &mut |_| {},
+                |paths| {
+                    called = true;
+                    Ok(paths.len())
+                },
+            );
+            assert!(
+                outcome.is_err(),
+                "stale duplicate scan accepted: {mutation}"
+            );
+            assert!(!called, "Trash invoked before full preflight: {mutation}");
+            assert!(selected.is_file());
+        }
+    }
+
+    #[test]
+    fn trash_refuses_whole_groups_and_unreviewed_paths() {
+        let (directory, result, selected, keeper) = cleanup_fixture();
+        let other = directory.path().join("other.bin");
+        fs::write(&other, b"aaaa").unwrap();
+        for paths in [
+            vec![selected.clone(), keeper],
+            vec![other.canonicalize().unwrap()],
+        ] {
+            let mut called = false;
+            assert!(
+                trash_selected_with(
+                    &result.groups,
+                    &paths,
+                    &CancelToken::default(),
+                    &mut |_| {},
+                    |_| {
+                        called = true;
+                        Ok(1)
+                    }
+                )
+                .is_err()
+            );
+            assert!(!called);
+        }
+    }
+
+    #[test]
+    fn trash_validates_all_copies_but_sends_only_the_confirmed_selection() {
+        let (_directory, result, selected, keeper) = cleanup_fixture();
+        let mut received = Vec::new();
+        let count = trash_selected_with(
+            &result.groups,
+            std::slice::from_ref(&selected),
+            &CancelToken::default(),
+            &mut |_| {},
+            |paths| {
+                received = paths.to_vec();
+                Ok(paths.len())
+            },
+        )
+        .unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(received, [selected]);
+        assert!(keeper.is_file());
+    }
+
+    #[test]
+    fn trash_cancellation_during_revalidation_never_reaches_the_effect() {
+        let (_directory, result, selected, keeper) = cleanup_fixture();
+        let cancel = CancelToken::default();
+        let stop = cancel.clone();
+        let mut called = false;
+        let outcome = trash_selected_with(
+            &result.groups,
+            std::slice::from_ref(&selected),
+            &cancel,
+            &mut |_| stop.cancel(),
+            |_| {
+                called = true;
+                Ok(1)
+            },
+        );
+        assert_eq!(outcome.unwrap_err().code(), "cancelled");
+        assert!(!called);
+        assert!(selected.is_file() && keeper.is_file());
+    }
 
     #[test]
     fn groups_identical_files_and_ignores_empty_and_different_content() {

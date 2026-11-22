@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertNativeGraph, nativeBuildEnvironment, parseOptions, bundleConfiguration, windowsResourceDefinition, portableResources, patchNsisUninstall } from './build-native.mjs';
+import fs from 'node:fs';
+import { assertNativeGraph, nativeBuildEnvironment, parseOptions, bundleConfiguration, windowsResourceDefinition, portableResources, patchNsisUninstall, patchNsisRunningCheck } from './build-native.mjs';
 
 const metadata = (nodes, extra = []) => ({
   workspace_members: ['native', 'legacy'],
@@ -89,4 +90,27 @@ test('NSIS uninstall cleans only an owned startup command before deleting the ex
   assert.doesNotMatch(output, /DeleteRegValue HKCU/);
   assert.equal(patchNsisUninstall(output), output);
   assert.throws(() => patchNsisUninstall('unknown future template'), /template/);
+});
+
+test('NSIS install and uninstall refuse a running app without a force-shutdown path', () => {
+  const source = 'before\r\n!macro CheckIfAppIsRunning executablePath productName\r\n  System::Call \'RSTRTMGR::RmShutdown(p R0, i ${RmForceShutdown}, p 0) i .r0\'\r\n!macroend\r\nafter\r\n';
+  const output = patchNsisRunningCheck(source);
+  assert.match(output, /RmGetList/);
+  assert.match(output, /RestartManager_RegisterFile/);
+  assert.match(output, /ERROR_MORE_DATA/);
+  assert.match(output, /Quit.*tray menu/);
+  assert.match(output, /SetErrorLevel 2/);
+  assert.match(output, /Abort/);
+  assert.doesNotMatch(output, /RmShutdown|RmForceShutdown|KillProcess|TerminateProcess/);
+  assert.ok(output.startsWith('before\n'));
+  assert.ok(output.endsWith('after\n'));
+  assert.equal(patchNsisRunningCheck(output), output);
+  assert.throws(() => patchNsisRunningCheck('unknown future template'), /template/);
+  assert.throws(() => patchNsisRunningCheck(`${source}${source}`), /template/);
+  assert.throws(() => patchNsisRunningCheck(output.replace('SetErrorLevel 2', 'SetErrorLevel 0')), /modified/);
+});
+
+test('MSI keeps files-in-use detection but disables automatic Restart Manager shutdown', () => {
+  const fragment = fs.readFileSync(new URL('../packaging/native/uninstall.wxs', import.meta.url), 'utf8');
+  assert.match(fragment, /<Property\s+Id="MSIRESTARTMANAGERCONTROL"\s+Value="DisableShutdown"\s*\/>/);
 });

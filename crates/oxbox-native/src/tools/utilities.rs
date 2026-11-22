@@ -83,7 +83,7 @@ pub(super) fn bytes(value: u64) -> String {
     format!("{amount:.1} {}", units[index])
 }
 pub(super) fn issue(ui: &mut Ui, error: impl std::fmt::Display) {
-    ui.label(format!("Error: {error}"));
+    crate::accessibility::alert(ui, error);
 }
 
 #[cfg(test)]
@@ -99,6 +99,7 @@ mod tests {
         let mut host = Host::new(directory.path().to_path_buf()).unwrap();
         let mut tools = UtilitiesTools::default();
         let context = eframe::egui::Context::default();
+        context.enable_accesskit();
         for id in [
             "transform-text",
             "unit-converter",
@@ -119,6 +120,15 @@ mod tests {
             });
             // Headless rendering has no GPU painter to consume font-atlas updates.
             output.textures_delta.clear();
+            let nodes = output
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .into_iter()
+                .map(|(_, node)| node)
+                .collect::<Vec<_>>();
+            crate::accessibility::assert_named_controls(&nodes, id);
         }
         let mut output = context.run_ui(eframe::egui::RawInput::default(), |ui| {
             assert!(!tools.show(ui, "unknown-tool", &mut host))

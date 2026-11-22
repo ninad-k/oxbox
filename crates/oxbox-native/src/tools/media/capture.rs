@@ -143,7 +143,7 @@ impl CaptureUi {
             .filter(|target| target.kind == kind)
             .collect();
         if self.mode != 2 {
-            egui::ComboBox::from_id_salt("capture target")
+            egui::ComboBox::from_label("Capture target")
                 .selected_text(
                     choices
                         .get(self.selected)

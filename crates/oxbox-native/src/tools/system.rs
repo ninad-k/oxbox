@@ -197,7 +197,7 @@ impl SystemTools {
                 false
             };
         if handled && let Some(error) = &self.error {
-            ui.label(format!("Error: {error}"));
+            crate::accessibility::alert(ui, error);
         }
         handled
     }
@@ -357,5 +357,46 @@ impl SystemTools {
         self.apps.shutdown();
         self.banner_task.shutdown();
         self.runtime.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod accessibility_tests {
+    use super::*;
+
+    #[test]
+    fn all_system_forms_have_named_controls_without_starting_os_jobs() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let mut tools = SystemTools::default();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        // Deny task admission before rendering. No OS-reading or OS-changing
+        // job may run just to check the source forms' accessibility names.
+        let registry = crate::jobs::register_context(&context);
+        registry.close();
+        let mut count = 0;
+        for tool in oxbox_core::launcher::Catalog::bundled().unwrap().tools {
+            let mut handled = false;
+            let mut output = context.run_ui(egui::RawInput::default(), |ui| {
+                handled = tools.show(ui, &tool.id, &mut host);
+            });
+            output.textures_delta.clear();
+            if handled {
+                count += 1;
+                let nodes = output
+                    .platform_output
+                    .accesskit_update
+                    .unwrap()
+                    .nodes
+                    .into_iter()
+                    .map(|(_, node)| node)
+                    .collect::<Vec<_>>();
+                crate::accessibility::assert_named_controls(&nodes, &tool.id);
+            }
+        }
+        tools.shutdown();
+        host.shutdown();
+        assert_eq!(count, 22);
     }
 }

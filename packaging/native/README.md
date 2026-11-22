@@ -29,6 +29,13 @@ node scripts/build-native.mjs --bundle --target x86_64-apple-darwin
 node scripts/build-native.mjs --bundle --target x86_64-unknown-linux-gnu
 ```
 
+The [installer acceptance protocol](../../docs/INSTALLER_ACCEPTANCE.md) includes a no-install verifier:
+`node scripts/verify-native-installers.mjs --expected-exe-sha256 <reviewed-sha256>`. It compares the downloaded
+draft checksums, extracts/hash-matches the MSI and checks generated NSIS/compiler inputs without executing
+installers or the app. Run its fake-input regressions with
+`node --test scripts/verify-native-installers.test.mjs`. Independent NSIS extraction and clean-machine
+execution remain separate gates.
+
 The default output root is `target/native-dist`; `CARGO_TARGET_DIR` overrides it. An explicit Rust
 target is always passed, including for the default host. MSVC builds append `+crt-static` only to the
 target build so proc-macro/build-script host binaries keep their normal compiler settings. The binary
@@ -71,6 +78,11 @@ MSI links the small [WiX fragment](uninstall.wxs). For NSIS, the script narrowly
 stock uninstall section to replace its unconditional Run deletion, then recompiles with the same
 cached `makensis.exe`. An unknown template layout fails the build instead of silently bypassing
 the ownership guard. Compiler/source inspection is separate from clean-machine uninstall acceptance.
+The generated NSIS running-app helper also refuses to continue until an active Oxbox has been explicitly
+quit through the tray; it never force-stops the process. The MSI disables automatic Restart Manager shutdown
+while retaining files-in-use detection. This protects application-owned services and restoration from an
+installer-triggered forced termination; actual running-app install/upgrade/uninstall behavior still needs
+the disposable-machine acceptance pass.
 
 [The release workflow](../../.github/workflows/release.yml) runs only on `v*` tags or explicit manual
 dispatch for an existing tag whose version matches Cargo. It builds Windows x64, macOS arm64/x64 and

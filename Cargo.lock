@@ -5145,6 +5145,7 @@ dependencies = [
  "flate2",
  "image",
  "keepawake",
+ "libc",
  "md-5",
  "qrcode",
  "rqrr",

@@ -318,3 +318,25 @@ minimum-toolchain check, and legacy UI/packaging regressions. macOS Intel runtim
 
 Full per-tool/hardware/monitor/accessibility acceptance, real install/login/upgrade/uninstall, independent
 security/license review, DNS coverage and other-OS runtime observation remain open. See [RELEASE.md](RELEASE.md).
+
+## Parallel release review fixes — 2026-11-22
+
+- User requested parallel installer/privacy/accessibility/security checks, fixes, commit/push and a draft-only
+  release. No disposable Windows VM was available; the user explicitly kept clean-machine acceptance pending.
+- Observed failing regressions for stale duplicate keeper/selection cleanup, inherited provider pipes delaying
+  timeout/exit, password undo retention, ambiguous row controls, archive/capture labels and unannounced errors.
+  The process regressions previously took about 4.12 seconds each; both now pass in 0.58 seconds combined.
+- The user approved promoting already-locked `libc = 0.2.191` to a Unix-only direct dependency for typed
+  waitid/WNOWAIT ownership. No resolved dependency version changed; the lockfile only adds the core edge.
+- Exact Rust 1.95.0 all-target strict Clippy and formatting passed. Integrated tests passed **208 core + 64 native**,
+  zero failed/ignored; core 106.16 seconds, native 0.31 seconds. Generated fixtures avoid real Trash, device,
+  clipboard or network effects. The real provider-process tests use bounded self-reexecuting test fixtures.
+- AccessKit name checks now cover all 49 default forms, with the 22 system forms denying task admission before
+  rendering; expanded/two-row/error/password fixtures are separate regressions. This is not screen-reader acceptance.
+- Packaging/notice/installer regressions passed 18/18, and Windows endpoint-observer argument guards passed 2/2.
+  Native Windows notices regenerated/verified: 355 packages, zero missing texts, three human attribution reviews.
+- Fresh audit invocation retained zero vulnerability entries, eight maintenance warnings and one GLib unsoundness
+  warning using advisory DB `55e1c3dfbd834237a05bbbf7b50ba3b5be27b662`. Primary metadata still has no compatible
+  published GLib 0.18 patch. Human review and Linux remediation remain open; no advisory was suppressed.
+- Existing GitHub Actions versions are pinned to verified upstream commits. Checks above precede rebuilt
+  installer/runtime verification, which must be recorded for the actual replacement executable and source.

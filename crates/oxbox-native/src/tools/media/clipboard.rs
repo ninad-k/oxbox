@@ -139,26 +139,29 @@ impl ClipboardUi {
                 );
             }
             egui::ScrollArea::vertical().max_height(350.0).show(ui,|ui|{for item in &snapshot.items{
+                ui.push_id(item.id, |ui| {
+                let context = format!("{} item {}", item.kind, item.id);
                 ui.group(|ui|{
-                    ui.horizontal(|ui|{ui.strong(if item.kind=="image"{"Image"}else{"Text"});ui.small(format!("{} bytes{}",item.bytes,if item.pinned{" · Pinned"}else{""}));});
+                    ui.horizontal(|ui|{ui.strong(&context);ui.small(format!("{} bytes{}",item.bytes,if item.pinned{" · Pinned"}else{""}));});
                     ui.label(&item.preview);
                     ui.horizontal(|ui|{
-                        if ui.add_enabled(!self.action.running(),egui::Button::new("Copy back")).clicked(){let service=shared.clipboard.clone();let id=item.id;self.action.start(ui.ctx(),move|cancel,_|{cancel.check()?;service.copy(id)});}
-                        if ui.button(if item.pinned{"Unpin"}else{"Pin"}).clicked(){self.error=shared.clipboard.pin(item.id,!item.pinned).err().map(|error|error.to_string());self.last=Instant::now()-Duration::from_secs(1);}
-                        if item.kind=="image" && ui.add_enabled(!self.preview_job.running(),egui::Button::new("Preview image")).clicked(){
+                        if crate::accessibility::enabled_button(ui,!self.action.running(),"Copy back",&format!("Copy {context} back")).clicked(){let service=shared.clipboard.clone();let id=item.id;self.action.start(ui.ctx(),move|cancel,_|{cancel.check()?;service.copy(id)});}
+                        if crate::accessibility::button(ui,if item.pinned{"Unpin"}else{"Pin"},&format!("{} {context}",if item.pinned{"Unpin"}else{"Pin"})).clicked(){self.error=shared.clipboard.pin(item.id,!item.pinned).err().map(|error|error.to_string());self.last=Instant::now()-Duration::from_secs(1);}
+                        if item.kind=="image" && crate::accessibility::enabled_button(ui,!self.preview_job.running(),"Preview image",&format!("Preview {context}")).clicked(){
                             self.selected=Some(item.id);let service=shared.clipboard.clone();let id=item.id;
                             self.preview_job.start(ui.ctx(),move|cancel,_|{cancel.check()?;let Content::Image{width,height,rgba}=service.content(id)? else{return Err(CoreError::InvalidInput("this entry is not an image".into()))};
                                 let width=u32::try_from(width).map_err(|_|CoreError::InvalidInput("image width is invalid".into()))?;let height=u32::try_from(height).map_err(|_|CoreError::InvalidInput("image height is invalid".into()))?;
                                 let image=RgbaImage::from_raw(width,height,rgba).ok_or_else(||CoreError::InvalidInput("image data is invalid".into()))?;Ok(Asset::new(image))});
                         }
-                        if ui.button("Remove…").clicked() && widgets::confirm(ui.ctx(),"Remove remembered item?","Remove this item from Oxbox's in-memory history? The system clipboard is unchanged."){
+                        if crate::accessibility::button(ui,"Remove…",&format!("Remove {context}")).clicked() && widgets::confirm(ui.ctx(),"Remove remembered item?","Remove this item from Oxbox's in-memory history? The system clipboard is unchanged."){
                             self.error=shared.clipboard.delete(item.id).err().map(|error|error.to_string());if self.selected==Some(item.id){self.preview=Preview::default();self.selected=None;self.preview_job.cancel();}self.last=Instant::now()-Duration::from_secs(1);
                         }
                     });
                 });
+                });
             }});
         }
-        self.snapshot_job.show(ui);
+        self.snapshot_job.show_quiet(ui);
         self.action.show(ui);
         self.preview_job.show(ui);
         widgets::error(ui, &self.error);
@@ -223,6 +226,50 @@ mod tests {
         atomic::{AtomicBool, Ordering},
         mpsc,
     };
+
+    #[test]
+    fn generated_clipboard_rows_have_distinct_named_actions_without_observing_clipboard() {
+        use oxbox_core::tools::clipboard_history::EntrySummary;
+        let mut view = ClipboardUi {
+            snapshot: Some(Snapshot {
+                paused: true,
+                bytes: 16,
+                total_items: 2,
+                error: None,
+                items: [(1, "text"), (2, "image")]
+                    .into_iter()
+                    .map(|(id, kind)| EntrySummary {
+                        id,
+                        kind,
+                        pinned: false,
+                        captured_at: 0,
+                        preview: format!("Generated {kind} fixture"),
+                        bytes: 8,
+                    })
+                    .collect(),
+            }),
+            ..Default::default()
+        };
+        let shared = Shared::default();
+        let nodes = crate::accessibility::test_tree(|ui| view.show(ui, &shared));
+        let labels = nodes
+            .iter()
+            .filter_map(|node| node.label())
+            .collect::<Vec<_>>();
+        for label in [
+            "Copy text item 1 back",
+            "Remove text item 1",
+            "Copy image item 2 back",
+            "Remove image item 2",
+        ] {
+            assert!(
+                labels.contains(&label),
+                "missing clipboard action name: {label}"
+            );
+        }
+        assert!(shared.clipboard.snapshot("").unwrap().paused);
+        view.shutdown();
+    }
 
     #[test]
     fn pause_joins_an_older_start_before_applying_the_final_paused_state() {

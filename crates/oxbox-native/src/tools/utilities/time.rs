@@ -399,10 +399,22 @@ impl TimeTools {
             ui.push_id(("alarm-banner", alarm.id), |ui| {
                 ui.horizontal(|ui| {
                     ui.label(format!("Alarm: {}", alarm.input.label));
-                    if ui.button("Snooze 5 minutes").clicked() {
+                    if crate::accessibility::button(
+                        ui,
+                        "Snooze 5 minutes",
+                        &format!("Snooze alarm {} for 5 minutes", alarm.input.label),
+                    )
+                    .clicked()
+                    {
                         action = Some((alarm.id, true));
                     }
-                    if ui.button("Dismiss alarm").clicked() {
+                    if crate::accessibility::button(
+                        ui,
+                        "Dismiss alarm",
+                        &format!("Dismiss alarm {}", alarm.input.label),
+                    )
+                    .clicked()
+                    {
                         action = Some((alarm.id, false));
                     }
                 });
@@ -600,16 +612,39 @@ impl TimeTools {
                     ));
                 }
                 ui.horizontal(|ui| {
-                    if ui.add_enabled(index > 0, egui::Button::new("Up")).clicked() {
+                    if ui
+                        .add_enabled_ui(index > 0, |ui| {
+                            crate::accessibility::button(
+                                ui,
+                                "Up",
+                                &format!("Move world clock {zone} up"),
+                            )
+                        })
+                        .inner
+                        .clicked()
+                    {
                         action = Some((index, -1));
                     }
                     if ui
-                        .add_enabled(index + 1 < state.zones.len(), egui::Button::new("Down"))
+                        .add_enabled_ui(index + 1 < state.zones.len(), |ui| {
+                            crate::accessibility::button(
+                                ui,
+                                "Down",
+                                &format!("Move world clock {zone} down"),
+                            )
+                        })
+                        .inner
                         .clicked()
                     {
                         action = Some((index, 1));
                     }
-                    if ui.button("Remove").clicked() {
+                    if crate::accessibility::button(
+                        ui,
+                        "Remove",
+                        &format!("Remove world clock {zone}"),
+                    )
+                    .clicked()
+                    {
                         action = Some((index, 0));
                     }
                 });
@@ -729,19 +764,43 @@ impl TimeTools {
                     if alarm.ringing { " · RINGING" } else { "" }
                 ));
                 ui.horizontal(|ui| {
-                    if ui
-                        .button(if alarm.enabled { "Disable" } else { "Enable" })
-                        .clicked()
+                    let verb = if alarm.enabled { "Disable" } else { "Enable" };
+                    if crate::accessibility::button(
+                        ui,
+                        verb,
+                        &format!("{verb} alarm {}", alarm.input.label),
+                    )
+                    .clicked()
                     {
                         action = Some((alarm.id, 0, !alarm.enabled));
                     }
-                    if alarm.ringing && ui.button("Snooze 5 minutes").clicked() {
+                    if alarm.ringing
+                        && crate::accessibility::button(
+                            ui,
+                            "Snooze 5 minutes",
+                            &format!("Snooze alarm {} for 5 minutes", alarm.input.label),
+                        )
+                        .clicked()
+                    {
                         action = Some((alarm.id, 1, true));
                     }
-                    if alarm.ringing && ui.button("Dismiss").clicked() {
+                    if alarm.ringing
+                        && crate::accessibility::button(
+                            ui,
+                            "Dismiss",
+                            &format!("Dismiss alarm {}", alarm.input.label),
+                        )
+                        .clicked()
+                    {
                         action = Some((alarm.id, 2, true));
                     }
-                    if ui.button("Remove").clicked() {
+                    if crate::accessibility::button(
+                        ui,
+                        "Remove",
+                        &format!("Remove alarm {}", alarm.input.label),
+                    )
+                    .clicked()
+                    {
                         action = Some((alarm.id, 3, false));
                     }
                 });
@@ -805,7 +864,13 @@ impl TimeTools {
                         ""
                     }
                 ));
-                if ui.button("Remove").clicked() {
+                if crate::accessibility::button(
+                    ui,
+                    "Remove",
+                    &format!("Remove date countdown {}", snapshot.item.input.label),
+                )
+                .clicked()
+                {
                     remove = Some(snapshot.item.id);
                 }
             });
@@ -906,5 +971,95 @@ impl TimeTools {
 impl Drop for TimeTools {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod accessibility_tests {
+    use super::*;
+
+    fn names(nodes: &[egui::accesskit::Node]) -> Vec<&str> {
+        nodes
+            .iter()
+            .filter(|node| node.role() == egui::accesskit::Role::Button)
+            .filter_map(|node| node.label())
+            .collect()
+    }
+
+    #[test]
+    fn two_time_rows_have_distinct_named_actions_without_starting_workers() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let mut tools = TimeTools::default();
+        tools.loaded = true;
+        {
+            let mut state = tools.state.lock().unwrap();
+            state.ready = true;
+            state.zones = vec!["UTC".into(), "Asia/Tokyo".into()];
+            for (id, label) in [(1, "Morning"), (2, "Evening")] {
+                state.alarms.items.push(Alarm {
+                    id,
+                    input: AlarmInput {
+                        label: label.into(),
+                        local_date_time: "2100-01-01T12:00".into(),
+                        zone: "UTC".into(),
+                        recurrence: Recurrence::Once,
+                        ambiguity: Ambiguity::Earlier,
+                    },
+                    next_at: 4_102_444_800,
+                    enabled: id == 1,
+                    ringing: true,
+                    last_fired: None,
+                });
+                state.countdowns.items.push(Countdown {
+                    id,
+                    input: CountdownInput {
+                        label: label.into(),
+                        local_date_time: "2100-01-01T12:00".into(),
+                        zone: "UTC".into(),
+                        notify: false,
+                        ambiguity: Ambiguity::Earlier,
+                    },
+                    target: 4_102_444_800,
+                    notified: true,
+                });
+            }
+        }
+        let alarms = crate::accessibility::test_tree(|ui| tools.alarms(ui, &mut host));
+        for label in ["Morning", "Evening"] {
+            for expected in [
+                format!("Remove alarm {label}"),
+                format!("Snooze alarm {label} for 5 minutes"),
+                format!("Dismiss alarm {label}"),
+            ] {
+                assert!(
+                    names(&alarms).contains(&expected.as_str()),
+                    "missing alarm action {expected}"
+                );
+            }
+        }
+        assert!(names(&alarms).contains(&"Disable alarm Morning"));
+        assert!(names(&alarms).contains(&"Enable alarm Evening"));
+        let banners = crate::accessibility::test_tree(|ui| tools.banners(ui, &mut host));
+        for label in ["Morning", "Evening"] {
+            assert!(
+                names(&banners).contains(&format!("Snooze alarm {label} for 5 minutes").as_str())
+            );
+            assert!(names(&banners).contains(&format!("Dismiss alarm {label}").as_str()));
+        }
+        let dates = crate::accessibility::test_tree(|ui| tools.dates(ui, &mut host));
+        for label in ["Morning", "Evening"] {
+            assert!(names(&dates).contains(&format!("Remove date countdown {label}").as_str()));
+        }
+        let world = crate::accessibility::test_tree(|ui| tools.world(ui, &mut host));
+        for zone in ["UTC", "Asia/Tokyo"] {
+            assert!(names(&world).contains(&format!("Remove world clock {zone}").as_str()));
+            assert!(names(&world).contains(&format!("Move world clock {zone} up").as_str()));
+            assert!(names(&world).contains(&format!("Move world clock {zone} down").as_str()));
+        }
+        assert!(tools.worker.is_none());
+        assert_eq!(tools.state.lock().unwrap().alarms.items.len(), 2);
+        tools.shutdown();
+        host.shutdown();
     }
 }

@@ -9,7 +9,7 @@ use std::{
     fs::{self, OpenOptions},
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Command, Stdio},
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, AtomicU64, Ordering},
@@ -17,6 +17,9 @@ use std::{
     thread::JoinHandle,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+#[path = "../platform/provider_process.rs"]
+mod provider_process;
+use provider_process::ManagedChild;
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 const MAX_OUTPUT: u64 = 20 * 1024 * 1024 * 1024;
 fn invalid(message: impl Into<String>) -> CoreError {
@@ -35,7 +38,7 @@ pub struct TemporaryFolder {
 }
 impl TemporaryFolder {
     pub fn new(parent: &Path) -> CoreResult<Self> {
-        let parent = parent.canonicalize()?;
+        let parent = canonical_local_path(parent)?;
         if !parent.is_dir() {
             return Err(invalid("choose an existing output folder"));
         }
@@ -118,10 +121,11 @@ impl OutputPlan {
         {
             return Err(invalid(format!("choose a .{extension} output filename")));
         }
-        let parent = output
-            .parent()
-            .ok_or_else(|| invalid("choose an output filename"))?
-            .canonicalize()?;
+        let parent = canonical_local_path(
+            output
+                .parent()
+                .ok_or_else(|| invalid("choose an output filename"))?,
+        )?;
         let destination = parent.join(
             output
                 .file_name()
@@ -181,6 +185,81 @@ impl OutputPlan {
     }
 }
 
+#[cfg(windows)]
+fn windows_local_drive(path: &Path) -> CoreResult<u8> {
+    use std::path::{Component, Prefix};
+    match path.components().next() {
+        Some(Component::Prefix(prefix)) if path.is_absolute() => match prefix.kind() {
+            Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => Ok(drive),
+            _ => Err(invalid(
+                "media providers require a local disk path, not a network or device path",
+            )),
+        },
+        _ => Err(invalid(
+            "media providers require a fully qualified local disk path",
+        )),
+    }
+}
+
+#[cfg(windows)]
+fn local_drive_type(kind: u32) -> bool {
+    // GetDriveTypeW: removable, fixed, optical and RAM disks are local. Unknown,
+    // absent and remote drives fail closed before any file metadata is queried.
+    matches!(kind, 2 | 3 | 5 | 6)
+}
+
+fn provider_folder_allowed(folder: &Path) -> bool {
+    if !folder.is_absolute() {
+        return false;
+    }
+    #[cfg(windows)]
+    {
+        windows_local_drive(folder).is_ok()
+    }
+    #[cfg(not(windows))]
+    {
+        true
+    }
+}
+
+fn canonical_local_path(path: &Path) -> CoreResult<PathBuf> {
+    #[cfg(windows)]
+    {
+        use std::path::Component;
+        if !path.is_absolute()
+            && (path.has_root() || matches!(path.components().next(), Some(Component::Prefix(_))))
+        {
+            return Err(invalid("choose a fully qualified local disk path"));
+        }
+        let absolute = std::path::absolute(path)?;
+        validate_local_drive(&absolute)?;
+        // A local junction/symlink may redirect to SMB. Reject Windows reparse
+        // points before canonicalize follows them, including provider aliases.
+        crate::fs_safe::reject_symlink_components(&absolute)?;
+        let canonical = absolute.canonicalize()?;
+        validate_local_drive(&canonical)?;
+        Ok(canonical)
+    }
+    #[cfg(not(windows))]
+    {
+        path.canonicalize().map_err(Into::into)
+    }
+}
+
+#[cfg(windows)]
+fn validate_local_drive(path: &Path) -> CoreResult<()> {
+    let drive = windows_local_drive(path)?;
+    let root = [u16::from(drive), u16::from(b':'), u16::from(b'\\'), 0];
+    // SAFETY: root is a NUL-terminated drive root kept alive for this call.
+    let kind = unsafe { windows_sys::Win32::Storage::FileSystem::GetDriveTypeW(root.as_ptr()) };
+    if !local_drive_type(kind) {
+        return Err(invalid(
+            "media providers cannot use remote or unavailable drives",
+        ));
+    }
+    Ok(())
+}
+
 pub fn find_executable(name: &str) -> CoreResult<PathBuf> {
     if !["ffmpeg", "ffprobe", "tesseract"].contains(&name) {
         return Err(invalid("unknown local media provider"));
@@ -191,12 +270,17 @@ pub fn find_executable(name: &str) -> CoreResult<PathBuf> {
         name.to_string()
     };
     for folder in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
-        if folder.as_os_str().is_empty() {
+        if !provider_folder_allowed(&folder) {
             continue;
         }
-        let candidate = folder.join(&executable);
+        let Ok(folder) = canonical_local_path(&folder) else {
+            continue;
+        };
+        let Ok(candidate) = canonical_local_path(&folder.join(&executable)) else {
+            continue;
+        };
         if candidate.is_file() {
-            return Ok(candidate.canonicalize()?);
+            return Ok(candidate);
         }
     }
     Err(invalid(format!(
@@ -212,26 +296,6 @@ fn command(executable: &Path) -> Command {
         command.creation_flags(0x08000000);
     }
     command
-}
-/// A failed adapter/thread setup must never leave a capture process detached.
-struct ManagedChild(Child);
-impl std::ops::Deref for ManagedChild {
-    type Target = Child;
-    fn deref(&self) -> &Child {
-        &self.0
-    }
-}
-impl std::ops::DerefMut for ManagedChild {
-    fn deref_mut(&mut self) -> &mut Child {
-        &mut self.0
-    }
-}
-impl Drop for ManagedChild {
-    fn drop(&mut self) {
-        if !self.0.try_wait().is_ok_and(|status| status.is_some()) {
-            terminate(&mut self.0);
-        }
-    }
 }
 struct Captured {
     reader: JoinHandle<std::io::Result<Vec<u8>>>,
@@ -275,9 +339,8 @@ fn finish_capture(capture: Captured) -> CoreResult<Vec<u8>> {
         .map_err(|_| invalid("provider output reader failed"))?
         .map_err(Into::into)
 }
-fn terminate(child: &mut Child) {
-    let _ = child.kill();
-    let _ = child.wait();
+fn terminate(child: &mut ManagedChild) {
+    child.terminate();
 }
 pub fn run_text(
     executable: &Path,
@@ -287,26 +350,23 @@ pub fn run_text(
     max_text: usize,
 ) -> CoreResult<String> {
     cancel.check()?;
-    let mut child = ManagedChild(
+    let mut child = ManagedChild::spawn(
         command(executable)
             .args(args)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?,
-    );
+            .stderr(Stdio::piped()),
+    )?;
     let stdout = capture(
         child
-            .stdout
-            .take()
+            .take_stdout()
             .ok_or_else(|| invalid("provider stdout is unavailable"))?,
         max_text,
         false,
     );
     let stderr = capture(
         child
-            .stderr
-            .take()
+            .take_stderr()
             .ok_or_else(|| invalid("provider stderr is unavailable"))?,
         65536,
         true,
@@ -360,20 +420,39 @@ pub struct ProviderStatus {
     pub error: Option<String>,
 }
 pub fn provider_status(name: &str) -> ProviderStatus {
-    match find_executable(name) {
+    provider_status_with_cancel(name, &CancelToken::default())
+}
+
+/// Inspect an explicitly requested local provider while sharing the caller's
+/// cancellation token with its bounded version subprocess. No provider is run
+/// when cancellation has already been requested.
+pub fn provider_status_with_cancel(name: &str, cancel: &CancelToken) -> ProviderStatus {
+    provider_status_using(name, cancel, find_executable, run_text)
+}
+
+fn provider_status_using<F, R>(name: &str, cancel: &CancelToken, find: F, run: R) -> ProviderStatus
+where
+    F: FnOnce(&str) -> CoreResult<PathBuf>,
+    R: FnOnce(&Path, &[String], &CancelToken, Duration, usize) -> CoreResult<String>,
+{
+    match cancel.check().and_then(|()| find(name)) {
         Ok(path) => {
-            let version = run_text(
-                &path,
-                &[if name == "tesseract" {
-                    "--version"
-                } else {
-                    "-version"
-                }
-                .into()],
-                &CancelToken::default(),
-                Duration::from_secs(5),
-                65536,
-            );
+            let version = cancel.check().and_then(|()| {
+                let text = run(
+                    &path,
+                    &[if name == "tesseract" {
+                        "--version"
+                    } else {
+                        "-version"
+                    }
+                    .into()],
+                    cancel,
+                    Duration::from_secs(5),
+                    65536,
+                )?;
+                cancel.check()?;
+                Ok(text)
+            });
             let (version, error) = match version {
                 Ok(text) => (text.lines().next().map(str::to_owned), None),
                 Err(error) => (None, Some(error.to_string())),
@@ -394,7 +473,7 @@ pub fn provider_status(name: &str) -> ProviderStatus {
     }
 }
 pub fn file_input(path: &Path) -> CoreResult<Vec<String>> {
-    let path = path.canonicalize()?;
+    let path = canonical_local_path(path)?;
     if !path.is_file() {
         return Err(invalid("choose a regular media file"));
     }
@@ -424,7 +503,7 @@ fn spawn_ffmpeg(args: &[String], plan: &OutputPlan, recording: bool) -> CoreResu
         })
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
-    Ok(ManagedChild(process.spawn()?))
+    ManagedChild::spawn(&mut process)
 }
 pub fn ffmpeg_job(
     args: &[String],
@@ -438,8 +517,7 @@ pub fn ffmpeg_job(
     let mut child = spawn_ffmpeg(args, &plan, false)?;
     let stderr = capture(
         child
-            .stderr
-            .take()
+            .take_stderr()
             .ok_or_else(|| invalid("FFmpeg stderr is unavailable"))?,
         65536,
         true,
@@ -584,8 +662,7 @@ impl Recorder {
         }
         let stderr = capture(
             child
-                .stderr
-                .take()
+                .take_stderr()
                 .ok_or_else(|| invalid("FFmpeg stderr is unavailable"))?,
             65536,
             true,
@@ -619,7 +696,7 @@ impl Recorder {
                         || began.elapsed() > Duration::from_secs(maximum + 10))
                         && requested_stop.is_none()
                     {
-                        if let Some(stdin) = child.stdin.as_mut() {
+                        if let Some(stdin) = child.stdin_mut() {
                             let _ = stdin.write_all(b"q\n");
                             let _ = stdin.flush();
                         }
@@ -713,8 +790,185 @@ impl Drop for Recorder {
     }
 }
 #[cfg(test)]
+#[path = "../../tests/fixtures/provider_process.rs"]
+mod process_fixture;
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    const DESCENDANT: &str = "tools::media_provider::tests::provider_fixture_descendant";
+    fn fixture_entry(name: &str, mode: process_fixture::Mode) {
+        // These are self-reexecution entrypoints, not ordinary test effects.
+        // A normal full test run does nothing; only our exact child invocation
+        // enters the bounded fixture. No global environment mutation is used.
+        let args: Vec<_> = std::env::args().collect();
+        if args.iter().any(|arg| arg == "--exact") && args.iter().any(|arg| arg == name) {
+            process_fixture::run(mode, &["--exact", DESCENDANT, "--nocapture"]).unwrap();
+        }
+    }
+    #[test]
+    fn provider_fixture_descendant() {
+        fixture_entry(DESCENDANT, process_fixture::Mode::Descendant);
+    }
+    #[test]
+    fn provider_fixture_wrapper_exit() {
+        fixture_entry(
+            "tools::media_provider::tests::provider_fixture_wrapper_exit",
+            process_fixture::Mode::WrapperExit,
+        );
+    }
+    #[test]
+    fn provider_fixture_wrapper_wait() {
+        fixture_entry(
+            "tools::media_provider::tests::provider_fixture_wrapper_wait",
+            process_fixture::Mode::WrapperWait,
+        );
+    }
+    #[test]
+    fn provider_fixture_version() {
+        fixture_entry(
+            "tools::media_provider::tests::provider_fixture_version",
+            process_fixture::Mode::Version,
+        );
+    }
+
+    #[test]
+    fn process_reaps_pipe_inheriting_descendants_after_wrapper_exit() {
+        let started = Instant::now();
+        let text = run_text(
+            &std::env::current_exe().unwrap(),
+            &[
+                "--exact".into(),
+                "tools::media_provider::tests::provider_fixture_wrapper_exit".into(),
+                "--nocapture".into(),
+            ],
+            &CancelToken::default(),
+            Duration::from_secs(1),
+            65536,
+        )
+        .unwrap();
+        assert!(text.contains("FIXTURE_WRAPPER_READY"));
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "pipe reader outlived wrapper for {:?}",
+            started.elapsed()
+        );
+    }
+    #[test]
+    fn process_timeout_reaps_pipe_inheriting_descendants() {
+        let started = Instant::now();
+        assert!(
+            run_text(
+                &std::env::current_exe().unwrap(),
+                &[
+                    "--exact".into(),
+                    "tools::media_provider::tests::provider_fixture_wrapper_wait".into(),
+                    "--nocapture".into()
+                ],
+                &CancelToken::default(),
+                Duration::from_millis(350),
+                65536
+            )
+            .is_err()
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "timeout waited on an inherited pipe for {:?}",
+            started.elapsed()
+        );
+    }
+    #[cfg(windows)]
+    #[test]
+    fn privacy_windows_paths_reject_network_and_device_names_without_filesystem_access() {
+        for path in [
+            r"\\oxbox-fixture.invalid\share\input.mp4",
+            r"//oxbox-fixture.invalid/share/input.mp4",
+            r"\\?\UNC\oxbox-fixture.invalid\share\input.mp4",
+            r"\\.\pipe\oxbox-fixture",
+            r"\\?\GLOBALROOT\Device\HarddiskVolume1\input.mp4",
+            r"C:input.mp4",
+            r"\input.mp4",
+        ] {
+            assert!(windows_local_drive(Path::new(path)).is_err(), "{path}");
+        }
+        assert_eq!(
+            windows_local_drive(Path::new(r"C:\input.mp4")).unwrap(),
+            b'C'
+        );
+        assert_eq!(
+            windows_local_drive(Path::new(r"\\?\D:\input.mp4")).unwrap(),
+            b'D'
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn privacy_only_known_local_drive_types_are_admitted() {
+        for rejected in [0, 1, 4, 7, u32::MAX] {
+            assert!(!local_drive_type(rejected));
+        }
+        for allowed in [2, 3, 5, 6] {
+            assert!(local_drive_type(allowed));
+        }
+    }
+
+    #[test]
+    fn privacy_provider_search_never_probes_relative_path_folders() {
+        for folder in ["", ".", "bin", "../provider"] {
+            assert!(!provider_folder_allowed(Path::new(folder)), "{folder}");
+        }
+        #[cfg(windows)]
+        for folder in [
+            r"\\oxbox-fixture.invalid\providers",
+            r"C:providers",
+            r"\\.\pipe\provider",
+        ] {
+            assert!(!provider_folder_allowed(Path::new(folder)), "{folder}");
+        }
+        #[cfg(windows)]
+        assert!(provider_folder_allowed(Path::new(r"C:\providers")));
+        #[cfg(not(windows))]
+        assert!(provider_folder_allowed(Path::new("/usr/bin")));
+    }
+
+    #[test]
+    fn privacy_provider_status_uses_the_callers_cancellation_without_a_real_process() {
+        let cancel = CancelToken::default();
+        let status = provider_status_using(
+            "ffmpeg",
+            &cancel,
+            |_| Ok(PathBuf::from("generated-provider-fixture")),
+            |_, args, child_cancel, timeout, limit| {
+                assert_eq!(args, ["-version"]);
+                assert_eq!(timeout, Duration::from_secs(5));
+                assert_eq!(limit, 65536);
+                cancel.cancel();
+                child_cancel.check()?;
+                Ok("provider should have stopped".into())
+            },
+        );
+        assert!(status.version.is_none());
+        assert!(
+            status
+                .error
+                .is_some_and(|error| error == CoreError::Cancelled.to_string())
+        );
+    }
+
+    #[test]
+    fn privacy_cancelled_status_never_resolves_or_launches_a_provider() {
+        let cancel = CancelToken::default();
+        cancel.cancel();
+        let status = provider_status_using(
+            "tesseract",
+            &cancel,
+            |_| panic!("a cancelled provider check must not inspect PATH"),
+            |_, _, _, _, _| panic!("a cancelled provider check must not launch a process"),
+        );
+        assert!(status.path.is_none());
+        assert!(status.version.is_none());
+        assert!(status.error.is_some());
+    }
     #[test]
     fn failed_recording_survives_unavailable_status_reporting() {
         let dir = tempfile::tempdir().unwrap();

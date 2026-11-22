@@ -75,7 +75,7 @@ impl PowerView {
             ui.label(text);
         }
         if let Some(text) = &self.error {
-            ui.label(format!("Error: {text}"));
+            crate::accessibility::alert(ui, text);
         }
     }
     pub fn show(
@@ -153,10 +153,12 @@ impl PowerView {
                         number(ui, "Minutes", &mut self.minutes, 1..=44640);
                     }
                     if self.awake_mode == 2 {
-                        ui.label("End date/time (YYYY-MM-DDTHH:MM)");
-                        ui.text_edit_singleline(&mut self.until);
-                        ui.label("IANA time zone");
-                        ui.text_edit_singleline(&mut self.zone);
+                        let label = ui.label("End date/time (YYYY-MM-DDTHH:MM)");
+                        ui.text_edit_singleline(&mut self.until)
+                            .labelled_by(label.id);
+                        let label = ui.label("IANA time zone");
+                        ui.text_edit_singleline(&mut self.zone)
+                            .labelled_by(label.id);
                         ui.small("For a repeated DST time, the earlier occurrence is used.");
                     }
                     ui.checkbox(&mut self.display, "Keep the display on too");
@@ -253,7 +255,7 @@ impl PowerView {
                             ui.label(format!("Duration remaining: {remaining} seconds"));
                         }
                         if let Some(e) = s.error {
-                            ui.label(format!("Error: {e}"));
+                            crate::accessibility::alert(ui, e);
                         }
                     }
                     Err(e) => {

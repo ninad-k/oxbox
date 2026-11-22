@@ -104,6 +104,51 @@ export function patchNsisUninstall(source) {
   return patched.replace(runDelete, '    ; The native cleanup command preserves any unrelated/user-repurposed Run value.');
 }
 
+export function patchNsisRunningCheck(source) {
+  const normalized = source.replaceAll('\r\n', '\n');
+  const marker = '; Oxbox requires explicit Quit; never force-stop owned services';
+  const start = '!macro CheckIfAppIsRunning executablePath productName\n';
+  const begin = normalized.indexOf(start);
+  const end = normalized.indexOf('!macroend', begin);
+  if (begin < 0 || end < 0 || normalized.indexOf(start, begin + start.length) >= 0) {
+    throw new Error('Unknown NSIS running-app template; refusing to change lifecycle behavior.');
+  }
+  const replacement = `${start}${marker}
+  !insertmacro RestartManager_StartSession $R0
+  \${If} $R0 == ""
+    SetErrorLevel 2
+    Abort "Could not check running applications. Quit Oxbox and retry."
+  \${EndIf}
+  !insertmacro RestartManager_RegisterFile $R0 "\${executablePath}"
+  \${If} $0 != 0
+    !insertmacro RestartManager_EndSession $R0
+    SetErrorLevel 2
+    Abort "Could not check the installed executable. Quit Oxbox and retry."
+  \${EndIf}
+  System::Call 'RSTRTMGR::RmGetList(p R0, *i .r1, *i .r2, p 0, *i .r3) i .r0'
+  StrCpy $R4 $0
+  !insertmacro RestartManager_EndSession $R0
+  \${If} $R4 = \${ERROR_MORE_DATA}
+    IfSilent +2
+      MessageBox MB_OK|MB_ICONSTOP "Quit Oxbox from its tray menu before continuing. Closing its window only hides it."
+    SetErrorLevel 2
+    Abort "Oxbox is running. Quit it from its tray menu before continuing."
+  \${ElseIf} $R4 != 0
+    SetErrorLevel 2
+    Abort "Could not verify that Oxbox has stopped. Quit it and retry."
+  \${EndIf}
+!macroend`;
+  const current = normalized.slice(begin, end + '!macroend'.length);
+  if (current.includes(marker)) {
+    if (current !== replacement) throw new Error('The generated NSIS lifecycle guard was modified; refusing to bypass review.');
+    return normalized;
+  }
+  if (!current.includes('RmShutdown') || !current.includes('RmForceShutdown')) {
+    throw new Error('Unknown NSIS running-app template; expected the reviewed Restart Manager force-shutdown path.');
+  }
+  return normalized.slice(0, begin) + replacement + normalized.slice(end + '!macroend'.length);
+}
+
 function rebuildNsis(out, target, config, environment) {
   const arch = target.startsWith('x86_64-') ? 'x64' : target.startsWith('aarch64-') ? 'arm64' : 'x86';
   const directory = path.join(out, 'nsis', arch);
@@ -115,6 +160,9 @@ function rebuildNsis(out, target, config, environment) {
   if (!plugin || !outputName || path.basename(outputName) !== outputName) throw new Error('Unknown NSIS compiler/output configuration.');
   const compiler = path.resolve(plugin, '../../..', 'makensis.exe');
   ordinary(compiler);
+  const utilities = path.join(directory, 'utils.nsh');
+  ordinary(utilities);
+  writeGenerated(utilities, patchNsisRunningCheck(fs.readFileSync(utilities, 'utf8')));
   writeGenerated(filename, patchNsisUninstall(source));
   const nsisEnvironment = { ...environment };
   delete nsisEnvironment.NSISDIR;

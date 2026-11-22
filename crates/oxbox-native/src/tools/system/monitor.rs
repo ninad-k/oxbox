@@ -139,7 +139,7 @@ impl MonitorViews {
                             });
                     }
                 }
-                self.snapshot.show(ui);
+                self.snapshot.show_quiet(ui);
                 ui.ctx().request_repaint_after(Duration::from_secs(1));
             }
             "network-usage" => {
@@ -179,7 +179,7 @@ impl MonitorViews {
                         });
                     }
                 }
-                self.traffic.show(ui);
+                self.traffic.show_quiet(ui);
                 ui.ctx().request_repaint_after(Duration::from_secs(1));
             }
             "cpu-temperature" => {

@@ -14,6 +14,7 @@ Do not commit downloaded packages, `node_modules`, `target`, installers, or cred
 | Files | walkdir, trash, dirs, zip 9.8 (patched parser), tar, flate2, sevenz-rust2 |
 | System | sysinfo, keepawake, target-specific windows-sys |
 | Capture/media/privacy | xcap, arboard, image (PNG/JPEG/WebP), age, rqrr/rxing; Windows COM/WinRT via windows |
+| Unix provider lifecycle | libc =0.2.191, user-approved as a direct Unix-only dependency on 2026-11-22; typed waitid(WNOWAIT) preserves the group leader identity until descendant cancellation |
 | Shared/test | serde, serde_json, thiserror, tempfile, vitest, svelte-check |
 
 The full transitive graph and third-party licenses should be reviewed before each public release. Package

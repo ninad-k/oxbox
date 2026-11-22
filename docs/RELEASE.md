@@ -4,14 +4,21 @@ The native migration uses exact eframe 0.37.0 and Rust 1.95, with all 49 tool ro
 release target. The existing release must stay an **unpublished draft** until the acceptance gates pass.
 Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the native application.
 
+The 2026-11-22 review fixes require a rebuilt candidate and new artifact verification. The earlier `7132daa`
+candidate and its CI/runtime/hash evidence below are historical until the replacement is recorded.
+The user explicitly left the clean-machine gate pending because no disposable Windows environment is available.
+
 ## Native acceptance gates
 
 - [x] Preserve all 49 stable tool IDs and route native forms; keep shared JSON metadata in sync with Pages.
 - [x] Pass local core/native tests, all-target clippy with warnings denied, and formatting.
 - [x] Observe the actual decorated Windows native launcher, favorites, search, a conversion, favorite hotkey,
   global shortcut hide, single-instance restoration and Quit. This is a bounded subset of manual acceptance.
-- [x] Complete functional-source Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks:
-  [run 44941250679](https://github.com/ninad-k/oxbox/actions/runs/44941250679), source `7132daa`.
+- [ ] Complete review-fix Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks. Earlier source `7132daa`
+  passed [run 44941250679](https://github.com/ninad-k/oxbox/actions/runs/44941250679).
+- [x] Complete the parallel agent source/regression review and fix reproduced installer, file, provider,
+  passphrase and accessibility issues; [security review](SECURITY_REVIEW.md), [privacy](PRIVACY_ACCEPTANCE.md),
+  [accessibility](ACCESSIBILITY.md) and [installer protocol](INSTALLER_ACCEPTANCE.md) distinguish scope and open gates.
 - [ ] Complete native per-tool manual acceptance, including progress, cancellation, destructive confirmations,
   provider failures, power/desktop/recording restoration and hidden notifications.
 - [ ] Complete production runtime observations including owned providers and DNS coverage on all three OSes;
@@ -27,8 +34,9 @@ Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the
 - [ ] Verify keyboard/screen-reader/IME/Unicode, DPI/monitor changes, high contrast and remote/GPU sessions.
 - [ ] Resolve/review dependency findings and outstanding attribution reviews with a human reviewer.
 - [ ] Complete independent file-tool path/deletion/archive and media-provider security review.
-- [x] Record final source `7132daa`, installer checksums and downloaded remote asset hash matches in
-  [VALIDATION.md](VALIDATION.md); the release remains draft/prerelease with no published version tag.
+- [ ] Record rebuilt review-fix source, installer checksums and downloaded remote asset hash matches in
+  [VALIDATION.md](VALIDATION.md). The earlier `7132daa` assets were verified and remain draft/prerelease;
+  no version tag has been pushed.
 
 ## Native packaging
 

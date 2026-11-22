@@ -236,11 +236,22 @@ impl<T: Send + 'static> Task<T> {
         }
     }
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.show_with_announcement(ui, true);
+    }
+    /// Passive polling must not recreate a live announcement on every sample.
+    pub fn show_quiet(&mut self, ui: &mut egui::Ui) {
+        self.show_with_announcement(ui, false);
+    }
+    fn show_with_announcement(&mut self, ui: &mut egui::Ui, announce: bool) {
         self.poll();
         if self.running() {
             ui.horizontal(|ui| {
                 ui.spinner();
-                ui.label("Working…");
+                if announce {
+                    crate::accessibility::status(ui, "Working…");
+                } else {
+                    ui.label("Working…");
+                }
                 if ui.button("Cancel").clicked() {
                     self.cancel();
                 }
@@ -253,9 +264,15 @@ impl<T: Send + 'static> Task<T> {
                 };
                 ui.add(egui::ProgressBar::new(fraction).text(&progress.message));
             }
+        } else if announce && self.result.is_some() {
+            crate::accessibility::status(ui, "Completed");
         }
         if let Some(error) = &self.error {
-            ui.colored_label(ui.visuals().error_fg_color, error);
+            if announce {
+                crate::accessibility::alert(ui, error);
+            } else {
+                ui.label(format!("Error: {error}"));
+            }
         }
     }
     pub fn shutdown(&mut self) {
@@ -278,6 +295,41 @@ impl<T: Send + 'static> Drop for Task<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn passive_refresh_avoids_live_working_announcements() {
+        for quiet in [false, true] {
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let (release, wait) = mpsc::sync_channel(1);
+            let mut task = Task::default();
+            assert!(task.start(&context, move |_, _| {
+                let _ = wait.recv_timeout(std::time::Duration::from_secs(5));
+                Ok(())
+            }));
+            let mut output = context.run_ui(egui::RawInput::default(), |ui| {
+                if quiet {
+                    task.show_quiet(ui);
+                } else {
+                    task.show(ui);
+                }
+            });
+            output.textures_delta.clear();
+            let live_working = output
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .iter()
+                .any(|(_, node)| {
+                    node.label() == Some("Working…")
+                        && node.live() == Some(egui::accesskit::Live::Polite)
+                });
+            let _ = release.send(());
+            task.shutdown();
+            assert_eq!(live_working, !quiet);
+        }
+    }
     use std::{
         sync::{
             Arc,

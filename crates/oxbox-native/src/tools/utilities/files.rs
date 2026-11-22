@@ -48,12 +48,32 @@ fn dropped(ui: &Ui) -> Vec<PathBuf> {
             .collect()
     })
 }
+
+fn password_field(ui: &mut Ui, label: &str, value: &mut String) -> egui::Response {
+    let label_response = ui.label(label);
+    let mut output = egui::TextEdit::singleline(value)
+        .id_salt(("password", label))
+        .password(true)
+        .char_limit(4096)
+        .show(ui);
+    // egui's password mode masks display/copy, but its ordinary undoer stores
+    // plaintext snapshots. Never retain that history across password frames.
+    output.state.clear_undoer();
+    output.state.store(ui.ctx(), output.response.id);
+    output.response.response.labelled_by(label_response.id)
+}
+
 fn list(ui: &mut Ui, paths: &mut Vec<PathBuf>) {
     let mut remove = None;
     for (index, path) in paths.iter().enumerate() {
         ui.horizontal(|ui| {
             ui.label(path.display().to_string());
-            if ui.button("Remove").clicked() {
+            let remove_button = ui.button("Remove");
+            crate::accessibility::name(
+                &remove_button,
+                &format!("Remove selected path {}", path.display()),
+            );
+            if remove_button.clicked() {
                 remove = Some(index);
             }
         });
@@ -312,7 +332,7 @@ impl FileTools {
                 let removes_group=result.groups.iter().any(|group|group.files.iter().all(|file|self.selected.contains(&file.path)));
                 if removes_group{ui.label("Keep at least one file in every group.");}
                 let total=result.groups.iter().map(|group|group.size*group.files.iter().filter(|file|self.selected.contains(&file.path)).count() as u64).sum();
-                if ui.add_enabled(!self.selected.is_empty()&&!removes_group,egui::Button::new(format!("Review {} copies ({}) for Trash…",self.selected.len(),bytes(total)))).clicked(){let paths=self.selected.iter().cloned().collect::<Vec<_>>();let detail=paths.iter().take(20).map(|path|path.display().to_string()).collect::<Vec<_>>().join("\n");if confirm(ui.ctx(), "Review duplicate cleanup",format!("Move {} selected copies ({}) to Recycle Bin / Trash?\n\n{detail}\n\nOne copy per group is kept. Review all selected paths in the list.",paths.len(),bytes(total))){self.trash.start(ui.ctx(),move|cancel,_|{cancel.check()?;fs_safe::move_to_trash(&paths)});}}
+                if ui.add_enabled(!self.selected.is_empty()&&!removes_group,egui::Button::new(format!("Review {} copies ({}) for Trash…",self.selected.len(),bytes(total)))).clicked(){let paths=self.selected.iter().cloned().collect::<Vec<_>>();let detail=paths.iter().take(20).map(|path|path.display().to_string()).collect::<Vec<_>>().join("\n");if confirm(ui.ctx(), "Review duplicate cleanup",format!("Move {} selected copies ({}) to Recycle Bin / Trash?\n\n{detail}\n\nOne copy per group is kept. Review all selected paths in the list.",paths.len(),bytes(total))){let groups=result.groups.clone();self.trash.start(ui.ctx(),move|cancel,progress|duplicates::trash_selected(&groups,&paths,&cancel,progress));}}
             });
         }
     }
@@ -320,7 +340,7 @@ impl FileTools {
         let busy = self.archive.running();
         ui.add_enabled_ui(!busy,|ui|{
         ui.horizontal(|ui|{ui.selectable_value(&mut self.archive_extract,false,"Create archive");ui.selectable_value(&mut self.archive_extract,true,"Extract archive");});
-        if self.archive_extract {picker(ui,"archive input",&mut self.archive_input,0);if let Some(path)=dropped(ui).first(){self.archive_input=path.to_string_lossy().into_owned();}picker(ui,"new destination folder",&mut self.archive_output,2);ui.label("The destination must not exist. Choose or enter a new folder name, not an existing folder.");ui.horizontal(|ui|{ui.label("Maximum extracted size (MiB)");ui.add(egui::DragValue::new(&mut self.max_mib).range(1..=1_048_576));});}
+        if self.archive_extract {picker(ui,"archive input",&mut self.archive_input,0);if let Some(path)=dropped(ui).first(){self.archive_input=path.to_string_lossy().into_owned();}picker(ui,"new destination folder",&mut self.archive_output,2);ui.label("The destination must not exist. Choose or enter a new folder name, not an existing folder.");ui.horizontal(|ui|{let label=ui.label("Maximum extracted size (MiB)");ui.add(egui::DragValue::new(&mut self.max_mib).range(1..=1_048_576)).labelled_by(label.id);});}
         else {ui.checkbox(&mut self.archive_folders,"Select folders in picker");if ui.button("Add archive inputs…").clicked(){let dialog=crate::host::dialogs::file(ui.ctx());let paths=if self.archive_folders{dialog.pick_folders()}else{dialog.pick_files()};if let Some(paths)=paths{for path in paths{if !self.sources.contains(&path){self.sources.push(path);}}}}for path in dropped(ui){if !self.sources.contains(&path){self.sources.push(path);}}list(ui,&mut self.sources);ui.horizontal(|ui|{ui.selectable_value(&mut self.tar,false,"ZIP");ui.selectable_value(&mut self.tar,true,"TAR.GZ");});picker(ui,"new archive filename",&mut self.archive_output,2);}
         let ready=!self.archive_output.is_empty()&&if self.archive_extract{!self.archive_input.is_empty()}else{!self.sources.is_empty()};
         if ui.add_enabled(ready,egui::Button::new(if self.archive_extract{"Review and extract…"}else{"Create archive"})).clicked(){let output=PathBuf::from(&self.archive_output);if self.archive_extract{let input=PathBuf::from(&self.archive_input);let limit=self.max_mib*1024*1024;if confirm(ui.ctx(), "Review extraction",format!("Extract into a NEW folder:\n{}\n\nOutput limited to {} MiB or 20× compressed size, whichever is smaller. Existing folders are never merged.",output.display(),self.max_mib)){self.archive.start(ui.ctx(),move|cancel,progress|archive::extract_archive(&input,&output,limit,&cancel,progress));}}else{let sources=self.sources.clone();let format=if self.tar{ArchiveFormat::TarGz}else{ArchiveFormat::Zip};self.archive.start(ui.ctx(),move|cancel,progress|archive::create_archive(&sources,&output,format,&cancel,progress));}}
@@ -358,6 +378,7 @@ impl FileTools {
     fn encrypt(&mut self, ui: &mut Ui) {
         let busy = self.crypt.running() || self.trash.running();
         ui.label("age scrypt encryption. Originals are kept; output must be new. Passphrases remain local and are never logged or persisted. Losing the passphrase loses access.");
+        ui.label("New files use scrypt factor 18 (about 256 MiB plus overhead). Decryption supports factors through 20 (about 1 GiB plus overhead). Higher-factor legacy age files are refused and preserved; this is not a general memory-exhaustion guarantee.");
         ui.add_enabled_ui(!busy, |ui| {
             let previous_source = self.source.clone();
             let previous_output = self.output.clone();
@@ -384,21 +405,9 @@ impl FileTools {
             if self.source != previous_source || self.output != previous_output {
                 self.crypt.result = None;
             }
-            let label = ui.label("Passphrase");
-            ui.add(
-                egui::TextEdit::singleline(&mut self.password)
-                    .password(true)
-                    .char_limit(4096),
-            )
-            .labelled_by(label.id);
+            password_field(ui, "Passphrase", &mut self.password);
             if !self.decrypt {
-                let label = ui.label("Confirm passphrase");
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.confirmation)
-                        .password(true)
-                        .char_limit(4096),
-                )
-                .labelled_by(label.id);
+                password_field(ui, "Confirm passphrase", &mut self.confirmation);
                 ui.label(if self.password.len() >= 24 {
                     "Long passphrase; prefer randomly chosen unrelated words."
                 } else {
@@ -465,5 +474,78 @@ impl FileTools {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod privacy_tests {
+    use super::*;
+
+    fn render_password(
+        context: &egui::Context,
+        value: &mut String,
+        label: &str,
+        time: f64,
+    ) -> egui::Id {
+        let mut id = None;
+        let mut output = context.run_ui(
+            egui::RawInput {
+                time: Some(time),
+                ..Default::default()
+            },
+            |ui| {
+                id = Some(password_field(ui, label, value).id);
+            },
+        );
+        output.textures_delta.clear();
+        id.unwrap()
+    }
+
+    #[test]
+    fn cleared_passphrase_cannot_be_restored_from_widget_undo_history() {
+        for label in ["Passphrase", "Confirm passphrase"] {
+            let context = egui::Context::default();
+            let mut draft = "generated passphrase undo fixture".to_owned();
+            let id = render_password(&context, &mut draft, label, 0.0);
+            context.memory_mut(|memory| memory.request_focus(id));
+            render_password(&context, &mut draft, label, 1.0);
+            draft.clear();
+            render_password(&context, &mut draft, label, 2.0);
+            let state = egui::text_edit::TextEditState::load(&context, id).unwrap();
+            let mut undoer = state.undoer();
+            assert!(
+                undoer
+                    .undo(&(egui::text::CCursorRange::default(), String::new()))
+                    .is_none(),
+                "cleared password retained a restorable undo entry"
+            );
+            assert!(
+                !undoer.is_in_flux(),
+                "password retained an in-progress undo snapshot"
+            );
+            assert!(draft.is_empty());
+        }
+    }
+
+    #[test]
+    fn archive_extraction_limit_has_an_accessible_name() {
+        let mut tools = FileTools {
+            archive_extract: true,
+            ..Default::default()
+        };
+        let nodes = crate::accessibility::test_tree(|ui| tools.show(ui, "archive"));
+        crate::accessibility::assert_named_controls(&nodes, "archive extraction");
+    }
+
+    #[test]
+    fn selected_path_remove_button_names_its_target() {
+        let mut paths = vec![PathBuf::from("generated-file-fixture.txt")];
+        let nodes = crate::accessibility::test_tree(|ui| list(ui, &mut paths));
+        assert!(
+            nodes
+                .iter()
+                .any(|node| node.role() == egui::accesskit::Role::Button
+                    && node.label() == Some("Remove selected path generated-file-fixture.txt"))
+        );
     }
 }

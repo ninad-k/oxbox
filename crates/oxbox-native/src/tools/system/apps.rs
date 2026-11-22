@@ -101,8 +101,9 @@ impl AppSetsView {
             self.selected = self.draft.id.clone();
             self.message = None;
         }
-        ui.label("Set name");
-        ui.text_edit_singleline(&mut self.draft.name);
+        let label = ui.label("Set name");
+        ui.text_edit_singleline(&mut self.draft.name)
+            .labelled_by(label.id);
         ui.horizontal(|ui| {
             for (kind, label) in [
                 (LaunchKind::Application, "Choose applications…"),
@@ -135,19 +136,42 @@ impl AppSetsView {
                         } else {
                             "File with default app"
                         });
-                        if ui.button("Remove target").clicked() {
+                        if crate::accessibility::button(
+                            ui,
+                            "Remove target",
+                            &format!("Remove target {}: {}", index + 1, entry.target),
+                        )
+                        .clicked()
+                        {
                             remove = Some(index);
                         }
                     });
-                    ui.label("Absolute local path");
-                    ui.text_edit_singleline(&mut entry.target);
+                    let label = ui.label("Absolute local path");
+                    ui.text_edit_singleline(&mut entry.target)
+                        .labelled_by(label.id);
                     if entry.kind == LaunchKind::Application {
                         ui.label("Literal arguments (one input per argument)");
                         let mut remove_arg = None;
                         for (i, arg) in entry.args.iter_mut().enumerate() {
                             ui.horizontal(|ui| {
-                                ui.add(egui::TextEdit::singleline(arg).id_salt(("argument", i)));
-                                if ui.button(format!("Remove argument {}", i + 1)).clicked() {
+                                let response = ui
+                                    .add(egui::TextEdit::singleline(arg).id_salt(("argument", i)));
+                                crate::accessibility::name(
+                                    &response,
+                                    &format!("Literal argument {}", i + 1),
+                                );
+                                if crate::accessibility::button(
+                                    ui,
+                                    &format!("Remove argument {}", i + 1),
+                                    &format!(
+                                        "Remove argument {} for target {}: {}",
+                                        i + 1,
+                                        index + 1,
+                                        entry.target
+                                    ),
+                                )
+                                .clicked()
+                                {
                                     remove_arg = Some(i);
                                 }
                             });
@@ -276,7 +300,7 @@ impl AppSetsView {
             ui.label(message);
         }
         if let Some(error) = &self.error {
-            ui.label(format!("Error: {error}"));
+            crate::accessibility::alert(ui, error);
         }
     }
     pub fn shutdown(&mut self) {
@@ -289,4 +313,53 @@ fn persist(candidate: &mut Stored, host: &Host, shared: &Shared) -> CoreResult<(
         candidate.presentation = state.presentation.status().options;
         host.save("native-system.json", candidate)
     })
+}
+
+#[cfg(test)]
+mod accessibility_tests {
+    use super::*;
+
+    #[test]
+    fn two_application_targets_have_distinct_named_remove_actions() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let shared = Arc::new(Shared::default());
+        let mut stored = Stored::default();
+        let mut view = AppSetsView::default();
+        view.draft.entries = ["/fixture/alpha.exe", "/fixture/beta.exe"]
+            .into_iter()
+            .map(|target| LaunchEntry {
+                kind: LaunchKind::Application,
+                target: target.into(),
+                args: vec!["--fixture".into()],
+            })
+            .collect();
+        let nodes = crate::accessibility::test_tree(|ui| {
+            crate::jobs::register_context(ui.ctx()).close();
+            view.show(ui, &mut stored, false, &mut host, &shared);
+        });
+        let names = nodes
+            .iter()
+            .filter(|node| node.role() == egui::accesskit::Role::Button)
+            .filter_map(|node| node.label())
+            .collect::<Vec<_>>();
+        for (index, target) in ["/fixture/alpha.exe", "/fixture/beta.exe"]
+            .into_iter()
+            .enumerate()
+        {
+            for expected in [
+                format!("Remove target {}: {target}", index + 1),
+                format!("Remove argument 1 for target {}: {target}", index + 1),
+            ] {
+                assert!(
+                    names.contains(&expected.as_str()),
+                    "missing contextual action {expected}: {names:?}"
+                );
+            }
+        }
+        assert_eq!(view.draft.entries.len(), 2);
+        assert!(!view.task.running());
+        view.shutdown();
+        host.shutdown();
+    }
 }

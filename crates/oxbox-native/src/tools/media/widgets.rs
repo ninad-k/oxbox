@@ -20,7 +20,7 @@ pub fn note(ui: &mut egui::Ui, text: impl Into<String>) {
 pub fn error(ui: &mut egui::Ui, text: &Option<String>) {
     if let Some(text) = text {
         ui.group(|ui| {
-            ui.colored_label(ui.visuals().error_fg_color, text);
+            crate::accessibility::alert(ui, text);
         });
     }
 }
@@ -63,7 +63,7 @@ pub fn file(ui: &mut egui::Ui, label: &str, value: &mut String, filters: &[&str]
             .add(egui::TextEdit::singleline(value).desired_width(ui.available_width() - 100.0))
             .labelled_by(description.id)
             .changed();
-        if ui.button("Choose…").clicked() {
+        if crate::accessibility::button(ui, "Choose…", &format!("Choose {label}")).clicked() {
             let mut dialog = crate::host::dialogs::file(ui.ctx()).set_title(label);
             if !filters.is_empty() {
                 dialog = dialog.add_filter("Supported files", filters);
@@ -81,7 +81,7 @@ pub fn folder(ui: &mut egui::Ui, label: &str, value: &mut String) {
     ui.horizontal(|ui| {
         ui.add(egui::TextEdit::singleline(value).desired_width(ui.available_width() - 100.0))
             .labelled_by(description.id);
-        if ui.button("Choose…").clicked()
+        if crate::accessibility::button(ui, "Choose…", &format!("Choose {label}")).clicked()
             && let Some(path) = crate::host::dialogs::file(ui.ctx())
                 .set_title(label)
                 .pick_folder()
@@ -95,7 +95,7 @@ pub fn output(ui: &mut egui::Ui, label: &str, value: &mut String, filename: &str
     ui.horizontal(|ui| {
         ui.add(egui::TextEdit::singleline(value).desired_width(ui.available_width() - 100.0))
             .labelled_by(description.id);
-        if ui.button("Save as…").clicked()
+        if crate::accessibility::button(ui, "Save as…", &format!("Save {label} as")).clicked()
             && let Some(path) = crate::host::dialogs::file(ui.ctx())
                 .set_title(label)
                 .set_file_name(filename)
@@ -114,10 +114,43 @@ pub fn confirm(ctx: &egui::Context, title: &str, description: &str) -> bool {
         .show()
         == rfd::MessageDialogResult::Yes
 }
+
+#[cfg(test)]
+mod accessibility_tests {
+    use super::*;
+    use egui::accesskit::Role;
+
+    #[test]
+    fn file_dialog_buttons_have_distinct_contextual_names() {
+        let mut input = String::new();
+        let mut directory = String::new();
+        let mut destination = String::new();
+        let nodes = crate::accessibility::test_tree(|ui| {
+            file(ui, "Input image", &mut input, &["png"]);
+            folder(ui, "Output folder", &mut directory);
+            output(ui, "Output image", &mut destination, "image.png");
+        });
+        let names = nodes
+            .iter()
+            .filter(|node| node.role() == Role::Button)
+            .filter_map(|node| node.label())
+            .collect::<Vec<_>>();
+        for name in [
+            "Choose Input image",
+            "Choose Output folder",
+            "Save Output image as",
+        ] {
+            assert!(
+                names.contains(&name),
+                "missing contextual accessible button: {name}; got {names:?}"
+            );
+        }
+    }
+}
 pub fn results(ui: &mut egui::Ui, paths: &[PathBuf]) {
     if !paths.is_empty() {
         ui.group(|ui| {
-            ui.label(format!("Saved {} file(s)", paths.len()));
+            crate::accessibility::status(ui, &format!("Saved {} file(s)", paths.len()));
             for path in paths {
                 ui.label(path.display().to_string());
             }
@@ -166,13 +199,13 @@ impl Preview {
         let texture = self.texture.as_ref()?;
         let size = texture.size_vec2();
         let factor = (ui.available_width() / size.x).min(340.0 / size.y).min(1.0);
-        Some(
-            ui.add(
-                egui::Image::new((texture.id(), size))
-                    .fit_to_exact_size(size * factor)
-                    .sense(egui::Sense::click()),
-            ),
-        )
+        let response = ui.add(
+            egui::Image::new((texture.id(), size))
+                .fit_to_exact_size(size * factor)
+                .sense(egui::Sense::click()),
+        );
+        crate::accessibility::name(&response, "Local image preview");
+        Some(response)
     }
 }
 
@@ -187,7 +220,7 @@ impl Providers {
             ui.label("Local media providers");
             ui.label("Oxbox never downloads providers. Install a maintained FFmpeg/Tesseract executable in PATH. Provider licensing belongs to the installed build.");
             if ui.add_enabled(!self.task.running(),egui::Button::new("Check installed providers")).clicked(){
-                self.task.start(ui.ctx(),|cancel,_|{cancel.check()?;let ffmpeg=oxbox_core::tools::media_provider::provider_status("ffmpeg");cancel.check()?;let tesseract=oxbox_core::tools::media_provider::provider_status("tesseract");Ok(vec![ffmpeg,tesseract])});
+                self.task.start(ui.ctx(),|cancel,_|{cancel.check()?;let ffmpeg=oxbox_core::tools::media_provider::provider_status_with_cancel("ffmpeg",&cancel);cancel.check()?;let tesseract=oxbox_core::tools::media_provider::provider_status_with_cancel("tesseract",&cancel);Ok(vec![ffmpeg,tesseract])});
             }
             for status in &self.statuses {
                 ui.label(format!("{}: {}",status.name,status.version.as_deref().unwrap_or("Unavailable")));
