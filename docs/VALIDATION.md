@@ -340,3 +340,31 @@ security/license review, DNS coverage and other-OS runtime observation remain op
   published GLib 0.18 patch. Human review and Linux remediation remain open; no advisory was suppressed.
 - Existing GitHub Actions versions are pinned to verified upstream commits. Checks above precede rebuilt
   installer/runtime verification, which must be recorded for the actual replacement executable and source.
+
+### First review candidate `54dd593`
+
+[CI run 44981134584](https://github.com/ninad-k/oxbox/actions/runs/44981134584) passed all five jobs with
+exact Rust 1.95.0: Windows 208 core/64 native tests, macOS ARM and Linux 201 core/65 native tests each,
+zero failed/ignored, strict Clippy and native release builds. Both real inherited-pipe/process cleanup
+regressions passed on all three systems. Minimum Rust and legacy UI/packaging checks also passed.
+
+The Windows production EXE (13,523,456 bytes, SHA-256
+`428b28603ec2c16d825e833250fba1cb1a1dd06d2d9d6ef1f78b6e4253c94273`) and MSI/NSIS passed the new
+read-only installer verifier. [Installer evidence](INSTALLER_ACCEPTANCE.md) records its exact package hashes.
+The Windows accessibility tree confirmed named Appearance/search/chooser controls, literal Unicode retention,
+keyboard search/Enter conversion (1 meter → 0.001 km), an alert for invalid input without moving focus,
+safe generated-provider results and Ctrl+Q shutdown. No installed startup registration was changed.
+
+The published endpoint observer completed a separate **360.095 s / 7,199 samples** window on that exact
+EXE, before launch through UI use, explicit generated-provider checks and Quit. TCP rows (including listeners/
+loopback) and UDP bindings had zero maxima and sums; query/marker errors were zero and the final EXE hash
+was unchanged. First/last ownership was at 33.158/203.955 s, leaving 156.140 s after the last owned sample.
+Observed names were the native app, generated `ffmpeg.exe`/`tesseract.exe` and their `conhost.exe`; at most
+three owned processes appeared. p95/maximum gaps were 62.815/136.954 ms. Generated providers only printed
+fixed version text; this is not actual FFmpeg/Tesseract, DNS, packet or other-platform traffic acceptance.
+
+This UI pass found provider results lost completion semantics after their task result was consumed.
+A narrow follow-up adds polite completion and contextual provider errors; its actual-tree regression failed
+first, then all **65 Windows native tests** and strict Clippy passed. The reusable observer's validity function
+also now rejects phase-marker failures, with three guard/behavior tests passing. Candidate `54dd593` remains
+historical evidence; replacement artifacts and observations must identify the follow-up source/hash separately.

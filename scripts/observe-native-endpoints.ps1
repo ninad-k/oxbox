@@ -22,6 +22,15 @@ function Read-Sha256([string]$Path) {
     try { return ([BitConverter]::ToString($algorithm.ComputeHash($hashStream))).Replace('-', '').ToLowerInvariant() }
     finally { $algorithm.Dispose(); $hashStream.Dispose() }
 }
+function Test-ObservationValidity(
+    [bool]$CompletedNormally,
+    [int]$SampleFailures,
+    [int]$MarkerFailures,
+    [bool]$TargetObserved,
+    [bool]$HashUnchanged
+) {
+    return ($CompletedNormally -and $SampleFailures -eq 0 -and $MarkerFailures -eq 0 -and $TargetObserved -and $HashUnchanged)
+}
 function Assert-NoReparseAncestor([string]$Path) {
     $current = [System.IO.Path]::GetPathRoot($Path)
     foreach ($part in $Path.Substring($current.Length).Split([System.IO.Path]::DirectorySeparatorChar)) {
@@ -276,7 +285,7 @@ try {
         maximumGapMs=if($sortedGaps.Count){$sortedGaps[-1]}else{$null}; p95GapMs=$p95
         completedNormally=$completedNormally; transientPhaseReadFailures=$phaseReadFailures
         targetObserved=($null -ne $firstSeen); executableHashUnchanged=$hashUnchanged
-        validObservation=($completedNormally -and $failures -eq 0 -and $null -ne $firstSeen -and $hashUnchanged)
+        validObservation=(Test-ObservationValidity -CompletedNormally $completedNormally -SampleFailures $failures -MarkerFailures $phaseReadFailures -TargetObserved ($null -ne $firstSeen) -HashUnchanged $hashUnchanged)
         rootPids=@($rootIds | ForEach-Object { $_ }); observedProcessNames=@($names | ForEach-Object { $_ }); maximumProcesses=$maxProcesses
         processesAtLastSuccessfulSample=if($null -ne $owned){$owned.Count}else{0}
         firstOwnedSeenMs=$firstSeen; lastOwnedSeenMs=$lastSeen; maximumTcpRows=$maxTcp; maximumTcpLoopbackRows=$maxLoopback

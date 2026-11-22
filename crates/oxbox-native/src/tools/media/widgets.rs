@@ -146,6 +146,34 @@ mod accessibility_tests {
             );
         }
     }
+
+    #[test]
+    fn consumed_provider_results_announce_completion_and_contextual_errors() {
+        use oxbox_core::tools::media_provider::ProviderStatus;
+        let mut providers = Providers {
+            statuses: vec![
+                ProviderStatus {
+                    name: "ffmpeg".into(),
+                    path: None,
+                    version: Some("Generated fixture 1.0".into()),
+                    error: None,
+                },
+                ProviderStatus {
+                    name: "tesseract".into(),
+                    path: None,
+                    version: None,
+                    error: Some("Generated provider failure".into()),
+                },
+            ],
+            ..Default::default()
+        };
+        let nodes = crate::accessibility::test_tree(|ui| providers.show(ui));
+        assert!(nodes.iter().any(|node| node.role() == Role::Status
+            && node.label() == Some("Checked 2 local providers")
+            && node.live() == Some(egui::accesskit::Live::Polite)));
+        assert!(nodes.iter().any(|node| node.role() == Role::Alert
+            && node.label() == Some("Error: tesseract: Generated provider failure")));
+    }
 }
 pub fn results(ui: &mut egui::Ui, paths: &[PathBuf]) {
     if !paths.is_empty() {
@@ -219,13 +247,17 @@ impl Providers {
         ui.group(|ui|{
             ui.label("Local media providers");
             ui.label("Oxbox never downloads providers. Install a maintained FFmpeg/Tesseract executable in PATH. Provider licensing belongs to the installed build.");
-            if ui.add_enabled(!self.task.running(),egui::Button::new("Check installed providers")).clicked(){
-                self.task.start(ui.ctx(),|cancel,_|{cancel.check()?;let ffmpeg=oxbox_core::tools::media_provider::provider_status_with_cancel("ffmpeg",&cancel);cancel.check()?;let tesseract=oxbox_core::tools::media_provider::provider_status_with_cancel("tesseract",&cancel);Ok(vec![ffmpeg,tesseract])});
+            if ui.add_enabled(!self.task.running(),egui::Button::new("Check installed providers")).clicked()
+                && self.task.start(ui.ctx(),|cancel,_|{cancel.check()?;let ffmpeg=oxbox_core::tools::media_provider::provider_status_with_cancel("ffmpeg",&cancel);cancel.check()?;let tesseract=oxbox_core::tools::media_provider::provider_status_with_cancel("tesseract",&cancel);Ok(vec![ffmpeg,tesseract])}) {
+                    self.statuses.clear();
+            }
+            if !self.statuses.is_empty() {
+                crate::accessibility::status(ui, &format!("Checked {} local providers", self.statuses.len()));
             }
             for status in &self.statuses {
                 ui.label(format!("{}: {}",status.name,status.version.as_deref().unwrap_or("Unavailable")));
                 if let Some(path)=&status.path{ui.small(path.display().to_string());}
-                if let Some(error)=&status.error{ui.label(error);}
+                if let Some(error)=&status.error{crate::accessibility::alert(ui, format!("{}: {error}", status.name));}
             }
             self.task.show(ui);
         });

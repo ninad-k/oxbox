@@ -48,8 +48,48 @@ and the [MSI property](https://learn.microsoft.com/en-us/windows/win32/msi/msire
 The new regression tests failed before these changes and pass afterward. The no-install verifier was also
 run against build B's old MSI/NSIS: all five extracted MSI payload hashes and manifest/compiler-output hashes
 matched, and it correctly reported the missing MSI shutdown property and missing NSIS running-app guard.
-The replacement installer compiler/table checks must be recorded after the final approved EXE is packaged.
-No build B installer was executed to demonstrate the force-shutdown risk.
+The replacement installer compiler/table checks are recorded below. No build B installer was executed to
+demonstrate the force-shutdown risk.
+
+## Replacement package inspection — 2026-11-22
+
+Frozen functional source `54dd5936475952d63c8b91ba2ea3935a92aca3e0` was built once using
+`rustc 1.95.0 (59807616e 2026-04-14)` and the production packaging wrapper. The release compilation completed
+in 4 minutes 13 seconds; WiX MSI and the patched NSIS compiler both succeeded. The old build B review files
+were preserved. The fresh six-asset review set is under `target/native-release-review/`.
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `oxbox-native.exe` | 13,523,456 | `428b28603ec2c16d825e833250fba1cb1a1dd06d2d9d6ef1f78b6e4253c94273` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 5,709,824 | `52624b9ea3f76eb1657c3dcfbb548a59d9aef62b700ed4f0d395d76aaf77ac9d` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,022,405 | `0eb8fa654ea4bae1432d838ea097b39edf7a15335a5d477e910db44000d791e1` |
+| `THIRD_PARTY_NOTICES.txt` | 3,696,014 | `6f22422e0098e8dc70702a06d63a321627d695fd0e9fbb952a137c8a85c792d2` |
+| `SHA256SUMS.txt` | 447 | `fe42c2a724237ddaa62f92616008c861d5241b541e12b3708304992911b38340` |
+
+The no-install verification command passed:
+
+```powershell
+node scripts/verify-native-installers.mjs --draft target/native-release-review --expected-exe-sha256 428b28603ec2c16d825e833250fba1cb1a1dd06d2d9d6ef1f78b6e4253c94273
+```
+
+Its report at `target/installer-verification/run-0pbXaL/report.json` records all manifest hashes, all five
+extracted MSI payload matches, `DisableShutdown`, the native cleanup command/action type 82 at sequence
+3499 before RemoveFiles, and the full-uninstall/non-upgrade condition. The final NSIS compiler output
+matches the review installer; its generated helper contains the explicit tray-Quit refusal and no
+`RmShutdown`/force-shutdown call. The source preserves the upgrade/owned-startup cleanup guard.
+
+The native EXE has 24 Windows system-DLL imports, no WebView2 loader or VC redistributable import, and
+version/product metadata 0.1.0/Oxbox. Its six icon payloads and the setup EXE's six original icon payloads
+match `src-tauri/icons/icon.ico`; MSI's extracted ProductIcon is an exact ICO hash match. All native resource
+leaf contents match the previously inspected original brand/version resources. Raw resource-section hashes
+differ because section layout RVAs changed; that does not alter those leaf contents. Inspection reports are
+under `target/native-inspection/source-54dd593/`.
+
+Both PE certificate directories are empty and the MSI has no digital-signature table: the artifacts remain
+unsigned. The NSIS compiler reported its stock unused WebView label and unused install-mode language-string
+warnings; compilation succeeded. No installer/application/custom action was executed during this inspection.
+Independent NSIS extraction, actual installation/login/upgrade/uninstall, signing and human attribution
+review remain pending. This record does not close any clean-machine protocol row below.
 
 ## Available isolation and extraction tooling
 
