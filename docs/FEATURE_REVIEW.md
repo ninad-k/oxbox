@@ -1,5 +1,9 @@
 # Functional feature review
 
+The current [complete 56-tool review](verification/2026-11-22-56-tool-pass.md) supersedes this
+49-tool baseline for the latest source, CI and bounded desktop/package evidence. The historical
+findings below retain their original scope; no full manual acceptance transfers between builds.
+
 Review date: 2026-11-22. Three parallel source audits examined all **49 native routes**: 13 utilities,
 14 media/capture/vision tools and 22 system/window/app tools. They traced concrete controls to core APIs,
 including parameters, results, copies/exports, errors, confirmation, persistence and navigation/worker cleanup.

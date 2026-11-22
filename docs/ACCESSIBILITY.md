@@ -79,6 +79,13 @@ an Alert for invalid input without moving focus. These are Windows UI Automation
 
 ## Remaining manual matrix
 
+The [56-tool follow-up](verification/2026-11-22-56-tool-pass.md) passed **135 native tests on Windows**
+and **137 each on macOS ARM/Linux**, including all default-form names and selected expanded states.
+The exact `a9b6e1c` Windows EXE additionally exposed the checksum comparison and a named local-image
+sample error through UI Automation; coordinate edits removed stale Copy controls, and a valid sample
+recovered. Native picker selection preserved a generated Japanese filename. These bounded generated
+interactions do not close the speech, complete keyboard, IME, DPI or cross-OS runtime gates below.
+
 - Test Narrator and another supported screen reader: navigation, names, values, focus, dialog return,
   error/completion announcements and absence of repeated passive announcements.
 - Complete keyboard-only traversal and operation of every expanded form and error/result state, including

@@ -18,6 +18,12 @@ Generated inputs and injected effects keep real user data, devices and OS settin
 Dependency manifests and the lockfile are unchanged. Final source/CI/binary receipts remain separate
 from independent human security approval and adversarial filesystem/runtime acceptance.
 
+Checked source `a9b6e1c` passes [all-platform CI 45027690468](https://github.com/ninad-k/oxbox/actions/runs/45027690468):
+Windows 285 core / 135 native, macOS ARM and Linux 280 / 137 each, zero failed/ignored, strict Clippy
+and native builds. The current artifact/runtime evidence and unchanged dependency warnings are in
+[validation](VALIDATION.md#complete-56-tool-follow-up-a9b6e1c). No real destructive/provider/OS-effect
+acceptance or independent security attestation is inferred from these results.
+
 ### Maintenance expansion `c30a179`
 
 Three parallel implementation/review lanes and the integrator added generated/fake-effect coverage for

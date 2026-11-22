@@ -6,7 +6,32 @@ network feature is separately opted-in, manually requested ECB currency refresh,
 The approved native migration removes the embedded browser from the production host. Finite network observations
 do not establish a universal zero-network guarantee; the historical browser investigation is retained below.
 
+## Current 56-tool candidate a9b6e1c — 2026-11-22
+
+Source `a9b6e1c13a2d15c0a87fa1fa42b364209e915310`, Rust 1.95.0, Windows EXE **14,425,600 bytes**, SHA-256
+`b5636873f9aa9e8a51607a32380b22ed6a83169fc225fb18894ce336cef8aa8d`. Observation directory:
+`target/native-privacy-qa/run-verification56`. The observer/validity guards are unchanged.
+
+- **300.070 seconds / 6,000 samples**, 50-ms requested interval; maximum gap **101.291 ms**, p95 **62.750 ms**.
+- Starts at **13:34:23.994 UTC**, finishes **13:39:24.129 UTC**. First row is at **18.916 ms**, zero owned
+  processes; first owned sample **18,751.085 ms**, last **258,164.997 ms**. Final sampled row at
+  **299,969.126 ms** is zero owned processes, approximately **41.804 seconds** after the last owned sample.
+- `completedNormally`, `validObservation`, `targetObserved` and `executableHashUnchanged` are true;
+  sample/marker failures are zero. All TCP categories and UDP bindings have zero maxima and sums.
+- The only observed process name is `oxbox-native.exe`; maximum process count two includes the brief
+  second-instance activation. No provider or live device/clipboard/network action was run.
+- The exact EXE used an isolated profile. Native picker/checksum comparison, generated Japanese image
+  path, local-color edit/error invalidation/recovery, close-to-tray, restored same-instance state and
+  normal Quit are recorded in [the current receipt](verification/2026-11-22-56-tool-pass.md).
+
+This is one bounded startup/generated-input/tray/Quit observation, not all 56 effects or all-provider
+coverage. Snapshot gaps can miss short flows/processes. DNS Client, OS brokers and system/vendor services
+are outside owned-PID coverage; UDP tables are bindings, not packet/destination evidence. No DNS/packet/
+ETW trace or system-setting change was used. Broader and cross-OS runtime acceptance remains open.
+
 ## Current maintenance candidate c30a179 — 2026-11-22
+
+Historical receipt for the previous executable, not the current candidate above.
 
 Source `c30a179a573424b178def065a3c5c0f5c9397074`, Rust 1.95.0, Windows EXE **14,381,056 bytes**, SHA-256
 `006769afce34f73fd4b1b9eee2216356e3f8ac7f39101d8fcf1587a74d8cb841`. The selected graph still contains

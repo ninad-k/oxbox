@@ -2,8 +2,8 @@
 
 This file records observed evidence, not planned results. Release gates remain open until explicitly recorded.
 
-Latest: [maintenance/workflow candidate `c30a179`](#maintenance-and-workflow-candidate-c30a179), preserving
-the original 49 tools and expanding the catalogue to 56. Earlier source/host evidence below stays historical.
+Latest: [complete 56-tool follow-up `a9b6e1c`](#complete-56-tool-follow-up-a9b6e1c), preserving
+the original 49 tools. Earlier source/host evidence below stays historical.
 
 ## 2026-11-21 implementation session
 
@@ -678,3 +678,45 @@ Clean-machine install/login/opt-out/upgrade/uninstall is intentionally pending. 
 effects, all-tool native manual acceptance, real screen readers/IME/contrast/DPI, hardware/providers,
 other-OS runtime/packages, DNS attribution, signing and independent human security/license review remain
 open. This source/CI/package receipt does not close them or claim complete CCleaner feature parity.
+
+## Complete 56-tool follow-up `a9b6e1c`
+
+Three parallel agents traced all **56 unique catalogue IDs**, with no omissions/duplicates. The
+[complete route, regression and bounded GUI record](verification/2026-11-22-56-tool-pass.md) identifies
+the concrete controls/core modules, reproduced defects and remaining manual scope.
+
+- Checked source: [`a9b6e1c13a2d15c0a87fa1fa42b364209e915310`](https://github.com/ninad-k/oxbox/commit/a9b6e1c13a2d15c0a87fa1fa42b364209e915310), including fixes in `cdfbff9`. Later receipt-only changes do not alter native/build inputs.
+- Exact Rust **1.95.0**, local workspace **285 core + 135 native + 12 legacy Rust tests**, zero failed/ignored;
+  formatting and strict workspace/all-target Clippy passed. The first CI exposed an APFS-incompatible
+  filename fixture; it was corrected without weakening the already-correct application guard or ignoring a test.
+- [CI 45027690468](https://github.com/ninad-k/oxbox/actions/runs/45027690468): all five jobs green;
+  Windows **285/135**, macOS ARM **280/137**, Linux **280/137** core/native, zero failed/ignored.
+  All three passed strict Clippy/tests/production builds; Linux formatting, actual Rust 1.95 check,
+  39 legacy UI tests and 18 packaging regressions passed. Local website four and observer three tests passed.
+- Svelte check/build passed; native graph **341 packages**, no browser host. Dependency manifests/lockfile
+  unchanged; Windows notices **355 packages / zero missing texts / three attribution reviews**. Audit snapshot
+  retains zero vulnerability entries, eight unmaintained and one GLib unsoundness warning; pnpm zero advisories.
+- The selected wrapper rebuilt production in **3m58s**. A byte-matched isolated-profile EXE passed native
+  checksum comparison, exact Japanese image selection, local-color edit/error invalidation and recovery,
+  close-to-tray, same-instance restoration and normal Quit. These are two bounded tool interactions.
+- Same EXE: **300.070 s / 6,000 samples**, startup/generated checks/hide/reactivation/Quit, valid observation,
+  zero owned TCP/UDP, zero query/marker failures, stable hash, zero final owned processes and about **41.8 s**
+  after the last owned sample. [Sampling limits](RUNTIME_PRIVACY.md#current-56-tool-candidate-a9b6e1c--2026-11-22).
+- Static MSI/NSIS local report `run-OyH7C1`, refresh preflight `run-hDuzqW`, re-downloaded `run-EdNUtD` passed.
+  MSI payload hashes match; NSIS source/compiler-output/lifecycle checks pass. No installer/custom action ran.
+- Release ID **453727915** targets the exact checked source and remains **draft/prerelease**, no real version tag.
+  Six old `c30a179` assets and notes were backed up/verified before replacement; all six new downloads matched.
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `oxbox-native.exe` | 14,425,600 | `b5636873f9aa9e8a51607a32380b22ed6a83169fc225fb18894ce336cef8aa8d` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 6,033,408 | `417dc8aa294bdb65728e6d7557ce35aaa6a825bcab816e6a5d919662efaad818` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,260,245 | `248ce9cc614cbfefb2457b06ef3b328a7a5c0a5c8c23d425c8bd602d3adc6416` |
+| `SHA256SUMS.txt` | 447 | `aae4ed079169a0065a61445e405d352a4cd8cd0f5e8b48c53cfbef8041d151b9` |
+| `THIRD_PARTY_NOTICES.txt` | 3,696,014 | `6f22422e0098e8dc70702a06d63a321627d695fd0e9fbb952a137c8a85c792d2` |
+| `LICENSE-MIT` | 1,076 | `dff2f23bad58d45b0830bf91f27ef278996da5ca00f1ab198969c854e8060f4f` |
+| `LICENSE-APACHE` | 11,358 | `c95bae1d1ce0235ecccd3560b772ec1efb97f348a79f0fbe0a634f0c2ccefe2c` |
+
+Clean-machine install/login/upgrade/uninstall is intentionally pending. All-tool real native effects,
+hardware/providers, other-OS runtime/packages, full accessibility, DNS/OS-broker privacy, independent
+NSIS extraction, signing and human security/license/dependency acceptance remain open. No release was published.

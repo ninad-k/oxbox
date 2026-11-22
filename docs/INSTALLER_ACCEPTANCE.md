@@ -4,7 +4,27 @@ The MSI and NSIS packages remain unsigned, unpublished review artifacts. Package
 inspection and compiler success do not establish successful installation, login startup, upgrade or removal.
 Keep the release draft until the relevant gates in [RELEASE.md](RELEASE.md) pass.
 
+## Current 56-tool candidate `a9b6e1c`
+
+Exact source `a9b6e1c13a2d15c0a87fa1fa42b364209e915310`, Rust 1.95.0; Windows EXE **14,425,600 bytes**,
+SHA-256 `b5636873f9aa9e8a51607a32380b22ed6a83169fc225fb18894ce336cef8aa8d`.
+MSI **6,033,408 bytes**, NSIS **4,260,245 bytes**, unsigned. Static reports `run-OyH7C1`,
+`run-hDuzqW` and downloaded `run-EdNUtD` pass under `target/installer-verification/`, including exact
+MSI payload hashes, owned-startup cleanup, non-forcing lifecycle and generated NSIS/compiler checks.
+The warning-only WebView label and misspelled English fallback are unreachable under this per-user,
+English-only configuration; no WebView installer/download branch is enabled. This source inspection
+does not certify the actual installer UI or behavior.
+
+The existing draft/prerelease ID **453727915** targets this exact source. Its six previous `c30a179`
+assets and notes were backed up/verified before replacement; every new download matched the staging
+hash/size manifest. No actual version tag was created, installer/custom action executed or release
+published. [All artifact hashes](VALIDATION.md#complete-56-tool-follow-up-a9b6e1c) and
+[bounded EXE interaction](verification/2026-11-22-56-tool-pass.md) are separate evidence.
+Clean-machine install/login/upgrade/uninstall, independent NSIS extraction, signing and human review remain pending.
+
 ## Current maintenance candidate `c30a179`
+
+Historical receipt for the previous candidate; the current one is `a9b6e1c` above.
 
 The six-asset draft targets `c30a179a573424b178def065a3c5c0f5c9397074`, exact Rust 1.95.0 and EXE SHA-256
 `006769afce34f73fd4b1b9eee2216356e3f8ac7f39101d8fcf1587a74d8cb841` (**14,381,056 bytes**).
