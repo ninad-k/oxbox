@@ -18,7 +18,7 @@ cargo run -p oxbox-native --locked
 
 The native package selects eframe/egui 0.37 with Glow, without a webview. The legacy Svelte checks remain
 comparison/catalogue checks; they do not certify native interaction. Packaging uses the build-native wrapper
-and must be checked separately. See [the 49-row native matrix](../tasks/native-migration.md).
+and must be checked separately. See [the preserved baseline and expansion matrices](../tasks/native-migration.md).
 
 The dated [native feature verification record](verification/2026-11-22-native-feature-pass.md)
 separates the 49-tool source/control pass, reproduced regressions and actual synthetic-provider smoke
@@ -26,6 +26,12 @@ from pending native, hardware and clean-machine acceptance. Record new results a
 and executable; do not treat proposed safe GUI cases as completed checks.
 
 ## Automated coverage
+
+- Maintenance/productivity: bounded arithmetic/unit/timer Quick Actions; validated option-only presets;
+  no-replace rename/recovery/Undo; fake overwrite/delete, startup and registry effects; immutable recovery
+  review; cache age/browser/identity guards; read-only generated browser/storage metadata; opaque flattened
+  redaction and cancelled image/text work. New native forms have headless label/idle checks. None of this
+  authorizes live deletion, registry/startup changes, screen capture or collection of private browser data.
 
 - Native tasks: cancel/abandon/late-result handling, latest-only bounded progress, shutdown and joined workers.
 - Native instance/settings transactions and finite bundled icon vectors.

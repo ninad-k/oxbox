@@ -165,6 +165,28 @@ impl Default for FileTools {
     }
 }
 impl FileTools {
+    pub fn checksum_preset(&self) -> oxbox_core::presets::ChecksumPreset {
+        oxbox_core::presets::ChecksumPreset {
+            algorithm: self.algorithm,
+        }
+    }
+    pub fn apply_checksum_preset(
+        &mut self,
+        p: &oxbox_core::presets::ChecksumPreset,
+    ) -> oxbox_core::CoreResult<()> {
+        self.hash.poll();
+        if self.hash.running() {
+            return Err(oxbox_core::CoreError::InvalidInput(
+                "Finish or cancel the checksum job before applying a preset.".into(),
+            ));
+        }
+        if self.algorithm != p.algorithm {
+            self.expected.clear();
+        }
+        self.algorithm = p.algorithm;
+        self.hash.abandon();
+        Ok(())
+    }
     pub(super) fn clear_secrets(&mut self) {
         self.password.clear();
         self.confirmation.clear();
@@ -410,7 +432,9 @@ impl FileTools {
     }
     fn clean(&mut self, ui: &mut Ui) {
         let busy = self.cleanup.running() || self.trash.running();
-        ui.label("Scan fixed user-cache locations, review exact paths and totals, then move selected eligible files to Trash. Close affected applications first. The Recycle Bin is never emptied.");
+        ui.label("Scan exact OS/user cache locations, review eligible files, then move only those reviewed files to Trash. Close affected browsers/apps first. History, cookies, passwords, documents and downloads are not cleanup categories. The Recycle Bin is size-only and never emptied.");
+        ui.small("Each category is limited to 50,000 entries and 20 levels. Partial scans are read-only. Cache eligibility uses the latest available modification/access timestamp and keeps files newer than 24 hours; the OS may not maintain reliable last-access timestamps.");
+        ui.small("Caches of recognized running Chrome, Chromium, Edge, Firefox or Safari processes are read-only. Browser activity is checked again before each Trash request; unrecognized builds and a process starting during the final OS call remain limitations. Close browsers first.");
         if ui
             .add_enabled(!busy, egui::Button::new("Scan user caches"))
             .clicked()
@@ -423,9 +447,9 @@ impl FileTools {
         }
         self.cleanup.show(ui);
         if let Some(categories) = &self.cleanup.result {
-            ui.add_enabled_ui(!busy,|ui|{for category in categories{let mut selected=self.categories.contains(&category.id);ui.group(|ui|{if ui.add_enabled(!category.read_only&&category.files>0,egui::Checkbox::new(&mut selected,&category.name)).changed(){if selected{self.categories.insert(category.id.clone());}else{self.categories.remove(&category.id);}}ui.label(category.path.display().to_string());ui.label(format!("{} files · {} · {} inaccessible skipped{}",category.files,bytes(category.bytes),category.skipped,if category.read_only{" · Read only"}else{""}));});}
-            let reviewed=categories.iter().filter(|category|self.categories.contains(&category.id)&&!category.read_only).collect::<Vec<_>>();let files=reviewed.iter().map(|category|category.files).sum();let size=reviewed.iter().map(|category|category.bytes).sum();ui.label(format!("Selected: {files} files, {}.",bytes(size)));
-            if ui.add_enabled(files>0,egui::Button::new("Review and move selected cache files to Trash…")).clicked(){let detail=reviewed.iter().map(|category|format!("{}\n{}\n{} files, {}",category.name,category.path.display(),category.files,bytes(category.bytes))).collect::<Vec<_>>().join("\n\n");if confirm(ui.ctx(), "Review cleanup",format!("Move {files} reviewed cache files ({}) to Trash?\n\n{detail}\n\nTemporary files less than 24 hours old are kept. Close affected apps first.",bytes(size))){let ids=reviewed.iter().map(|category|category.id.clone()).collect::<Vec<_>>();self.trash.start(ui.ctx(),move|cancel,progress|clean_drive::clean_categories(&ids,files,size,&cancel,progress));}}
+            ui.add_enabled_ui(!busy,|ui|{for category in categories{let mut selected=self.categories.contains(&category.id);ui.group(|ui|{if ui.add_enabled(!category.read_only&&category.files>0,egui::Checkbox::new(&mut selected,&category.name)).changed(){if selected{self.categories.insert(category.id.clone());}else{self.categories.remove(&category.id);}}ui.label(category.path.display().to_string());ui.label(format!("{} files · {} · {} skipped{}",category.files,bytes(category.bytes),category.skipped,if category.limited{" · Partial scan: read only"}else if category.read_only{" · Read only"}else{""}));});}
+            let reviewed=categories.iter().filter(|category|self.categories.contains(&category.id)&&!category.read_only).collect::<Vec<_>>();let files=reviewed.iter().map(|category|category.files).sum::<u64>();let size=reviewed.iter().map(|category|category.bytes).sum();ui.label(format!("Selected: {files} files, {}.",bytes(size)));
+            if ui.add_enabled(files>0,egui::Button::new("Review and move selected cache files to Trash…")).clicked(){let detail=reviewed.iter().map(|category|format!("{}\n{}\n{} files, {}",category.name,category.path.display(),category.files,bytes(category.bytes))).collect::<Vec<_>>().join("\n\n");if confirm(ui.ctx(), "Review cleanup",format!("Move {files} reviewed cache files ({}) to Trash?\n\n{detail}\n\nOnly this scan's exact files are eligible. Recently modified/accessed or changed files are refused. Close affected browsers/apps first; locked files are not forced.",bytes(size))){let snapshots=reviewed.into_iter().cloned().collect::<Vec<_>>();self.trash.start(ui.ctx(),move|cancel,progress|clean_drive::clean_reviewed_categories(&snapshots,true,&cancel,progress));}}
         });
         }
     }

@@ -193,10 +193,18 @@ impl Preferences {
 mod tests {
     use super::*;
     #[test]
-    fn registry_preserves_all_49_unique_tools_and_platforms() {
+    fn registry_preserves_original_tools_and_adds_maintenance_routes() {
         let catalogue = Catalog::bundled().unwrap();
-        assert_eq!(catalogue.tools.len(), 49);
-        assert_eq!(catalogue.categories.len(), 7);
+        let baseline: Vec<String> =
+            serde_json::from_str(include_str!("../../../catalog/v01-tool-ids.json")).unwrap();
+        assert_eq!(baseline.len(), 49);
+        assert!(
+            baseline
+                .iter()
+                .all(|id| catalogue.tools.iter().any(|tool| &tool.id == id))
+        );
+        assert_eq!(catalogue.tools.len(), 56);
+        assert_eq!(catalogue.categories.len(), 8);
         assert_eq!(
             catalogue
                 .tools
@@ -204,7 +212,7 @@ mod tests {
                 .map(|tool| &tool.id)
                 .collect::<std::collections::HashSet<_>>()
                 .len(),
-            49
+            56
         );
         assert!(
             catalogue

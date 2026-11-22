@@ -47,7 +47,28 @@ The controlled production Mouse Activity run used build **A**, executable SHA-25
 - [ ] Complete current production/per-tool/provider network coverage, DNS/OS-broker attribution and other-OS
   acceptance. The build A GUI run does not establish results for a later executable or a network probe.
 
-## Parallel ownership
+## Maintenance and productivity expansion — 2026-11-22
+
+The current catalogue contains **56** tools in eight categories. The 49-row baseline below remains
+historical migration scope; `catalog/v01-tool-ids.json` makes preservation executable. New source and
+headless/fake-backend tests do not close native manual acceptance. See the
+[scope](maintenance-and-productivity.md) and [user/recovery guide](../docs/MAINTENANCE.md).
+
+| Stable tool ID | Native form | Core coverage | Manual acceptance |
+|---|---|---|---|
+| `batch-rename` | `maintenance/files.rs` | Exact plans, no-replace moves, write-ahead/recovery, guarded Undo | Pending; use disposable fixtures |
+| `file-shred` | `maintenance/files.rs` | Typed acknowledgement, identity/hard-link guards, bounded writes, partial cancellation; fake effects | Pending; never use personal data |
+| `startup-manager` | `maintenance/system.rs` | Per-OS current-user scope, exclusive backup, immutable recovery review, stale entry refusal; fake effects | Pending on each OS |
+| `storage-analyzer` | `maintenance/system.rs` | Generated trees, limits, categories and cancellation; read-only | Pending on each OS |
+| `registry-review` | `maintenance/system.rs` | Narrow HKCU App Paths eligibility, backup, stale review/restore; fake registry | Pending on Windows; unavailable elsewhere |
+| `browser-review` | `maintenance/browser.rs` | Generated extension metadata, bounded traversal, cancellation; no private browser state | Pending on each supported browser/OS |
+| `maintenance-review` | `maintenance.rs` | Named idle routing and existing cleanup models; no automatic mutation | Pending on each OS |
+
+Existing tools also gain screenshot annotations, explicit text cleanup, safe resize/checksum/timer/unit
+presets, Quick Actions and new per-OS application review. Their tests cover generated data and native
+control/state models; they do not establish device, actual deletion, OS mutation or screen-reader passes.
+
+## Original parallel ownership
 
 - System/window/app group: 22 tools in `crates/oxbox-native/src/tools/system/`.
 - Media/capture/vision/clipboard group: 14 tools in `crates/oxbox-native/src/tools/media/`.

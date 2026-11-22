@@ -97,6 +97,65 @@ impl Default for ImageTools {
     }
 }
 impl ImageTools {
+    pub fn export_resize_preset(
+        &self,
+    ) -> oxbox_core::CoreResult<oxbox_core::presets::ResizePreset> {
+        if self.resize_job.running() {
+            return Err(oxbox_core::CoreError::InvalidInput(
+                "wait for the current resize job before saving a preset".into(),
+            ));
+        }
+        let mode = ["percent", "fit", "exact"]
+            .get(self.resize_mode)
+            .ok_or_else(|| {
+                oxbox_core::CoreError::InvalidInput("choose a valid resize mode".into())
+            })?;
+        let format = ["png", "jpeg", "webp"].get(self.format).ok_or_else(|| {
+            oxbox_core::CoreError::InvalidInput("choose a valid image output format".into())
+        })?;
+        let preset = oxbox_core::presets::ResizePreset {
+            mode: (*mode).into(),
+            percent: self.percent,
+            width: self.width,
+            height: self.height,
+            format: (*format).into(),
+            quality: self.quality,
+        };
+        preset.validate()?;
+        Ok(preset)
+    }
+
+    pub fn import_resize_preset(
+        &mut self,
+        preset: &oxbox_core::presets::ResizePreset,
+    ) -> oxbox_core::CoreResult<()> {
+        preset.validate()?;
+        if self.resize_job.running() {
+            return Err(oxbox_core::CoreError::InvalidInput(
+                "wait for the current resize job before applying a preset".into(),
+            ));
+        }
+        self.resize_mode = match preset.mode.as_str() {
+            "percent" => 0,
+            "fit" => 1,
+            _ => 2,
+        };
+        self.percent = preset.percent;
+        self.width = preset.width;
+        self.height = preset.height;
+        self.format = match preset.format.as_str() {
+            "png" => 0,
+            "jpeg" => 1,
+            _ => 2,
+        };
+        self.quality = preset.quality;
+        self.resize_job.abandon();
+        self.preview_job.abandon();
+        self.resize_results.clear();
+        self.resize_preview = Preview::default();
+        Ok(())
+    }
+
     pub fn show(&mut self, ui: &mut egui::Ui, id: &str, shared: &Shared) {
         match id {
             "qr-code" => self.qr(ui, shared),
@@ -545,6 +604,49 @@ impl ImageTools {
 #[cfg(test)]
 mod verification2_tests {
     use super::*;
+
+    #[test]
+    fn resize_preset_round_trip_contains_only_options_and_preserves_input_paths() {
+        let mut view = ImageTools {
+            resize_paths: vec![PathBuf::from("generated-input.png")],
+            resize_folder: "generated-destination".into(),
+            resize_mode: 2,
+            percent: 25.0,
+            width: 640,
+            height: 480,
+            format: 1,
+            quality: 83,
+            ..Default::default()
+        };
+        let preset = view.export_resize_preset().unwrap();
+        let fields = serde_json::to_value(&preset).unwrap();
+        assert_eq!(fields.as_object().unwrap().len(), 6);
+        assert_eq!(fields["mode"], "exact");
+        assert_eq!(fields["format"], "jpeg");
+        view.resize_mode = 0;
+        view.width = 1;
+        view.import_resize_preset(&preset).unwrap();
+        assert_eq!(
+            (
+                view.resize_mode,
+                view.width,
+                view.height,
+                view.format,
+                view.quality
+            ),
+            (2, 640, 480, 1, 83)
+        );
+        assert_eq!(
+            view.resize_paths,
+            vec![PathBuf::from("generated-input.png")]
+        );
+        assert_eq!(view.resize_folder, "generated-destination");
+        let mut invalid = preset;
+        invalid.quality = 0;
+        assert!(view.import_resize_preset(&invalid).is_err());
+        assert_eq!((view.resize_mode, view.width, view.quality), (2, 640, 83));
+        view.shutdown();
+    }
 
     fn frame(
         view: &mut ImageTools,

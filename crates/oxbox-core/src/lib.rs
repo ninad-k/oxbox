@@ -16,3 +16,5 @@ pub mod startup;
 pub mod tools;
 
 pub use error::{CoreError, CoreResult};
+pub mod presets;
+pub mod quick_actions;

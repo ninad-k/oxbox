@@ -14,6 +14,56 @@ pub struct UtilitiesTools {
     currency: currency::CurrencyTools,
 }
 impl UtilitiesTools {
+    pub fn export_preset(
+        &self,
+        id: &str,
+    ) -> oxbox_core::CoreResult<Option<oxbox_core::presets::PresetConfig>> {
+        use oxbox_core::presets::PresetConfig as P;
+        Ok(match id {
+            "verify-checksum" => Some(P::VerifyChecksum(self.files.checksum_preset())),
+            "timer-stopwatch" => Some(P::TimerStopwatch(self.time.timer_preset()?)),
+            "unit-converter" if !self.text.currency_mode => {
+                Some(P::UnitConverter(self.text.export_preset()))
+            }
+            _ => None,
+        })
+    }
+    pub fn import_preset(
+        &mut self,
+        p: &oxbox_core::presets::PresetConfig,
+    ) -> oxbox_core::CoreResult<()> {
+        use oxbox_core::presets::PresetConfig as P;
+        p.validate()?;
+        match p {
+            P::VerifyChecksum(p) => self.files.apply_checksum_preset(p),
+            P::TimerStopwatch(p) => self.time.apply_timer_preset(p),
+            P::UnitConverter(p) => {
+                self.currency.leave();
+                self.text.import_preset(p)
+            }
+            _ => Err(oxbox_core::CoreError::InvalidInput(
+                "This preset belongs to another tool.".into(),
+            )),
+        }
+    }
+    pub fn configure_quick_action(
+        &mut self,
+        action: &oxbox_core::quick_actions::QuickAction,
+    ) -> oxbox_core::CoreResult<()> {
+        use oxbox_core::quick_actions::QuickAction as A;
+        match action {
+            A::Timer { seconds } => self
+                .time
+                .apply_timer_preset(&oxbox_core::presets::TimerPreset { seconds: *seconds }),
+            A::Convert {
+                value, from, to, ..
+            } => {
+                self.currency.leave();
+                self.text.quick_conversion(*value, from, to)
+            }
+            _ => Ok(()),
+        }
+    }
     pub fn show(&mut self, ui: &mut Ui, id: &str, host: &mut Host) -> bool {
         match id {
             "transform-text" => self.text.transform(ui),

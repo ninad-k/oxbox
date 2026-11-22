@@ -9,12 +9,25 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalogue = JSON.parse(fs.readFileSync(path.join(root, 'website/dist/tools.json'), 'utf8'));
 const canonical = JSON.parse(fs.readFileSync(path.join(root, 'catalog/tools.json'), 'utf8'));
 const notes = JSON.parse(fs.readFileSync(path.join(root, 'website/tool-notes.json'), 'utf8'));
+// New catalogue entries may grow the site; the original public tool IDs must survive.
+const baselineIds = JSON.parse(fs.readFileSync(path.join(root, 'catalog/v01-tool-ids.json'), 'utf8'));
 
 test('website catalogue preserves canonical metadata, order and platform restrictions', () => {
-  assert.equal(catalogue.tools.length, 49);
+  assert.equal(catalogue.tools.length, canonical.tools.length);
   assert.deepEqual(catalogue.categories, canonical.categories);
   assert.deepEqual(catalogue.tools, canonical.tools.map(tool => ({ ...tool, note: Object.hasOwn(notes, tool.id) ? notes[tool.id] : tool.note ?? '' })));
   assert.deepEqual(catalogue.tools.find(tool => tool.id === 'mouse-activity').platforms, ['windows']);
+});
+
+test('catalogue growth preserves original tool IDs and renders dynamic tool/category totals', () => {
+  const ids = new Set(catalogue.tools.map(tool => tool.id));
+  assert.equal(ids.size, catalogue.tools.length);
+  assert.deepEqual(baselineIds.filter(id => !ids.has(id)), []);
+  const html = fs.readFileSync(path.join(root, 'website/dist/index.html'), 'utf8');
+  assert.equal([...html.matchAll(/<article class="tool-card"\s/g)].length, canonical.tools.length);
+  assert.ok(html.includes(`<strong>${canonical.tools.length}</strong> tools in source`));
+  assert.ok(html.includes(`<strong>${canonical.categories.length}</strong> useful categories`));
+  assert.ok(html.includes(`Showing all ${canonical.tools.length} tools`));
 });
 
 function page() {

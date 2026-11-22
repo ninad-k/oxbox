@@ -1,6 +1,7 @@
 # Shared tool catalogue
 
-`tools.json` is the metadata authority for all 49 stable tool IDs and seven categories. The native Rust
+`tools.json` is the metadata authority for 56 stable tool IDs and eight categories. The original 49 IDs
+are preserved by `v01-tool-ids.json` and catalogue regression tests. The native Rust
 launcher embeds it at compile time; the legacy Svelte registry imports it as build-time data; the static
 website builder reads it directly. None fetches the catalogue over the network.
 

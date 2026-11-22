@@ -34,6 +34,11 @@
       "id": "privacy",
       "label": "Privacy & Security",
       "icon": "shield"
+    },
+    {
+      "id": "maintenance",
+      "label": "Maintenance",
+      "icon": "brush-cleaning"
     }
   ],
   "tools": [
@@ -78,7 +83,7 @@
       ],
       "phase": 4,
       "status": "ready",
-      "note": "Opt-in monitoring. History is kept in memory; review clipboard privacy limits before enabling it.",
+      "note": "History monitoring is opt-in and memory-only. Separate pasted-text cleanup offers preview and Copy without starting history or injecting cross-app paste.",
       "icon": "clipboard-list"
     },
     {
@@ -254,7 +259,7 @@
       ],
       "phase": 2,
       "status": "ready",
-      "note": "",
+      "note": "Per-OS allowlisted caches and old temporary files, reviewed exact-file Trash only. Running-browser caches, partial scans and unsupported categories are read-only; password/history/cookie databases are excluded.",
       "icon": "brush-cleaning"
     },
     {
@@ -276,7 +281,7 @@
       ],
       "phase": 4,
       "status": "ready",
-      "note": "Capture permissions and desktop-session restrictions apply, especially on Wayland.",
+      "note": "Capture defaults to memory-only review and annotation. Only explicit export saves or copies flattened pixels. Optional direct capture can save an unedited original. OS/session permissions still apply.",
       "icon": "camera"
     },
     {
@@ -718,11 +723,13 @@
         "leftovers"
       ],
       "platforms": [
-        "windows"
+        "windows",
+        "macos",
+        "linux"
       ],
       "phase": 5,
       "status": "ready",
-      "note": "Windows registered uninstallers. Leftover inspection is separate from uninstalling.",
+      "note": "Windows uses reviewed registered uninstallers. macOS can Trash eligible user-owned app bundles; Linux can Trash eligible portable AppImages. System package entries are read-only and need their OS software manager. Personal app data is kept.",
       "icon": "package-minus"
     },
     {
@@ -1063,6 +1070,163 @@
       "status": "ready",
       "note": "Import dated reference rates locally, or explicitly opt into a manual ECB HTTPS refresh. Reference rates are not live trading quotes.",
       "icon": "coins"
+    },
+    {
+      "id": "batch-rename",
+      "name": "Batch Rename",
+      "description": "Preview and rename selected files with numbering, literal rules and guarded undo",
+      "category": "files",
+      "icon": "file-pen-line",
+      "keywords": [
+        "rename",
+        "batch",
+        "prefix",
+        "suffix",
+        "number",
+        "undo"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "note": "Explicit preview and confirmation; same-folder moves never replace existing files. Undo refuses changed or occupied targets.",
+      "phase": 6,
+      "status": "ready"
+    },
+    {
+      "id": "file-shred",
+      "name": "File Shred",
+      "description": "Explicitly overwrite and permanently remove reviewed local files",
+      "category": "privacy",
+      "icon": "shredder",
+      "keywords": [
+        "shred",
+        "overwrite",
+        "delete",
+        "permanent",
+        "privacy"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "note": "Advanced permanent action. File-only overwrite/delete does not guarantee erasure from SSDs, snapshots, copy-on-write storage or backups. Typed confirmation required; cancellation may leave partially overwritten files.",
+      "phase": 6,
+      "status": "ready"
+    },
+    {
+      "id": "startup-manager",
+      "name": "Startup Manager",
+      "description": "Review and reversibly disable current-user login entries",
+      "category": "maintenance",
+      "icon": "power",
+      "keywords": [
+        "startup",
+        "login",
+        "autostart",
+        "launchagents",
+        "xdg"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "note": "Current-user HKCU Run, user LaunchAgents or user XDG autostart only. Backups and guarded restore; system services and elevated entries are not managed.",
+      "phase": 6,
+      "status": "ready"
+    },
+    {
+      "id": "storage-analyzer",
+      "name": "Storage Analyzer",
+      "description": "Find large files and understand folder and file-type storage use",
+      "category": "maintenance",
+      "icon": "chart-pie",
+      "keywords": [
+        "storage",
+        "disk",
+        "space",
+        "large",
+        "files",
+        "analyze"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "note": "Explicit, bounded, read-only local scan. Skipped links, unreadable entries and limits are reported; no files are automatically deleted.",
+      "phase": 6,
+      "status": "ready"
+    },
+    {
+      "id": "registry-review",
+      "name": "Registry Review",
+      "description": "Review obsolete current-user Windows application paths with backup and restore",
+      "category": "maintenance",
+      "icon": "list-tree",
+      "keywords": [
+        "registry",
+        "cleanup",
+        "windows",
+        "backup",
+        "restore"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "note": "Opt-in Windows HKCU App Paths values only, with proof of a missing local target, exclusive backup, exact review and guarded restore. No system-hive sweep or performance promise.",
+      "phase": 6,
+      "status": "ready"
+    },
+    {
+      "id": "browser-review",
+      "name": "Browser Review",
+      "description": "Inspect local browser extension metadata and declared permissions",
+      "category": "maintenance",
+      "icon": "puzzle",
+      "keywords": [
+        "browser",
+        "extensions",
+        "plugins",
+        "chrome",
+        "edge",
+        "firefox",
+        "brave"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "note": "Read-only bounded extension review; enabled state may require checking in the browser. History, cookies, saved passwords and account databases are not read or edited.",
+      "phase": 6,
+      "status": "ready"
+    },
+    {
+      "id": "maintenance-review",
+      "name": "Maintenance Review",
+      "description": "Review eligible cache space and reach cleanup, storage and startup tools",
+      "category": "maintenance",
+      "icon": "brush-cleaning",
+      "keywords": [
+        "maintenance",
+        "cleanup",
+        "cache",
+        "space",
+        "review",
+        "health"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "note": "Local review overview with separate confirmed actions. Maintenance reminders use Alarm and do not automatically delete anything; no synthetic health or speed score.",
+      "phase": 6,
+      "status": "ready"
     }
   ]
 }

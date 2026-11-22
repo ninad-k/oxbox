@@ -1,6 +1,4 @@
 {
-  "clipboard-history": "Opt-in monitoring. History is kept in memory; review clipboard privacy limits before enabling it.",
-  "screenshot": "Capture permissions and desktop-session restrictions apply, especially on Wayland.",
   "hide-desktop": "Changes desktop icon visibility. Linux is not supported.",
   "lock-screen": "macOS uses display sleep; immediate password protection depends on your OS settings.",
   "break-time": "Notifications require permission. Full-screen activity detection is best effort.",
@@ -15,7 +13,6 @@
   "energy-saver": "Selects an available Windows power plan; available plans depend on the device.",
   "hidden-files": "Uses file-manager settings on Windows and macOS; changing macOS settings can restart Finder.",
   "cpu-temperature": "Only sensors exposed by the system are available. Many Windows devices expose none.",
-  "uninstall-apps": "Windows registered uninstallers. Leftover inspection is separate from uninstalling.",
   "presentation-mode": "Combines keep-awake with supported desktop controls. Notification settings remain manual OS controls.",
   "do-not-disturb": "Opens supported OS settings. You change the notification mode yourself.",
   "airplane-mode": "Opens Windows airplane-mode settings. You control the radios in Windows.",

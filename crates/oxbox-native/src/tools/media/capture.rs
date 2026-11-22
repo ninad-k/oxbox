@@ -1,5 +1,6 @@
 use super::{
     Shared,
+    annotate::ImageEditor,
     widgets::{self, Asset, Preview},
 };
 use crate::{host::Host, jobs::Task};
@@ -12,9 +13,10 @@ use oxbox_core::{
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 struct Captured {
-    path: PathBuf,
+    path: Option<PathBuf>,
     asset: Asset,
     clipboard_error: Option<String>,
+    review: bool,
 }
 struct Frozen {
     target: TargetInfo,
@@ -32,8 +34,11 @@ struct AreaSession {
     frames: Vec<AreaFrame>,
     folder: Option<PathBuf>,
     copy: bool,
+    review: bool,
 }
 pub struct CaptureUi {
+    review: bool,
+    editor: ImageEditor,
     mode: usize,
     delay: usize,
     selected: usize,
@@ -54,11 +59,13 @@ pub struct CaptureUi {
 impl Default for CaptureUi {
     fn default() -> Self {
         Self {
+            review: true,
+            editor: ImageEditor::default(),
             mode: 0,
             delay: 0,
             selected: 0,
             folder: String::new(),
-            copy: true,
+            copy: false,
             targets_job: Task::default(),
             targets: Vec::new(),
             capture: Task::default(),
@@ -77,37 +84,66 @@ fn finish(
     image: RgbaImage,
     folder: Option<PathBuf>,
     copy: bool,
+    review: bool,
     shared_clipboard: Arc<oxbox_core::tools::clipboard_history::ClipboardService>,
     cancel: &CancelToken,
     quit: &CancelToken,
 ) -> CoreResult<Captured> {
+    finish_capture_using(
+        image,
+        review,
+        copy,
+        cancel,
+        quit,
+        |image| {
+            let folder = folder
+                .map(Ok)
+                .unwrap_or_else(screenshot::output_directory)?;
+            screenshot::save_capture(image, &folder)
+        },
+        |image| shared_clipboard.copy_image(image),
+    )
+}
+
+fn finish_capture_using(
+    image: RgbaImage,
+    review: bool,
+    copy: bool,
+    cancel: &CancelToken,
+    quit: &CancelToken,
+    save: impl FnOnce(&RgbaImage) -> CoreResult<PathBuf>,
+    copy_image: impl FnOnce(&RgbaImage) -> CoreResult<()>,
+) -> CoreResult<Captured> {
     cancel.check()?;
     quit.check()?;
-    let folder = folder
-        .map(Ok)
-        .unwrap_or_else(screenshot::output_directory)?;
-    let path = screenshot::save_capture(&image, &folder)?;
+    if review {
+        return Ok(Captured {
+            path: None,
+            asset: Asset::new(image),
+            clipboard_error: None,
+            review: true,
+        });
+    }
+    let path = save(&image)?;
     cancel.check()?;
     quit.check()?;
     let clipboard_error = if copy {
-        shared_clipboard
-            .copy_image(&image)
-            .err()
-            .map(|error| error.to_string())
+        copy_image(&image).err().map(|error| error.to_string())
     } else {
         None
     };
     Ok(Captured {
-        path,
+        path: Some(path),
         asset: Asset::new(image),
         clipboard_error,
+        review: false,
     })
 }
 impl CaptureUi {
     pub fn show(&mut self, ui: &mut egui::Ui, host: &mut Host, shared: &Shared) {
         widgets::introduction(
             ui,
-            "Capture a display, a window, or a selected area. The launcher hides before capture and the PNG is saved to a new file.",
+            "Capture a display, window or selected area. Review and annotate before exporting, or explicitly choose direct raw screenshot saving.",
         );
         let old = self.mode;
         widgets::choice(
@@ -170,24 +206,50 @@ impl CaptureUi {
             &mut self.delay,
             &["None", "3 seconds", "5 seconds", "10 seconds"],
         );
-        widgets::folder(
-            ui,
-            "Output folder (blank uses Pictures/Oxbox)",
-            &mut self.folder,
-        );
-        ui.checkbox(&mut self.copy, "Copy capture to clipboard");
+        if ui
+            .checkbox(
+                &mut self.review,
+                "Review and annotate before exporting (memory-only capture)",
+            )
+            .changed()
+            && self.review
+        {
+            self.copy = false;
+        }
+        ui.add_enabled_ui(!self.review, |ui| {
+            widgets::folder(
+                ui,
+                "Direct-save folder (blank uses Pictures/Oxbox)",
+                &mut self.folder,
+            );
+            ui.checkbox(
+                &mut self.copy,
+                "Copy raw direct-save screenshot to clipboard",
+            );
+        });
+        if !self.review {
+            widgets::note(
+                ui,
+                "Direct-save mode exports the unedited screenshot immediately. Later redaction does not change earlier files or clipboard copies.",
+            );
+        }
         let busy = self.capture.running() || self.freeze.running() || self.session.is_some();
         if ui
             .add_enabled(
                 !busy && !choices.is_empty(),
-                egui::Button::new(if self.mode == 2 {
-                    "Select an area…"
-                } else {
-                    "Capture and save PNG"
+                egui::Button::new(match (self.mode == 2, self.review) {
+                    (true, true) => "Select area for review…",
+                    (true, false) => "Select area and save…",
+                    (false, true) => "Capture for review",
+                    (false, false) => "Save screenshot",
                 }),
             )
             .clicked()
         {
+            self.editor.clear();
+            self.preview = Preview::default();
+            self.path = None;
+            self.clipboard_error = None;
             self.error = None;
             let delay = [0, 3, 5, 10][self.delay];
             let folder = if self.folder.trim().is_empty() {
@@ -234,6 +296,7 @@ impl CaptureUi {
                     frames: Vec::new(),
                     folder,
                     copy: self.copy,
+                    review: self.review,
                 });
             } else if let Some(target) = choices.get(self.selected) {
                 let target = CaptureTarget {
@@ -241,6 +304,7 @@ impl CaptureUi {
                     id: target.id,
                 };
                 let copy = self.copy;
+                let review = self.review;
                 let clipboard = shared.clipboard.clone();
                 let quit = shared.quit.clone();
                 self.capture.start(ui.ctx(), move |cancel, _| {
@@ -250,7 +314,7 @@ impl CaptureUi {
                         || {
                             quit.check()?;
                             let image = screenshot::capture_image(target)?;
-                            finish(image, folder, copy, clipboard, &cancel, &quit)
+                            finish(image, folder, copy, review, clipboard, &cancel, &quit)
                         },
                     )
                 });
@@ -284,8 +348,11 @@ impl CaptureUi {
                 format!("The PNG was saved. Clipboard copy failed: {error}"),
             );
         }
-        self.preview.show(ui);
+        if !self.editor.active() {
+            self.preview.show(ui);
+        }
         if let Some(image) = &self.preview.image
+            && !self.editor.active()
             && ui
                 .add_enabled(
                     !self.copy_job.running(),
@@ -300,9 +367,17 @@ impl CaptureUi {
                 clipboard.copy_image(&image)
             });
         }
+        if !self.editor.active()
+            && let Some(image) = self.preview.image.clone()
+            && ui.button("Annotate this captured image").clicked()
+        {
+            self.copy_job.abandon();
+            self.editor.begin(ui.ctx(), image);
+        }
+        self.editor.show(ui, shared);
         widgets::note(
             ui,
-            "Capture is an explicit action. Clipboard history stays paused unless separately enabled. Existing image files are never overwritten.",
+            "Review captures stay in memory until an explicit flattened Save or Copy. Clipboard history stays paused unless separately enabled. Saved originals and earlier clipboard copies are not erased by redaction; existing files are never overwritten.",
         );
     }
 
@@ -311,15 +386,22 @@ impl CaptureUi {
         self.capture.poll();
         self.freeze.poll();
         self.copy_job.poll();
+        self.editor.tick(ctx);
         if let Some(targets) = self.targets_job.result.take() {
             self.targets = targets;
             self.selected = 0;
         }
         if let Some(result) = self.capture.result.take() {
-            self.path = Some(result.path);
+            self.path = result.path;
             self.clipboard_error = result.clipboard_error;
             if let Some(ctx) = ctx {
-                self.preview.set(ctx, result.asset);
+                if result.review {
+                    self.preview = Preview::default();
+                    self.editor.begin_asset(ctx, result.asset);
+                } else {
+                    self.editor.clear();
+                    self.preview.set(ctx, result.asset);
+                }
             }
         }
         if let Some(frames) = self.freeze.result.take()
@@ -506,11 +588,12 @@ impl CaptureUi {
             let quit = shared.quit.clone();
             let folder = session.folder;
             let copy = session.copy;
+            let review = session.review;
             self.capture.start(ui.ctx(), move |cancel, _| {
                 cancel.check()?;
                 quit.check()?;
                 let image = screenshot::crop_selection(&image, selection, 1.0)?;
-                finish(image, folder, copy, clipboard, &cancel, &quit)
+                finish(image, folder, copy, review, clipboard, &cancel, &quit)
             });
         }
     }
@@ -522,6 +605,7 @@ impl CaptureUi {
         }
     }
     pub fn shutdown(&mut self, ctx: Option<&egui::Context>) {
+        self.editor.shutdown();
         self.targets_job.shutdown();
         self.capture.shutdown();
         self.freeze.shutdown();
@@ -532,6 +616,7 @@ impl CaptureUi {
         self.preview = Preview::default();
     }
     pub fn leave(&mut self, ctx: Option<&egui::Context>) {
+        self.editor.clear();
         self.targets_job.abandon();
         self.capture.abandon();
         self.freeze.abandon();
@@ -544,5 +629,74 @@ impl CaptureUi {
         self.clipboard_error = None;
         self.error = None;
         // Tick will restore a hidden launcher after the cancelled worker joins.
+    }
+}
+
+#[cfg(test)]
+mod review_tests {
+    use super::*;
+    use std::cell::Cell;
+
+    #[test]
+    fn screenshot_review_dispatch_never_saves_or_copies_unreviewed_pixels() {
+        let saved = Cell::new(0);
+        let copied = Cell::new(0);
+        let result = finish_capture_using(
+            RgbaImage::from_pixel(2, 2, image::Rgba([99, 88, 77, 255])),
+            true,
+            true,
+            &CancelToken::default(),
+            &CancelToken::default(),
+            |_| {
+                saved.set(saved.get() + 1);
+                Ok(PathBuf::from("generated-original.png"))
+            },
+            |_| {
+                copied.set(copied.get() + 1);
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(saved.get(), 0);
+        assert_eq!(copied.get(), 0);
+        assert!(result.path.is_none());
+        assert!(result.review);
+        assert!(
+            CaptureUi::default().review,
+            "review before export must be the default"
+        );
+    }
+
+    #[test]
+    fn direct_capture_mode_keeps_a_saved_path_when_explicit_clipboard_copy_fails() {
+        let saved = Cell::new(0);
+        let copied = Cell::new(0);
+        let result = finish_capture_using(
+            RgbaImage::from_pixel(2, 2, image::Rgba([1, 2, 3, 255])),
+            false,
+            true,
+            &CancelToken::default(),
+            &CancelToken::default(),
+            |_| {
+                saved.set(saved.get() + 1);
+                Ok(PathBuf::from("generated-direct.png"))
+            },
+            |_| {
+                copied.set(copied.get() + 1);
+                Err(CoreError::InvalidInput(
+                    "Generated clipboard refusal".into(),
+                ))
+            },
+        )
+        .unwrap();
+        assert_eq!((saved.get(), copied.get()), (1, 1));
+        assert_eq!(result.path, Some(PathBuf::from("generated-direct.png")));
+        assert!(
+            result
+                .clipboard_error
+                .unwrap()
+                .contains("Generated clipboard refusal")
+        );
+        assert!(!result.review);
     }
 }

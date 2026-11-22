@@ -30,6 +30,42 @@ impl Default for TextTools {
     }
 }
 impl TextTools {
+    pub fn export_preset(&self) -> oxbox_core::presets::UnitPreset {
+        oxbox_core::presets::UnitPreset {
+            from: self.from.clone(),
+            to: self.to.clone(),
+        }
+    }
+    pub fn import_preset(
+        &mut self,
+        p: &oxbox_core::presets::UnitPreset,
+    ) -> oxbox_core::CoreResult<()> {
+        oxbox_core::tools::unit_convert::convert(1.0, &p.from, &p.to)?;
+        let Some(unit) = unit_convert::units().iter().find(|u| u.id == p.from) else {
+            return Err(oxbox_core::CoreError::InvalidInput(
+                "Unknown unit preset.".into(),
+            ));
+        };
+        self.category = unit.category.into();
+        self.from = p.from.clone();
+        self.to = p.to.clone();
+        self.currency_mode = false;
+        Ok(())
+    }
+    pub fn quick_conversion(
+        &mut self,
+        value: f64,
+        from: &str,
+        to: &str,
+    ) -> oxbox_core::CoreResult<()> {
+        unit_convert::convert(value, from, to)?;
+        self.import_preset(&oxbox_core::presets::UnitPreset {
+            from: from.into(),
+            to: to.into(),
+        })?;
+        self.value = value.to_string();
+        Ok(())
+    }
     pub fn transform(&mut self, ui: &mut Ui) {
         let input_label = ui.label("Input text");
         let changed = ui

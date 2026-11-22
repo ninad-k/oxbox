@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The selected application is **native eframe/egui 0.37.0 on Rust 1.95**, with shared oxbox-core logic and all 49
+The selected application is **native eframe/egui 0.37.0 on Rust 1.95**, with shared oxbox-core logic and 56
 concrete tool routes. The user approved the dependency set and architecture in
 [ADR 0004](../docs/adr/0004-runtime-offline-boundary.md). Follow [native-migration.md](native-migration.md)
 for the per-tool route/automation/manual matrix and outstanding release gates. The retained Svelte/Tauri
@@ -11,7 +11,9 @@ host is a behavior/parity reference, not the native runtime or its packaging com
 Metadata comes from catalog/tools.json for the native host, legacy adapters and static site. All file,
 crypto, platform/provider, opt-in networking and confirmation requirements continue to apply. Existing
 [Phase 5 specifications](todo.md#phase-5-roadmap), [Mouse Activity](mouse-activity.md) and original core
-acceptance criteria remain part of the 49-tool scope. Download Video/Audio and Free Memory stay excluded.
+acceptance criteria remain part of the preserved 49-tool baseline. The user-approved
+[maintenance and productivity expansion](maintenance-and-productivity.md) adds seven tools, per-OS cleanup,
+review-first image annotation, text cleanup, Quick Actions and safe presets. Download Video/Audio and Free Memory stay excluded.
 
 The original 7z update raised the minimum to 1.93; the selected current renderer now requires 1.95. Keep
 native privacy, packaging, hardware, accessibility and cross-platform runtime gates open until recorded.

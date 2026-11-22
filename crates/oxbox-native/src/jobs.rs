@@ -39,6 +39,14 @@ pub fn register_context(ctx: &egui::Context) -> Registry {
     })
 }
 impl Registry {
+    /// Synchronous admission for passive UI persistence after a native dialog.
+    pub fn check_open(&self) -> CoreResult<()> {
+        if self.0.closed.load(Ordering::Acquire) {
+            Err(oxbox_core::CoreError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
     pub fn close(&self) {
         // Make queued registrations fail before waiting for their tiny mutex.
         self.0.closed.store(true, Ordering::Release);
@@ -189,7 +197,7 @@ impl<T: Send + 'static> Task<T> {
                 Err(mpsc::TryRecvError::Disconnected) => {
                     if !self.discarded {
                         self.error = Some(
-                            "The worker stopped unexpectedly; original inputs were preserved"
+                            "The worker stopped unexpectedly. Review inputs, outputs and any partially completed changes."
                                 .into(),
                         );
                     }
@@ -205,7 +213,7 @@ impl<T: Send + 'static> Task<T> {
             {
                 self.result = None;
                 self.error =
-                    Some("The worker stopped unexpectedly; original inputs were preserved".into());
+                    Some("The worker stopped unexpectedly. Review inputs, outputs and any partially completed changes.".into());
             }
             // Joining establishes that this is the worker's final progress,
             // even if its last callback raced our first read above.
@@ -270,6 +278,8 @@ impl<T: Send + 'static> Task<T> {
         if let Some(error) = &self.error {
             if announce {
                 crate::accessibility::alert(ui, error);
+            } else if error == "Cancelled" {
+                ui.label("Cancelled");
             } else {
                 ui.label(format!("Error: {error}"));
             }

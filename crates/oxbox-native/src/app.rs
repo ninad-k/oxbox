@@ -4,7 +4,10 @@ use crate::{
     instance::Instance,
     integration::{Event, Integration},
     recovery::{Action as RecoveryAction, Failure as RecoveryFailure, RecoveryWorker},
-    tools::{media::MediaTools, system::SystemTools, utilities::UtilitiesTools},
+    tools::{
+        maintenance::MaintenanceTools, media::MediaTools, system::SystemTools,
+        utilities::UtilitiesTools,
+    },
 };
 use eframe::egui::{self, Color32, RichText};
 use oxbox_core::launcher::{Catalog, Preferences, Theme};
@@ -34,6 +37,7 @@ pub struct App {
     system: SystemTools,
     media: MediaTools,
     utilities: UtilitiesTools,
+    maintenance: MaintenanceTools,
     quitting: bool,
     activation: Arc<AtomicBool>,
     heartbeat_stop: Arc<AtomicBool>,
@@ -44,6 +48,9 @@ pub struct App {
     monitor_refresh: std::time::Instant,
     job_registry: crate::jobs::Registry,
     recovery: Option<RecoveryWorker>,
+    presets: crate::preset_ui::PresetUi,
+    starter_selected: Vec<String>,
+    starter_hidden: bool,
 }
 impl App {
     pub fn new(
@@ -138,6 +145,7 @@ impl App {
             activation.clone(),
             heartbeat_stop.clone(),
         )?);
+        let presets = crate::preset_ui::PresetUi::load(&host);
         let mut app = Self {
             host,
             catalog,
@@ -156,6 +164,7 @@ impl App {
             system: SystemTools::default(),
             media: MediaTools::default(),
             utilities: UtilitiesTools::default(),
+            maintenance: MaintenanceTools::default(),
             quitting: false,
             activation,
             heartbeat_stop,
@@ -165,6 +174,13 @@ impl App {
             recording_active: false,
             monitor_refresh: std::time::Instant::now(),
             job_registry,
+            presets,
+            starter_selected: vec![
+                "unit-converter".into(),
+                "timer-stopwatch".into(),
+                "screenshot".into(),
+            ],
+            starter_hidden: false,
             recovery: None,
         };
         app.system.initialize(&mut app.host, &cc.egui_ctx);
@@ -243,6 +259,7 @@ impl App {
             self.utilities.leave_tool(id);
             self.media.leave_tool(id);
             self.system.leave_tool(id);
+            self.maintenance.leave_tool(id);
         }
         self.utilities.deactivate();
     }
@@ -290,6 +307,7 @@ impl App {
         self.system.shutdown();
         self.media.shutdown();
         self.utilities.shutdown();
+        self.maintenance.shutdown();
         self.heartbeat_stop.store(true, Ordering::Release);
         if let Some(heartbeat) = self.heartbeat.take() {
             heartbeat.thread().unpark();
@@ -476,15 +494,70 @@ impl App {
     }
     fn browse(&mut self, ui: &mut egui::Ui) {
         let search = crate::accessibility::search(ui, &mut self.query);
+        let enter = (search.has_focus() || search.lost_focus())
+            && ui.input(|input| input.key_pressed(egui::Key::Enter));
+        match oxbox_core::quick_actions::parse(&self.query) {
+            Ok(Some(action)) => {
+                use oxbox_core::quick_actions::QuickAction;
+                ui.add_space(12.0);
+                ui.heading("Quick action");
+                match &action {
+                    QuickAction::Calculate { result, .. } => {
+                        ui.heading(result.to_string());
+                        if ui.button("Copy calculated result").clicked() || enter {
+                            ui.ctx().copy_text(result.to_string());
+                            crate::accessibility::status(ui, "Result copied.");
+                        }
+                    }
+                    QuickAction::Convert {
+                        value,
+                        from,
+                        to,
+                        result,
+                    } => {
+                        ui.heading(format!("{value} {from} = {result} {to}"));
+                        if ui.button("Copy conversion result").clicked() {
+                            ui.ctx().copy_text(result.to_string());
+                        }
+                        if ui.button("Open configured Unit Converter").clicked() || enter {
+                            match self.utilities.configure_quick_action(&action) {
+                                Ok(()) => {
+                                    self.active = Some("unit-converter".into());
+                                    self.query.clear();
+                                }
+                                Err(error) => self.error = Some(error.to_string()),
+                            }
+                        }
+                    }
+                    QuickAction::Timer { seconds } => {
+                        ui.heading(format!("Timer · {seconds} seconds"));
+                        ui.label("Opens a configured timer. Start it explicitly from the tool.");
+                        if ui.button("Open configured timer").clicked() || enter {
+                            match self.utilities.configure_quick_action(&action) {
+                                Ok(()) => {
+                                    self.active = Some("timer-stopwatch".into());
+                                    self.query.clear();
+                                }
+                                Err(error) => self.error = Some(error.to_string()),
+                            }
+                        }
+                    }
+                }
+                ui.weak("Local actions only. No shell commands or maintenance changes run from this input.");
+                return;
+            }
+            Err(error) => {
+                crate::accessibility::alert(ui, error);
+            }
+            Ok(None) => {}
+        }
         let result_ids: Vec<String> = self
             .catalog
             .search(&self.view, &self.query, &self.prefs.favorites)
             .into_iter()
             .map(|tool| tool.id.clone())
             .collect();
-        if (search.has_focus() || search.lost_focus())
-            && ui.input(|input| input.key_pressed(egui::Key::Enter))
-        {
+        if enter {
             self.active = result_ids.first().cloned();
         }
         ui.add_space(16.0);
@@ -531,6 +604,47 @@ impl App {
             });
             if !searching && ui.button("Explore the tools").clicked() {
                 self.select("all");
+            }
+            if !searching && self.view == "favorites" && !self.starter_hidden {
+                ui.add_space(16.0);
+                ui.label("Choose a few favorites to get started. Nothing starts automatically.");
+                for (id, label) in [
+                    ("unit-converter", "Unit Converter"),
+                    ("timer-stopwatch", "Timer & Stopwatch"),
+                    ("screenshot", "Screenshot"),
+                    ("resize-images", "Resize Images"),
+                    ("verify-checksum", "Verify Checksum"),
+                ] {
+                    let mut selected = self.starter_selected.iter().any(|item| item == id);
+                    if ui.checkbox(&mut selected, label).changed() {
+                        if selected {
+                            self.starter_selected.push(id.into());
+                        } else {
+                            self.starter_selected.retain(|item| item != id);
+                        }
+                    }
+                }
+                if ui
+                    .add_enabled(
+                        !self.starter_selected.is_empty(),
+                        egui::Button::new("Pin selected favorites"),
+                    )
+                    .clicked()
+                {
+                    self.prefs.favorites = self.starter_selected.clone();
+                    if let Err(error) = self.save() {
+                        self.error = Some(error);
+                    }
+                }
+                if ui.button("Keep dashboard empty").clicked() {
+                    self.starter_hidden = true;
+                }
+            }
+            if !searching {
+                ui.add_space(12.0);
+                ui.weak(format!("Open from anywhere: {}", self.prefs.shortcut));
+                ui.label("Closing this window keeps Oxbox in the tray. Ctrl/Cmd Q or Quit Oxbox stops it.");
+                ui.weak("Try quick actions: = 2 + 3 · 12 inches to cm · timer 10m");
             }
             return;
         }
@@ -661,6 +775,7 @@ impl eframe::App for App {
         self.system.tick(&mut self.host);
         self.media.tick(&mut self.host);
         self.utilities.tick(&mut self.host);
+        self.maintenance.tick();
         if let Ok(status) = self.media.recording_status()
             && status.active != self.recording_active
         {
@@ -680,6 +795,7 @@ impl eframe::App for App {
                         && ctx.input(|input| input.viewport().focused.unwrap_or(false))
                     {
                         self.utilities.deactivate();
+                        self.maintenance.deactivate();
                         self.host.hide(ctx);
                     } else {
                         self.show(ctx);
@@ -707,6 +823,7 @@ impl eframe::App for App {
             if self.integration.has_tray() {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
                 self.utilities.deactivate();
+                self.maintenance.deactivate();
                 self.host.hide(ctx);
             } else {
                 self.quit(ctx);
@@ -891,9 +1008,32 @@ impl eframe::App for App {
                                     ui.weak(&tool.note);
                                     ui.add_space(10.0);
                                 }
-                                let handled = self.system.show(ui, &id, &mut self.host)
+                                let current = if id == "resize-images" {
+                                    self.media.export_preset(&id)
+                                } else {
+                                    self.utilities.export_preset(&id)
+                                };
+                                if let Some(config) =
+                                    self.presets.show(ui, &id, &self.host, current)
+                                {
+                                    let result = if id == "resize-images" {
+                                        self.media.import_preset(&config)
+                                    } else {
+                                        self.utilities.import_preset(&config)
+                                    };
+                                    match result {
+                                        Ok(()) => self.presets.applied(),
+                                        Err(error) => self.presets.error = error.to_string(),
+                                    }
+                                }
+                                let handled = self.maintenance.show(ui, &id, &mut self.host)
+                                    || self.system.show(ui, &id, &mut self.host)
                                     || self.media.show(ui, &id, &mut self.host)
                                     || self.utilities.show(ui, &id, &mut self.host);
+                                if let Some(target) = self.maintenance.take_navigation() {
+                                    self.leave_active();
+                                    self.active = Some(target);
+                                }
                                 if !handled {
                                     ui.colored_label(
                                         ui.visuals().error_fg_color,

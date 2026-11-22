@@ -27,11 +27,17 @@ import Shield from '@lucide/svelte/icons/shield';
 import Sparkles from '@lucide/svelte/icons/sparkles';
 import Sun from '@lucide/svelte/icons/sun';
 import Timer from '@lucide/svelte/icons/timer';
+import FilePenLine from '@lucide/svelte/icons/file-pen-line';
+import Shredder from '@lucide/svelte/icons/shredder';
+import Power from '@lucide/svelte/icons/power';
+import ChartPie from '@lucide/svelte/icons/chart-pie';
+import ListTree from '@lucide/svelte/icons/list-tree';
+import Puzzle from '@lucide/svelte/icons/puzzle';
 import { roadmapIcons, roadmapViews } from './roadmap-registry';
 
 export type Os = 'windows' | 'macos' | 'linux';
 export const ALL_OS: Os[] = ['windows', 'macos', 'linux'];
-export type CategoryId = 'productivity' | 'time' | 'files' | 'capture' | 'media' | 'system' | 'privacy';
+export type CategoryId = 'productivity' | 'time' | 'files' | 'capture' | 'media' | 'system' | 'privacy' | 'maintenance';
 export interface Category { id: CategoryId; label: string; icon: LucideIcon; tone: string }
 export type ToolViewLoader = () => Promise<{ default: Component }>;
 export interface ToolDef {
@@ -74,6 +80,7 @@ export const baseIcons: Record<string, LucideIcon> = {
   'sparkles': Sparkles,
   'sun': Sun,
   'timer': Timer,
+  'file-pen-line':FilePenLine,'shredder':Shredder,'power':Power,'chart-pie':ChartPie,'list-tree':ListTree,'puzzle':Puzzle,
 };
 
 export const baseViews: Record<string, ToolViewLoader> = {
@@ -97,12 +104,19 @@ export const baseViews: Record<string, ToolViewLoader> = {
   'lock-screen': () => import('./tools/LockScreen.svelte'),
   'hide-desktop': () => import('./tools/HideDesktop.svelte'),
   'encrypt-files': () => import('./tools/EncryptFiles.svelte'),
+  'batch-rename':()=>import('./tools/NativeMaintenance.svelte'),
+  'file-shred':()=>import('./tools/NativeMaintenance.svelte'),
+  'startup-manager':()=>import('./tools/NativeMaintenance.svelte'),
+  'storage-analyzer':()=>import('./tools/NativeMaintenance.svelte'),
+  'registry-review':()=>import('./tools/NativeMaintenance.svelte'),
+  'browser-review':()=>import('./tools/NativeMaintenance.svelte'),
+  'maintenance-review':()=>import('./tools/NativeMaintenance.svelte'),
 };
 
 // Presentation tokens belong to the legacy UI, rather than catalogue metadata.
 const categoryTones: Record<CategoryId, string> = {
   productivity: 'var(--tone-blue)', time: 'var(--tone-teal)', files: 'var(--tone-amber)',
-  capture: 'var(--tone-rose)', media: 'var(--tone-violet)', system: 'var(--tone-green)', privacy: 'var(--tone-red)',
+  capture: 'var(--tone-rose)', media: 'var(--tone-violet)', system: 'var(--tone-green)', privacy: 'var(--tone-red)',maintenance:'var(--tone-green)',
 };
 const icons = { ...baseIcons, ...roadmapIcons };
 function iconFor(name: string): LucideIcon {

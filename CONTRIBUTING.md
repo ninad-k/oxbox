@@ -1,7 +1,7 @@
 # Contributing to Oxbox
 
 Help is welcome with bugs, tests, documentation, accessibility and platform acceptance. Keep each pull request
-focused on one tool or one shared concern. All 49 tool routes are implemented; remaining acceptance boxes
+focused on one tool or one shared concern. All 56 tool routes are implemented; remaining acceptance boxes
 identify verification work, not necessarily missing features.
 
 For fork/clone commands, a real code path to follow and your first pull request, start with the
@@ -71,7 +71,7 @@ read metadata from the same canonical JSON. Keep those adapters and website outp
 the catalogue. pnpm tauri dev is a legacy comparison command, not the selected native entrypoint.
 
 See [ADR 0004](docs/adr/0004-runtime-offline-boundary.md), [catalogue maintenance](catalog/README.md) and
-[the 49-tool migration matrix](tasks/native-migration.md). Existing manual/installer/privacy/hardware evidence
+[the native migration matrices](tasks/native-migration.md) and [maintenance guide](docs/MAINTENANCE.md). Existing manual/installer/privacy/hardware evidence
 does not transfer automatically between hosts. Native bundles use node scripts/build-native.mjs --bundle;
 the installed bundler is packaging tooling, not an embedded runtime.
 

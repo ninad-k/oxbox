@@ -32,3 +32,44 @@
 }
 
 .product-shot { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 24px 65px #0004; }
+
+.workflow-section { border-top: 1px solid var(--line); }
+.workflow-heading { max-width: 48rem; }
+.workflow-heading h2 { margin-block: 1rem 1.25rem; font-size: clamp(2rem, 3.6vw, 3.1rem); }
+.workflow-heading > p:last-child { max-width: 42rem; }
+.workflow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; margin-top: 3rem; }
+.workflow-story { min-width: 0; border-top: 2px solid var(--ember); padding-top: 1.5rem; }
+.workflow-label { color: var(--dim); font-size: .875rem; letter-spacing: .08em; }
+.workflow-story h3 { font-size: 1.6rem; margin-block: 1rem; }
+.workflow-story > p { margin-bottom: 1.25rem; }
+.workflow-example { display: grid; gap: .6rem; padding: 1.25rem; margin-block: 1.5rem; background: var(--surface); border-left: 1px solid var(--line); }
+.workflow-example strong { color: var(--text); font-weight: 600; }
+.workflow-example span { color: var(--muted); }
+.workflow-detail { font-size: .9375rem; }
+.quick-examples code { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 1rem; overflow-wrap: anywhere; }
+.maintenance-section { padding-block: 4.5rem; background: var(--surface); border-block: 1px solid var(--line); }
+.maintenance-heading { display: grid; grid-template-columns: 1.2fr 1fr; align-items: end; gap: 3rem; }
+.maintenance-heading h2 { margin-top: 1rem; font-size: clamp(2rem, 3.6vw, 3.1rem); }
+.maintenance-path { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; margin-block: 2.5rem; padding-block: 1.5rem; border-block: 1px solid var(--line); }
+.maintenance-path strong { display: block; color: var(--text); font-size: 1.1rem; margin-bottom: .4rem; }
+.maintenance-path span { display: block; }
+.os-maintenance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }
+.os-maintenance h3 { font-size: 1.4rem; margin-bottom: 1rem; }
+.maintenance-boundary { display: flex; align-items: center; gap: 3rem; padding-top: 2.5rem; margin-top: 2.5rem; border-top: 1px solid var(--line); }
+.maintenance-boundary p { max-width: 48rem; font-size: .9375rem; }
+.maintenance-boundary .button { flex-shrink: 0; }
+@media (max-width: 1050px) {
+  .workflow-grid { gap: 1.5rem; }
+  .workflow-story h3 { font-size: 1.4rem; }
+  .maintenance-boundary { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+}
+@media (max-width: 760px) {
+  .site-header nav .nav-detail { display: none; }
+  .workflow-grid, .maintenance-heading, .maintenance-path, .os-maintenance { grid-template-columns: 1fr; }
+  .workflow-grid { margin-top: 2rem; gap: 2.5rem; }
+  .workflow-story { padding-top: 1.25rem; }
+  .maintenance-section { padding-block: 3.5rem; }
+  .maintenance-heading { gap: 1.5rem; }
+  .maintenance-path { gap: 1.5rem; }
+  .os-maintenance { gap: 2rem; }
+}

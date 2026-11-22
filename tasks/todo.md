@@ -7,9 +7,11 @@ Work top to bottom; one task per branch/PR. Tick a box only when its acceptance 
 ## Implementation status — 2026-11-21
 
 The current implementation branch is codex/native-renderer. The selected eframe 0.37/Rust 1.95 host contains
-all 49 source routes and concrete forms, reusing the core. Debug native builds, 23 host/headless tests and a
+all 56 source routes and concrete forms, reusing the core. Native builds, automated control tests and a
 live Windows launcher have been observed; this does not close every tool's runtime or accessibility gate.
-See [the 49-row native migration matrix](native-migration.md) for source, automated and pending manual scope.
+The subsequent [maintenance/productivity expansion](maintenance-and-productivity.md) brings the catalogue
+to 56 tools and preserves all original 49 IDs. See [the native migration matrices](native-migration.md)
+for source, automated and pending manual scope.
 
 The original Svelte/Tauri source and its public CI/deployment records below are retained historical evidence.
 Earlier [CI at 5117e6d](https://github.com/ninad-k/oxbox/actions/runs/44909470452) does not certify the native

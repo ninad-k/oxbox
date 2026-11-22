@@ -5,7 +5,7 @@ The user selected native eframe 0.37.0 and Rust 1.95 on 2026-11-21; ADR 0004 rec
 
 ## 1. What Oxbox is
 
-A native tray/menu-bar desktop toolbox with 49 small utilities, an 800 × 800 favorites-first launcher,
+A native tray/menu-bar desktop toolbox with 56 small utilities, an 800 × 800 favorites-first launcher,
 search and category browsing. Rust core logic is shared across Windows 10/11 (primary), macOS and Linux.
 The current app is crates/oxbox-native (eframe/egui with Glow), without an embedded browser. The original
 Tauri/Svelte source remains a parity reference; its previous validation does not certify the new host.
@@ -17,7 +17,8 @@ Tauri/Svelte source remains a parity reference; its previous validation does not
    view modules are allowed; every ID must expose its real controls, results, errors and platform limits.
    Do not replace tools with generic JSON editors, mock results or placeholder routes.
 3. **Never delete user data without confirmation.** Default to Recycle Bin/Trash through the shared helper,
-   never permanent deletion. Outputs use exclusive creation and preserve originals.
+   never permanent deletion except the explicitly user-authorized File Shred tool, which requires its own
+   exact review, typed DELETE, limitation acknowledgement and confirmation. Outputs use exclusive creation.
 4. **Offline by default.** No telemetry, automatic URL loading or background refresh. The user-approved
    manual ECB currency refresh is the documented opt-in exception (issue #1). New network use needs an issue
    and approval. A native renderer alone is not proof of zero runtime network activity.
@@ -43,7 +44,7 @@ Tauri/Svelte source remains a parity reference; its previous validation does not
 - crates/oxbox-native/src/app.rs: launcher, settings, focus, navigation and global UI lifecycle.
 - crates/oxbox-native/src/{host,jobs,integration,instance}.rs: storage/notifications, cancellable tasks,
   tray/hotkeys/login and local single-instance activation.
-- crates/oxbox-native/src/tools/{system,media,utilities}.rs and submodules: all 49 concrete native forms.
+- crates/oxbox-native/src/tools/{system,media,utilities,maintenance}.rs and submodules: concrete native forms.
 - catalog/tools.json: the sole tool/category metadata authority for native, legacy and website interfaces.
 - catalog/icons.json: flattened existing Lucide vectors; scripts/generate-native-icons.mjs regenerates them.
 - src/, src-tauri/: retained legacy comparison host. Legacy registries contain only typed view/icon adapters.

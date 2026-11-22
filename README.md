@@ -18,14 +18,14 @@
 ---
 
 Oxbox lives in your system tray (menu bar on macOS). Open its normal, resizable window to a dashboard containing
-only your favorites. Search all **49 tools**, browse a category, or open a pinned tool with **Alt+1–9**.
+only your favorites. Search all **56 tools**, browse a category, or open a pinned tool with **Alt+1–9**.
 The window starts at 800 × 800 logical pixels, with native window controls and an original outlined O brand.
 
 The default global launcher shortcut is **Ctrl+Alt+O** (**Cmd+Option+O** on macOS). Inside the app,
 **Ctrl/Cmd+K** searches and **Ctrl/Cmd+Q** quits. Existing saved launcher shortcuts are retained;
 conflicts can be resolved in Settings. Installed Windows/macOS copies enable login startup on the first fresh launch; later logins open quietly in the tray. You can turn this off, and upgrades preserve existing choices. See the [usage guide](docs/USAGE.md) for keyboard details.
 
-> **Status: native implementation, awaiting release acceptance.** All 49 catalogue IDs have Rust core logic and concrete
+> **Status: native implementation, awaiting release acceptance.** All 56 catalogue IDs have Rust core logic and concrete
 > native forms. Debug builds, headless routes and the live Windows launcher have been observed. Automated checks and manual gates are recorded in
 > [VALIDATION.md](docs/VALIDATION.md). “Ready” below means the implementation is available in source;
 > it does not imply a published or independently audited release. Contributions welcome.
@@ -61,9 +61,17 @@ conflicts can be resolved in Settings. Installed Windows/macOS copies enable log
 | | Hide Desktop | Hide desktop icons for presentations | **Ready** |
 | | Encrypt Files | Passphrase encryption with [age](https://age-encryption.org) | **Ready** |
 
-The original 20 tools, 28 user-promoted Phase 5 entries, and Windows-only Mouse Activity make **49 tools**, including window/app controls,
+The original 20 tools, 28 user-promoted Phase 5 entries, and Windows-only Mouse Activity form the preserved **49-tool baseline**, including window/app controls,
 presentation tools, alarms, media recording/conversion, OCR, barcode reading, color sampling, and currency.
-See [the expanded tool guide](docs/ROADMAP_TOOLS.md) for platform support and local-provider requirements.
+Seven new tools bring the catalogue to **56**: Batch Rename, File Shred, Startup Manager, Storage Analyzer,
+Registry Review (Windows), Browser Review and Maintenance Review. Existing tools also gain OS-specific
+cleanup, screenshot crop/arrow/text/opaque redaction, pasted-text cleanup, safe saved presets and launcher
+Quick Actions. See the [maintenance and workflow guide](docs/MAINTENANCE.md) for exact scope, recovery and
+platform limits, and [the expanded tool guide](docs/ROADMAP_TOOLS.md) for optional local providers.
+
+Cleanup reviews exact eligible paths and uses Trash. File Shred is a separate, explicitly confirmed
+irreversible operation; file overwrite cannot guarantee SSD, snapshot or backup erasure. Registry Review
+backs up narrow obsolete HKCU application mappings; it does not sweep system hives or promise a speedup.
 Mouse Activity always starts stopped; it does not click, type or scroll. Read its [behavior and limits](docs/MOUSE_ACTIVITY.md)
 before starting a session. A bounded Windows production GUI check reported two idle pointer movements, pause
 on controlled Tab input and Stop. Physical input, held keys/buttons, locked desktops, multi-monitor/DPI and
@@ -117,7 +125,8 @@ src/ and src-tauri/ trees remain available for parity comparison.
 
 - [SPEC.md](SPEC.md): goals, scope, boundaries
 - [docs/README.md](docs/README.md): documentation hub for users, contributors and maintainers
-- [docs/FEATURES.md](docs/FEATURES.md): all 49 features, stable IDs, platforms and provider limits
+- [docs/FEATURES.md](docs/FEATURES.md): all 56 features, stable IDs, platforms and provider limits
+- [docs/MAINTENANCE.md](docs/MAINTENANCE.md): cleanup, recovery, registry, shredding and everyday workflow guide
 - [docs/FEATURE_REVIEW.md](docs/FEATURE_REVIEW.md): source audit, reproduced fixes and remaining manual checks
 - [tasks/plan.md](tasks/plan.md): phased roadmap with acceptance criteria
 - [AGENTS.md](AGENTS.md): conventions and the step-by-step recipe for adding a tool (for humans and AI agents)
@@ -134,7 +143,7 @@ src/ and src-tauri/ trees remain available for parity comparison.
 - [docs/ROADMAP_TOOLS.md](docs/ROADMAP_TOOLS.md): Phase 5 tools, providers and network opt-in
 - [docs/MOUSE_ACTIVITY.md](docs/MOUSE_ACTIVITY.md): Windows pointer sessions, bounded GUI evidence and remaining acceptance
 - [catalog/README.md](catalog/README.md): shared metadata, icon/view adapters and consistency checks
-- [tasks/native-migration.md](tasks/native-migration.md): 49-tool route/automation/manual matrix
+- [tasks/native-migration.md](tasks/native-migration.md): preserved baseline and new-tool route/automation/manual matrices
 - [website/README.md](website/README.md): generated catalog, static site checks and GitHub Pages deployment
 - [CHANGELOG.md](CHANGELOG.md): user-facing changes
 
@@ -142,7 +151,7 @@ src/ and src-tauri/ trees remain available for parity comparison.
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [first contribution walkthrough](docs/GETTING_STARTED.md).
 Help fix a reproducible bug, improve documentation or tests, or record a native acceptance case using
-disposable fixtures. The [49-tool matrix](tasks/native-migration.md) identifies open verification work.
+disposable fixtures. The [native tool matrices](tasks/native-migration.md) identify open verification work.
 Current native changes target `codex/native-renderer`; see the [maintainer workflow](docs/MAINTAINING.md)
 for review expectations and the [code of conduct](CODE_OF_CONDUCT.md) for community standards.
 

@@ -1,7 +1,7 @@
 # Your first Oxbox contribution
 
 You can help with a reproducible bug, a documentation correction, a generated fixture, accessibility feedback
-or an unverified platform case. All 49 tool routes already have implementations; an unchecked acceptance
+or an unverified platform case. All 56 tool routes already have implementations; an unchecked acceptance
 box does not mean its tool needs to be written again.
 
 ## Get the current source

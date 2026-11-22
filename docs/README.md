@@ -1,6 +1,6 @@
 # Oxbox documentation
 
-Oxbox is a native Rust desktop toolbox with 49 implemented tool routes. Implementation, automated checks,
+Oxbox is a native Rust desktop toolbox with 56 implemented tool routes. Implementation, automated checks,
 manual acceptance and release approval are separate states. Windows installers remain in an unpublished
 draft; [release gates](RELEASE.md) identify what still needs verification.
 
@@ -11,7 +11,8 @@ draft; [release gates](RELEASE.md) identify what still needs verification.
 | Use the launcher, shortcuts and tools | [Usage](USAGE.md), [complete feature catalogue](FEATURES.md) |
 | Make my first contribution | [Contributor guide](../CONTRIBUTING.md), [first contribution walkthrough](GETTING_STARTED.md) |
 | Understand the code | [Architecture](ARCHITECTURE.md), [architecture decisions](adr/0004-runtime-offline-boundary.md), [agent/human working rules](../AGENTS.md) |
-| Find a bounded task | [49-tool matrix](../tasks/native-migration.md), [validation gaps](VALIDATION.md), [task specifications](../tasks/todo.md) |
+| Find a bounded task | [Native tool matrices](../tasks/native-migration.md), [validation gaps](VALIDATION.md), [task specifications](../tasks/todo.md) |
+| Clean up or reuse a workflow | [Maintenance, recovery, presets and Quick Actions](MAINTENANCE.md) |
 | Test safely | [Testing](TESTING.md), [troubleshooting](TROUBLESHOOTING.md) |
 | Get help or report a problem | [Support](../SUPPORT.md), [private security reports](../SECURITY.md) |
 | See the functional review and its limits | [49-tool source review](FEATURE_REVIEW.md), [second native feature pass](verification/2026-11-22-native-feature-pass.md), [dated validation](VALIDATION.md) |

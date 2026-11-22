@@ -1,4 +1,5 @@
 //! Native capture, media and clipboard views. No embedded browser or startup devices.
+mod annotate;
 mod capture;
 mod clipboard;
 mod dispatch;
@@ -71,6 +72,25 @@ pub struct MediaTools {
 }
 
 impl MediaTools {
+    pub fn export_preset(&self, id: &str) -> CoreResult<Option<oxbox_core::presets::PresetConfig>> {
+        if id == "resize-images" {
+            Ok(Some(oxbox_core::presets::PresetConfig::ResizeImages(
+                self.images.export_resize_preset()?,
+            )))
+        } else {
+            Ok(None)
+        }
+    }
+    pub fn import_preset(&mut self, p: &oxbox_core::presets::PresetConfig) -> CoreResult<()> {
+        p.validate()?;
+        if let oxbox_core::presets::PresetConfig::ResizeImages(p) = p {
+            self.images.import_resize_preset(p)
+        } else {
+            Err(oxbox_core::CoreError::InvalidInput(
+                "This preset belongs to another tool.".into(),
+            ))
+        }
+    }
     pub fn recovery_handle(&self) -> MediaRecovery {
         MediaRecovery {
             shared: self.shared.clone(),

@@ -71,7 +71,8 @@ open. The selected native migration removes the embedded browser dependency; it 
 ## Selected native architecture
 
 The user selected **eframe 0.37.0 and Rust 1.95** on 2026-11-21. All 49 tools now have concrete native
-forms, reusing the Rust core and existing platform/provider limits. A live Windows native window and
+forms, reusing the Rust core and existing platform/provider limits. Seven later maintenance/productivity
+tools bring the current catalogue to **56**, preserving all 49 original IDs. A live Windows native window and
 headless route construction have been observed; full native tool, accessibility, privacy and installer
 acceptance remains open in [the migration matrix](tasks/native-migration.md).
 The retained Tauri/Svelte host is a comparison implementation, not the current native runtime.
@@ -83,7 +84,7 @@ The retained Tauri/Svelte host is a comparison implementation, not the current n
 | UI/renderer | eframe/egui 0.37.0, Glow, bundled/system fonts, AccessKit | Native forms, previews, keyboard/accessibility support; no embedded webview or automatic remote loader |
 | Desktop integration | rfd, tray-icon, global-hotkey, auto-launch, open, platform notification adapters | Explicit native dialogs, launcher lifecycle, login setting and user-requested open actions |
 | Services | Standard-library workers, bounded Task progress, atomic local storage | Hidden reminders, cancellation/Stop/Quit ownership and recoverable preferences |
-| Metadata/assets | catalog/tools.json and flattened existing Lucide vectors | One ordered 49-tool capability catalogue for native, legacy and website interfaces |
+| Metadata/assets | catalog/tools.json and flattened existing Lucide vectors | One ordered 56-tool capability catalogue for native, legacy and website interfaces |
 | Core | Existing file, crypto, capture, media, system and time crates | Toolkit-neutral operations and tested safety policies; resolved versions in Cargo.lock |
 | Development | Cargo; Node/pnpm for legacy checks, static website and existing packaging wrapper | Native runtime does not execute JavaScript or need WebView2 |
 
@@ -115,7 +116,7 @@ the existing bundler is a packaging tool, not the native runtime.
 - crates/oxbox-core/src/{launcher,preferences}.rs: shared metadata/search and bounded atomic storage.
 - crates/oxbox-native/src/app.rs: native favorites/search/settings and window lifecycle.
 - crates/oxbox-native/src/{host,jobs,integration,instance}.rs: notifications, tasks, OS integration and activation.
-- crates/oxbox-native/src/tools/{system,media,utilities}/: all 49 concrete native forms and owned controllers.
+- crates/oxbox-native/src/tools/{system,media,utilities,maintenance}/: concrete native forms and owned controllers.
 - catalog/: canonical category/tool metadata and existing licensed vector assets.
 - src/ and src-tauri/: retained Svelte/Tauri parity reference and typed adapters.
 - website/: static Pages output built from the canonical JSON, without executing app imports.

@@ -5,6 +5,26 @@ the presence of this changelog does not mean installers have been published.
 
 ## 0.1.0 — draft, 2026-11-21
 
+### Maintenance and daily workflows — 2026-11-22
+
+- Added Batch Rename with exact preview, no-replace moves and write-ahead guarded Undo.
+- Added Startup Manager, read-only Storage Analyzer and Browser Review, plus a Maintenance Review hub.
+- Clean Drive now uses per-OS cache/temp allowlists, age checks, active-browser guards and exact reviewed
+  Trash requests. Partial scans and active-browser cache results remain read-only.
+- Added Windows Registry Review for narrowly identified obsolete current-user App Paths values, with
+  mandatory backup and guarded restore. System hives, services, COM and drivers are outside its scope.
+- Added a separately confirmed File Shred workflow. Overwrite/delete is irreversible and cannot guarantee
+  erasure on SSDs, copy-on-write storage, snapshots or backups; cancellation may leave partial overwrites.
+- Added bounded current-user application review for macOS/Linux. System packages stay read-only;
+  eligible user-owned bundles/AppImages require an exact review before Trash.
+- Screenshot capture defaults to in-memory review with crop, arrows, ASCII labels and opaque redaction
+  before flattened PNG export, Copy or explicit offline OCR. Direct raw export remains optional.
+- Added pasted-text cleanup, safe named presets, calculator/unit/timer Quick Actions and optional starter
+  favorites. Quick timer configuration does not start a session. Cancellation is a neutral status.
+- Preserved all original 49 IDs; seven additions bring the catalogue to 56 tools/eight categories.
+  Added workflow, safety/recovery and contributor documentation and updated the GitHub Pages catalogue.
+- Release and clean-machine gates remain open; these entries describe source behavior, not publication.
+
 ### Release review fixes — 2026-11-22
 
 - Reopening the tray window preserves the active tool and its work. Explicit search still navigates back.

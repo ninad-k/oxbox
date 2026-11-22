@@ -32,6 +32,10 @@ pub(crate) fn enabled_button(
 }
 
 pub(crate) fn alert(ui: &mut egui::Ui, message: impl std::fmt::Display) -> egui::Response {
+    let message = message.to_string();
+    if message == "Cancelled" {
+        return status(ui, "Cancelled");
+    }
     let message = format!("Error: {message}");
     let response = ui.colored_label(ui.visuals().error_fg_color, &message);
     response.ctx.accesskit_node_builder(response.id, |node| {
@@ -81,6 +85,24 @@ pub(crate) fn test_tree(
         .into_iter()
         .map(|(_, node)| node)
         .collect()
+}
+
+#[cfg(test)]
+mod cancellation_tests {
+    #[test]
+    fn requested_cancellation_is_a_neutral_polite_status_not_an_error_alert() {
+        let nodes = super::test_tree(|ui| {
+            super::alert(ui, oxbox_core::CoreError::Cancelled);
+        });
+        assert!(nodes.iter().any(|node| node.label() == Some("Cancelled")
+            && node.role() == eframe::egui::accesskit::Role::Status
+            && node.live() == Some(eframe::egui::accesskit::Live::Polite)));
+        assert!(
+            !nodes
+                .iter()
+                .any(|node| node.role() == eframe::egui::accesskit::Role::Alert)
+        );
+    }
 }
 
 #[cfg(test)]

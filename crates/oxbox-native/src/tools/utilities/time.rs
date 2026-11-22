@@ -213,6 +213,40 @@ fn validate(stored: &Stored) -> CoreResult<()> {
     Ok(())
 }
 impl TimeTools {
+    pub fn timer_preset(&self) -> CoreResult<oxbox_core::presets::TimerPreset> {
+        let seconds = self.minutes * 60.0;
+        if !seconds.is_finite()
+            || !(1.0..=604800.0).contains(&seconds)
+            || (seconds - seconds.round()).abs() > 1e-6
+        {
+            return Err(CoreError::InvalidInput(
+                "Saved timer presets need a whole-second duration from 1 second to 7 days.".into(),
+            ));
+        }
+        Ok(oxbox_core::presets::TimerPreset {
+            seconds: seconds.round() as u64,
+        })
+    }
+    pub fn apply_timer_preset(&mut self, p: &oxbox_core::presets::TimerPreset) -> CoreResult<()> {
+        oxbox_core::presets::PresetConfig::TimerStopwatch(p.clone()).validate()?;
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| CoreError::InvalidInput("Timer state is unavailable.".into()))?;
+        if state.timer.running()
+            || (!state.timer.completed() && state.timer.elapsed(state.ms()) > 0)
+        {
+            return Err(CoreError::InvalidInput(
+                "Reset the running or paused timer before applying a preset.".into(),
+            ));
+        }
+        state.timer = Clock::timer(p.seconds * 1000)?;
+        state.error.clear();
+        state.notice.clear();
+        self.minutes = p.seconds as f64 / 60.0;
+        self.stopwatch = false;
+        Ok(())
+    }
     fn initialize(&mut self, host: &mut Host) {
         if self.loaded {
             return;

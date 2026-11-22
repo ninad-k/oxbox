@@ -6,6 +6,7 @@ mod icons;
 mod instance;
 mod integration;
 mod jobs;
+mod preset_ui;
 mod recovery;
 mod settings_tx;
 mod shortcuts;

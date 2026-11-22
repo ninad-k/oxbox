@@ -8,7 +8,7 @@ records the accepted migration and open release gates.
 
 ## Catalogue, launcher and assets
 
-catalog/tools.json is the sole ordered 49-tool/category metadata source. The Rust catalogue embeds it;
+catalog/tools.json is the sole ordered 56-tool/category metadata source. The Rust catalogue embeds it;
 legacy registries import it and bind typed component/icon adapters; the static website builder reads it
 directly. Names, descriptions, keywords, platforms, phase/status and icon keys are not maintained as parallel
 TypeScript literals. Canonical notes carry provider/validation caveats, with explicit website-only overrides.
@@ -103,7 +103,7 @@ Historical WebView2 findings remain in [runtime privacy records](RUNTIME_PRIVACY
 
 The site is plain static HTML/CSS/JavaScript with no automatic external resources or app commands. Its
 JSON builder validates canonical IDs, categories, icon bindings, platforms and note overrides, then renders
-all 49 cards for no-JavaScript browsing. Category/platform/search filters are progressive enhancement.
+all 56 cards for no-JavaScript browsing. Category/platform/search filters are progressive enhancement.
 Relative assets and fragment targets are checked; generated website/dist stays ignored.
 
 Headless egui tests consume textures_delta without a GPU painter. Existing native tests cover default forms

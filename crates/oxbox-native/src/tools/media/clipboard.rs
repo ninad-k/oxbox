@@ -26,7 +26,174 @@ fn pause_pending(
     pause()
 }
 
+struct TextCleanup {
+    input: String,
+    options: oxbox_core::tools::text_clean::Options,
+    job: Task<String>,
+    preview: String,
+    ready: bool,
+    copied: bool,
+    context: Option<egui::Context>,
+    input_id: Option<egui::Id>,
+    output_id: Option<egui::Id>,
+}
+impl Default for TextCleanup {
+    fn default() -> Self {
+        Self {
+            input: String::new(),
+            options: oxbox_core::tools::text_clean::Options {
+                trim_lines: true,
+                normalize_line_endings: true,
+                ..Default::default()
+            },
+            job: Task::default(),
+            preview: String::new(),
+            ready: false,
+            copied: false,
+            context: None,
+            input_id: None,
+            output_id: None,
+        }
+    }
+}
+impl TextCleanup {
+    fn invalidate(&mut self) {
+        self.job.abandon();
+        self.preview.clear();
+        self.ready = false;
+        self.copied = false;
+    }
+    fn show(&mut self, ui: &mut egui::Ui) {
+        self.context = Some(ui.ctx().clone());
+        widgets::introduction(
+            ui,
+            "Clean explicitly pasted or typed plain text, preview it, then Copy. This does not start clipboard history or read the clipboard automatically.",
+        );
+        let input_id = ui.scope_id().with("cleanup input");
+        self.input_id = Some(input_id);
+        let label = ui.label("Paste or type plain text to clean");
+        let changed = ui
+            .add(
+                egui::TextEdit::multiline(&mut self.input)
+                    .id(input_id)
+                    .desired_rows(6)
+                    .desired_width(f32::INFINITY)
+                    .char_limit(oxbox_core::tools::text_clean::MAX_INPUT_BYTES),
+            )
+            .labelled_by(label.id)
+            .changed();
+        let previous = self.options;
+        ui.checkbox(
+            &mut self.options.trim_lines,
+            "Trim each line's leading and trailing whitespace",
+        );
+        ui.checkbox(
+            &mut self.options.collapse_whitespace,
+            "Collapse horizontal whitespace to one space",
+        );
+        ui.checkbox(
+            &mut self.options.remove_empty_lines,
+            "Remove empty and whitespace-only lines",
+        );
+        ui.checkbox(
+            &mut self.options.normalize_line_endings,
+            "Normalize CRLF and CR line endings to LF",
+        );
+        if changed || previous != self.options {
+            self.invalidate();
+        }
+        let within_limit = self.input.len() <= oxbox_core::tools::text_clean::MAX_INPUT_BYTES;
+        if !within_limit {
+            crate::accessibility::alert(ui, "Text cleanup is limited to 1 MiB; shorten the input.");
+        }
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(
+                    within_limit && !self.job.running(),
+                    egui::Button::new("Preview cleaned text"),
+                )
+                .clicked()
+            {
+                let input = self.input.clone();
+                let options = self.options;
+                self.preview.clear();
+                self.ready = false;
+                self.copied = false;
+                self.job.start(ui.ctx(), move |cancel, _| {
+                    oxbox_core::tools::text_clean::clean(&input, &options, &cancel)
+                });
+            }
+            if ui.button("Clear cleanup text").clicked() {
+                self.leave();
+            }
+        });
+        self.job.show(ui);
+        if self.ready {
+            crate::accessibility::status(
+                ui,
+                &format!("Cleaned preview ready: {} bytes", self.preview.len()),
+            );
+            let label = ui.label("Cleaned plain-text preview");
+            let output_id = ui.scope_id().with("cleanup output");
+            self.output_id = Some(output_id);
+            ui.add(
+                egui::TextEdit::multiline(&mut self.preview)
+                    .id(output_id)
+                    .interactive(false)
+                    .desired_rows(6)
+                    .desired_width(f32::INFINITY),
+            )
+            .labelled_by(label.id);
+            if ui
+                .add_enabled(
+                    !self.job.running() && !self.preview.is_empty(),
+                    egui::Button::new("Copy cleaned text"),
+                )
+                .clicked()
+            {
+                ui.ctx().copy_text(self.preview.clone());
+                self.copied = true;
+            }
+            if self.copied {
+                crate::accessibility::status(
+                    ui,
+                    "Cleaned text copied. Switch to the destination and paste it yourself.",
+                );
+            }
+        }
+        widgets::note(
+            ui,
+            "Use the operating system's ordinary Paste shortcut to supply text here. Copy is explicit; automatic cross-application paste is not implemented. Text stays in memory, is not saved in presets or logs, and is discarded when leaving this view.",
+        );
+    }
+    fn poll(&mut self) {
+        self.job.poll();
+        if let Some(text) = self.job.result.take() {
+            self.preview = text;
+            self.ready = true;
+        }
+    }
+    fn leave(&mut self) {
+        self.invalidate();
+        self.input.clear();
+        if let Some(context) = &self.context {
+            for id in [self.input_id, self.output_id].into_iter().flatten() {
+                context.data_mut(|data| data.remove::<egui::text_edit::TextEditState>(id));
+            }
+        }
+        self.context = None;
+        self.input_id = None;
+        self.output_id = None;
+    }
+    fn shutdown(&mut self) {
+        self.leave();
+        self.job.shutdown();
+    }
+}
+
 pub struct ClipboardUi {
+    cleanup_tab: bool,
+    cleanup: TextCleanup,
     consent: bool,
     query: String,
     view_active: bool,
@@ -44,6 +211,8 @@ pub struct ClipboardUi {
 impl Default for ClipboardUi {
     fn default() -> Self {
         Self {
+            cleanup_tab: false,
+            cleanup: TextCleanup::default(),
             consent: false,
             query: String::new(),
             view_active: false,
@@ -62,6 +231,29 @@ impl Default for ClipboardUi {
 }
 impl ClipboardUi {
     pub fn show(&mut self, ui: &mut egui::Ui, shared: &Shared) {
+        let previous = self.cleanup_tab;
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut self.cleanup_tab, false, "Clipboard history");
+            ui.selectable_value(&mut self.cleanup_tab, true, "Clean pasted text");
+        });
+        if previous != self.cleanup_tab {
+            self.snapshot_job.abandon();
+            self.action.abandon();
+            self.preview_job.abandon();
+            self.snapshot = None;
+            self.preview = Preview::default();
+            self.selected = None;
+            self.query.clear();
+            self.last = Instant::now() - Duration::from_secs(1);
+            if !self.cleanup_tab {
+                self.cleanup.leave();
+            }
+        }
+        if self.cleanup_tab {
+            self.view_active = false;
+            self.cleanup.show(ui);
+            return;
+        }
         self.view_active = true;
         self.context = Some(ui.ctx().clone());
         self.service = Some(shared.clipboard.clone());
@@ -171,6 +363,7 @@ impl ClipboardUi {
         ui.ctx().request_repaint_after(Duration::from_millis(500));
     }
     pub fn tick(&mut self) {
+        self.cleanup.poll();
         self.snapshot_job.poll();
         self.action.poll();
         self.preview_job.poll();
@@ -199,6 +392,7 @@ impl ClipboardUi {
         self.view_active = false;
     }
     pub fn shutdown(&mut self) {
+        self.cleanup.shutdown();
         self.snapshot_job.shutdown();
         self.action.shutdown();
         self.preview_job.shutdown();
@@ -208,6 +402,7 @@ impl ClipboardUi {
         self.consent = false;
     }
     pub fn leave(&mut self) {
+        self.cleanup.leave();
         self.snapshot_job.abandon();
         self.action.abandon();
         self.preview_job.abandon();
@@ -228,6 +423,55 @@ mod tests {
         atomic::{AtomicBool, Ordering},
         mpsc,
     };
+
+    #[test]
+    fn cleanup_text_edit_discards_previous_preview_and_queued_result_without_starting_history() {
+        let mut cleanup = TextCleanup {
+            input: "Generated original text".into(),
+            preview: "Previous cleaned value".into(),
+            ..Default::default()
+        };
+        cleanup.job.result = Some("Queued previous cleaned value".into());
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut first = context.run_ui(egui::RawInput::default(), |ui| cleanup.show(ui));
+        first.textures_delta.clear();
+        let field = first
+            .platform_output
+            .accesskit_update
+            .unwrap()
+            .nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::MultilineTextInput
+                    && node.value() == Some("Generated original text"))
+                .then_some(id)
+            })
+            .unwrap();
+        let mut second = context.run_ui(
+            egui::RawInput {
+                events: vec![egui::Event::AccessKitActionRequest(
+                    egui::accesskit::ActionRequest {
+                        action: egui::accesskit::Action::SetValue,
+                        target_node: field,
+                        target_tree: egui::accesskit::TreeId::ROOT,
+                        data: Some(egui::accesskit::ActionData::Value(
+                            "Generated replacement text".into(),
+                        )),
+                    },
+                )],
+                ..Default::default()
+            },
+            |ui| cleanup.show(ui),
+        );
+        second.textures_delta.clear();
+        assert_eq!(cleanup.input, "Generated replacement text");
+        assert!(cleanup.preview.is_empty() && cleanup.job.result.is_none());
+        cleanup.leave();
+        assert!(cleanup.input.is_empty() && cleanup.preview.is_empty());
+        assert!(Shared::default().clipboard.snapshot("").unwrap().paused);
+        cleanup.shutdown();
+    }
 
     #[test]
     fn community_search_edit_discards_old_filter_rows_and_queued_snapshot() {

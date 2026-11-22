@@ -2,9 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { tools, categories } from './registry';
 import canonical from '../../catalog/tools.json';
 import nativeIcons from '../../catalog/icons.json';
+import originalIds from '../../catalog/v01-tool-ids.json';
 describe('shipped tool catalogue', () => {
   it('matches all canonical metadata and native icon bindings in catalog order', () => {
-    expect(canonical.tools).toHaveLength(49);
+    expect(canonical.tools).toHaveLength(56);
+    expect(originalIds).toHaveLength(49);
+    expect(originalIds.every(id=>canonical.tools.some(tool=>tool.id===id))).toBe(true);
     for (const entry of [...canonical.categories, ...canonical.tools]) {
       expect(Object.hasOwn(nativeIcons.icons, entry.icon), entry.id).toBe(true);
     }
@@ -26,7 +29,7 @@ describe('shipped tool catalogue', () => {
   });
   it('has unique, implemented views for the base and expanded catalogue', async () => {
     expect(tools.filter(tool=>tool.phase<5)).toHaveLength(20);
-    expect(tools).toHaveLength(49);
+    expect(tools).toHaveLength(56);
     expect(new Set(tools.map(tool => tool.id)).size).toBe(tools.length);
     for (const tool of tools) {
       expect(tool.status, tool.id).toBe('ready');

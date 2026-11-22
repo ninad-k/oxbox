@@ -5,7 +5,11 @@ for a disposable fixture profile. The retained `pnpm tauri dev` host and `pnpm d
 comparison tools, not the native entrypoint.
 Open Oxbox from its tray/menu-bar icon or the default **Ctrl+Alt+O** shortcut (**Cmd+Option+O** on macOS).
 The normal, resizable native window starts at 800 × 800 logical pixels. **Dashboard shows only your favorites**;
-use All tools or a category to browse the 49-tool catalog. The original outlined O/ember mark is shared with the website.
+use All tools or a category to browse the 56-tool catalog. The original outlined O/ember mark is shared with the website.
+
+The [maintenance and workflow guide](MAINTENANCE.md) covers the seven new tools, per-OS cleanup rules,
+startup/registry recovery, file-shred limits, screenshot annotations, pasted-text cleanup, safe saved
+presets and search Quick Actions. Its safety limits apply before any corresponding change is confirmed.
 Closing the launcher hides it; **Quit Oxbox** in the sidebar/tray or **Ctrl/Cmd+Q** inside the app exits and stops background work.
 
 Search with **Ctrl/Cmd+K** or **/**, press **Enter** to open the first result, and **Escape** to return.
