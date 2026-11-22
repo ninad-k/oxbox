@@ -6,7 +6,15 @@ The release remains a draft while the open gates in [RELEASE.md](RELEASE.md) rem
 
 ## Scope and evidence
 
-Current source is `a9b6e1c`, EXE SHA-256
+Current source is `8a62ec1`, EXE SHA-256
+`101ed74680fc884960ebfaaee33a8f1677b7ed09e0dd83c5cac90083b142b6ac`.
+Its [two bounded Windows observations](RUNTIME_PRIVACY.md#current-dependency-candidate-8a62ec1--2026-11-22)
+cover generated checks/tray restoration (300.103 seconds, ending with an app alive) and separately
+startup/Quit (90.033 seconds, ending with zero processes). Both report zero owned TCP/UDP and errors,
+with stable executable hashes. DNS, brokers, short flows, providers and all-OS/manual acceptance remain
+outside that scope. [Current source/GUI/draft receipt](verification/2026-11-22-dependency-accessibility.md).
+
+The preceding source was `a9b6e1c`, EXE SHA-256
 `b5636873f9aa9e8a51607a32380b22ed6a83169fc225fb18894ce336cef8aa8d`.
 Its [300.070-second / 6,000-sample observation](RUNTIME_PRIVACY.md#current-56-tool-candidate-a9b6e1c--2026-11-22)
 covers before startup through generated checksum/color checks, hide/reactivation and normal Quit;

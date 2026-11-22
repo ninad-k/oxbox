@@ -6,7 +6,34 @@ network feature is separately opted-in, manually requested ECB currency refresh,
 The approved native migration removes the embedded browser from the production host. Finite network observations
 do not establish a universal zero-network guarantee; the historical browser investigation is retained below.
 
+## Current dependency candidate 8a62ec1 — 2026-11-22
+
+Source `8a62ec1ad7e65ad9b3378dbcb495b897ef725c47`, Rust 1.95.0, exact Windows EXE **13,637,632 bytes**,
+SHA-256 `101ed74680fc884960ebfaaee33a8f1677b7ed09e0dd83c5cac90083b142b6ac`.
+Two separate read-only owner-PID observations completed normally with valid flags, stable hashes,
+zero sample/marker errors and zero TCP/UDP maxima and sums:
+
+| Evidence directory under `target/native-privacy-qa/` | Seconds / samples | Max processes | p95 / maximum gap | Final processes |
+|---|---|---:|---|---:|
+| `run-security-a11y-resumed` | 300.103 / 5,998 | 2 | 63.214 / 112.812 ms | 1 |
+| `run-security-a11y-quit` | 90.033 / 1,800 | 1 | 62.557 / 79.201 ms | 0 |
+
+The first window covers startup, keyboard combo dismissal, generated Unicode checksum selection,
+close-to-tray and activation. It ended with the app alive and supplies **no Quit/post-exit coverage**.
+The second covers a fresh launch and normal Ctrl+Q; its first owned sample was at 26,506.344 ms and
+last at 48,552.532 ms, leaving approximately 41.480 seconds after last ownership before the zero-process
+final sample. Only `oxbox-native.exe` was observed; no provider, private capture, clipboard collection,
+destructive/OS-setting operation or ECB request ran. All QA app processes were stopped afterward.
+
+The earlier interrupted observation is preserved separately and is not treated as completed desktop
+verification. Snapshots can miss short-lived flows, UDP rows are bindings rather than packets, and
+DNS Client, brokers and unrelated system services are outside ownership coverage. No packet/DNS/ETW
+trace ran. These windows do not prove universal offline behavior or all-provider/all-OS acceptance.
+See the [full current receipt](verification/2026-11-22-dependency-accessibility.md).
+
 ## Current 56-tool candidate a9b6e1c — 2026-11-22
+
+Historical observation, superseded by the separately scoped current source above.
 
 Source `a9b6e1c13a2d15c0a87fa1fa42b364209e915310`, Rust 1.95.0, Windows EXE **14,425,600 bytes**, SHA-256
 `b5636873f9aa9e8a51607a32380b22ed6a83169fc225fb18894ce336cef8aa8d`. Observation directory:

@@ -2,8 +2,62 @@
 
 This file records observed evidence, not planned results. Release gates remain open until explicitly recorded.
 
-Latest: [complete 56-tool follow-up `a9b6e1c`](#complete-56-tool-follow-up-a9b6e1c), preserving
+Latest: [dependency and accessibility follow-up `8a62ec1`](#dependency-and-accessibility-follow-up-8a62ec1), preserving
 the original 49 tools. Earlier source/host evidence below stays historical.
+
+## Dependency and accessibility follow-up `8a62ec1`
+
+Source [`8a62ec1ad7e65ad9b3378dbcb495b897ef725c47`](https://github.com/ninad-k/oxbox/commit/8a62ec1ad7e65ad9b3378dbcb495b897ef725c47)
+preserves all 56 tools. The [full receipt](verification/2026-11-22-dependency-accessibility.md) records
+the approved source backports, rejected Age 0.12.1 trial, retained Age 0.11.5, Jiff compatibility corpus,
+reproduced accessibility fixes and intermediate versus final executable evidence.
+
+- [CI 45039126970](https://github.com/ninad-k/oxbox/actions/runs/45039126970) passed all five jobs on
+  exact Rust 1.95: Windows **294 core / 5 golden / 150 native**, macOS ARM **289 / 5 / 152**, Linux
+  **289 / 5 / 153**, zero failed/ignored in the full suites. All platforms passed five localization
+  configuration tests, the valid macro runtime plus four expected compiler diagnostics, strict Clippy
+  and production builds. Optimized Linux GLib and the actual minimum-toolchain checks passed.
+- Local workspace also passed **12 retained-host tests**, formatting and strict all-target Clippy;
+  34 Node guards, 39 UI tests and four website tests passed. All 582 upstream source files/six artifacts
+  verify; the Git index independently preserved all 582 source-file byte hashes. Windows notices
+  reproduce **358 packages / zero missing texts / three human attribution reviews**.
+- Fresh audit on resumption: **zero vulnerability entries / five maintenance warnings**, database
+  `d1fe6ac3eba823a3515e849045f36dc34543885d`, no ignores; pnpm has zero advisories. Optional locked
+  Chrono, GTK macro-error1 and three Zbus-family findings remain. Patched GLib is omitted by the
+  scanner and retains its explicit source-advisory accounting. The native graph has 345 package names
+  and no Tauri/WebView host. [Dependency scope](DEPENDENCIES.md) distinguishes active paths and lockfile entries.
+- Exact Windows EXE: **13,637,632 bytes**, hash below. Keyboard Enter/Escape/next-Tab preserved combo
+  focus; a generated Japanese filename and independent checksum comparison passed. Close-to-tray and
+  same-process result restoration passed; normal Ctrl+Q exited. Ctrl+Shift+Q did not quit but coincided
+  with an unexplained hidden window; its visibility case remains inconclusive. Narrator speech wording
+  remains unreported. These selected interactions do not establish all-tool or full accessibility acceptance.
+- Hash-pinned endpoint windows found zero owned TCP/UDP and zero query/marker failures: **300.103 s /
+  5,998 samples** for generated checks/hide/restoration, ending with one process; separately **90.033 s /
+  1,800 samples** for startup/Quit, ending with zero and about **41.480 s** after last ownership.
+  [Sampling scope](RUNTIME_PRIVACY.md#current-dependency-candidate-8a62ec1--2026-11-22) excludes DNS,
+  brokers, short flows and provider/all-OS guarantees.
+- Completed local static reports `run-6kAsWm` and peer `run-HglVde` passed. Draft-refresh preflight
+  `run-GkDRoH` and downloaded-assets report `run-adNvQa` also passed. MSI extraction matches the exact
+  executable; NSIS source/compiler-output/lifecycle checks pass. No installer or custom action executed.
+- Existing release **453727915** now targets the exact source and remains **draft/prerelease**, with
+  no actual version tag. Six old A9 assets/notes were backed up and verified before replacement;
+  all six new downloads matched bytes and hashes. Receipt: ignored
+  `target/security-a11y-approved-draft-refresh/security-a11y-approved-remote-assets.json`.
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `oxbox-native.exe` | 13,637,632 | `101ed74680fc884960ebfaaee33a8f1677b7ed09e0dd83c5cac90083b142b6ac` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 6,062,080 | `96b78fe77c29d0ee130748babf0e568eb21efc9cc2e1ffda4b2e9634a1cc7f4e` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,324,931 | `2ce96ef65f431cdd39d11712696f97a5868340c8a0ad69c150a011b5abba2af4` |
+| `SHA256SUMS.txt` | 447 | `eec439a4a958c4c5301e93d88e472dd447b0dc9d96ac110a4df7bac57f03ea76` |
+| `THIRD_PARTY_NOTICES.txt` | 3,718,522 | `779210e025e9b9f9a227c44bed73ac26c8216d419440dfb06a0c221baa217784` |
+| `LICENSE-MIT` | 1,076 | `dff2f23bad58d45b0830bf91f27ef278996da5ca00f1ab198969c854e8060f4f` |
+| `LICENSE-APACHE` | 11,358 | `c95bae1d1ce0235ecccd3560b772ec1efb97f348a79f0fbe0a634f0c2ccefe2c` |
+
+Clean-machine install/login/upgrade/uninstall remains intentionally pending. Full native effects,
+hardware/providers, other-OS runtime/packages, screen readers/keyboard/IME/DPI/high contrast, DNS/broker
+coverage, independent NSIS extraction, signing and human security/attribution acceptance remain open.
+The [draft](https://github.com/ninad-k/oxbox/releases/tag/untagged-6ee10a588a88a930f10a) was not published.
 
 ## 2026-11-21 implementation session
 

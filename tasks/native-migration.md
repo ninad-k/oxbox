@@ -4,6 +4,17 @@ Approved by the user on 2026-11-21: eframe **0.37.0**, Rust **1.95**, and the di
 [ADR 0004](../docs/adr/0004-runtime-offline-boundary.md). Preserve all 49 tools and each tool's existing
 platform availability, streaming/data safety, settings, background behavior and cleanup. Keep the release draft.
 
+## Dependency and accessibility follow-up — 2026-11-22
+
+Source `8a62ec1` preserves all 56 tools and passes all five jobs in
+[CI 45039126970](https://github.com/ninad-k/oxbox/actions/runs/45039126970), including the approved
+source backports, frozen time/legacy encryption compatibility, localization diagnostics and native
+focus regressions. Its exact Windows EXE and downloaded draft installers pass the scoped checks in
+the [current receipt](../docs/verification/2026-11-22-dependency-accessibility.md). Source integrity,
+license notices and audit outcomes distinguish the five remaining maintenance findings and GLib's
+reviewed source correction. Clean-machine and full manual/hardware/accessibility/privacy/human gates
+remain open. Release ID 453727915 stays draft/prerelease with no actual version tag.
+
 ## Complete 56-tool follow-up — 2026-11-22
 
 The [current route/regression receipt](../docs/verification/2026-11-22-56-tool-pass.md) accounts for every

@@ -5,6 +5,18 @@ the presence of this changelog does not mean installers have been published.
 
 ## 0.1.0 — draft, 2026-11-21
 
+### Dependency and accessibility follow-up — 2026-11-22
+
+- Moved active clocks, alarms and rate-date validation to Jiff with bundled offline timezone data,
+  preserving saved records and tested legacy grammar. Future DST no longer freezes at the finite old table.
+- Added four pinned, license-preserving upstream source backports with exact reconstruction/integrity
+  records. Kept Age 0.11.5 after the tested 0.12.1 upgrade failed its security gate; localization maintenance
+  is fixed separately without changing cryptography. Five upstream maintenance warnings remain documented.
+- Fixed real screen-reader expand/collapse actions, disabled-field edits, contextual row identity and
+  popup Escape focus. Area capture has keyboard numeric bounds alongside pointer selection.
+- Added reproducible encryption/localization fixtures, three-platform verification and refreshed Windows
+  draft installers. All 56 tools remain; clean-machine, complete accessibility and other manual gates stay open.
+
 ### 56-tool follow-up — 2026-11-22
 
 - Rechecked every native tool route in three parallel review lanes; the dated verification record

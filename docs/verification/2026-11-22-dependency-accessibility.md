@@ -196,3 +196,114 @@ Clean-machine install/login/upgrade/uninstall, full per-tool native effects, ano
 IME/DPI/high contrast and other-OS runtime accessibility, DNS/broker/short-flow coverage, independent
 security/attribution reviews and signing remain separate gates. Keep the release a draft/prerelease;
 do not create a version tag or publish it.
+
+## Final approved source — 8a62ec1
+
+This section records the completed follow-up for source
+`8a62ec1ad7e65ad9b3378dbcb495b897ef725c47`, including the two focus regressions and the approved fourth
+localization source backport. The earlier intermediate/pending statements are historical snapshots;
+their executable and observation windows remain separate from this final-source evidence. Age remains
+exact 0.11.5, and the immutable time corpus keeps its original hash.
+
+### Final CI
+
+[CI run 45039126970](https://github.com/ninad-k/oxbox/actions/runs/45039126970) completed successfully
+for the exact source above: **all five jobs passed**.
+
+| Native runner | Core tests | Frozen comparisons | Native tests | Isolated configuration tests | Production build |
+|---|---:|---:|---:|---:|---|
+| Windows x64 | 294 | 5 | 150 | 5 | Passed, 3m 19s |
+| macOS ARM64 | 289 | 5 | 152 | 5 | Passed, 2m 35s |
+| Linux x64 | 289 | 5 | 153 | 5 | Passed, 2m 56s |
+
+All full suites had zero failed, ignored or filtered tests. Strict all-target Core/native Clippy passed
+on each OS; the Linux formatting step passed. The minimum-Rust job used actual Rust 1.95.0 and passed
+its locked Windows all-target check in 31.39s. The UI job passed 39 tests across 11 files, zero Svelte
+errors/warnings, its production build and the generated contributor-index check.
+
+Each native job explicitly fetched its locked macro-fixture dependencies, then passed the source-bound
+offline checker against the reviewed `i18n-embed-fl 0.9.4` directory. Its valid generated fixture ran;
+unknown message, missing named argument, unexpected named argument and malformed input each produced
+the required compile diagnostic without a build panic. All five cases passed on all three OSes, in
+addition to their five configuration tests. Both actual popup-focus regressions, all five frozen time
+comparisons and the six focused time grammar/range/future-rule regressions passed on each OS.
+
+Fresh-checkout integrity verification passed for all **four packages, 582 upstream files and six
+provenance/patch artifacts**. The six integrity tests and 28 build/macro-checker/license/installer tests
+passed, **34 Node tests** combined. Linux's GLib iterator regression also passed in both normal and
+optimized native execution; the optimized selection reported one passed, zero failed/ignored and 152
+other tests filtered, with 2m 41s release-test compilation. The full Linux suite above was unfiltered.
+
+### Final local artifact and installer identity
+
+The Rust 1.95 Windows production executable is **13,637,632 bytes**, SHA-256
+`101ed74680fc884960ebfaaee33a8f1677b7ed09e0dd83c5cac90083b142b6ac`.
+The primary and peer static-verification runs passed and matched this executable in the extracted MSI
+payload. The prepared six-asset set is:
+
+| Asset | Bytes | SHA-256 |
+|---|---:|---|
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,324,931 | `2ce96ef65f431cdd39d11712696f97a5868340c8a0ad69c150a011b5abba2af4` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 6,062,080 | `96b78fe77c29d0ee130748babf0e568eb21efc9cc2e1ffda4b2e9634a1cc7f4e` |
+| `LICENSE-MIT` | 1,076 | `dff2f23bad58d45b0830bf91f27ef278996da5ca00f1ab198969c854e8060f4f` |
+| `LICENSE-APACHE` | 11,358 | `c95bae1d1ce0235ecccd3560b772ec1efb97f348a79f0fbe0a634f0c2ccefe2c` |
+| `THIRD_PARTY_NOTICES.txt` | 3,718,522 | `779210e025e9b9f9a227c44bed73ac26c8216d419440dfb06a0c221baa217784` |
+| `SHA256SUMS.txt` | 447 | `eec439a4a958c4c5301e93d88e472dd447b0dc9d96ac110a4df7bac57f03ea76` |
+
+No installer or MSI custom action was executed. Independent NSIS extraction, clean-machine acceptance,
+signing and human license review remain pending.
+
+The [existing release draft](https://github.com/ninad-k/oxbox/releases/tag/untagged-6ee10a588a88a930f10a),
+ID **453727915**, now targets exact source `8a62ec1ad7e65ad9b3378dbcb495b897ef725c47`.
+All six assets were downloaded and matched the names, sizes and SHA-256 values above. The prior A9
+six-asset set and notes were backed up and verified before replacement. Both local and downloaded
+installer sets passed static verification with zero errors. The refresh ran no installer, application
+or MSI custom action. The release is still **draft=true, prerelease=true, published=false**; its release
+tag field is `v0.1.0`, but no actual `v0.1.0` Git tag exists.
+
+The resumed final Rust audit again reported **zero vulnerability entries and five maintenance warnings**
+against advisory database `d1fe6ac3eba823a3515e849045f36dc34543885d`, without ignores. The fresh pnpm
+audit reported zero advisories. The separately recorded path-package GLib finding, maintenance follow-up
+and human security/attribution gates remain visible; these counts are not independent security acceptance.
+
+### Resumed consenting-desktop checks
+
+All observations below used the exact final executable hash above. After resuming the interrupted
+session, Ctrl+Q exited its previously running app process. A fresh launch then passed Ctrl+K, typing
+Unit Converter and Enter. Tab reached Dashboard, Shift+Tab reached Copy, and another Shift+Tab reached
+the To-unit chooser. Enter opened its nine options; Escape closed the popup **and retained To focus**;
+the next Tab reached Copy. This directly rechecked the focus defect fixed after the intermediate build.
+
+The native checksum picker accepted a generated Japanese filename, `generated-画像.txt`, without changing
+its name. The displayed SHA-256
+`9fad1eb93c668a3e3470680d6e6cb8ee8d31b1c4948d91cf217a9bb41e774574` matched both an independent
+PowerShell calculation and the Expected field; status was Completed. Copy was not activated, so this
+does not claim clipboard-effect acceptance. Closing the window hid it while the process remained alive;
+a second launch restored the same original process/window and its checksum result.
+
+Ctrl+Shift+Q left the process running but the window vanished. Source review found no backend binding
+for that chord; the cause of the visibility change remains **inconclusive**, without a speculative fix
+or a passing negative-visibility claim. Another activation restored the same window, and Ctrl+Q then
+exited the app process. Narrator was not relaunched: the earlier confirmation that it was audible is
+retained, while specific announcement words and a final screen-reader sequence remain pending.
+
+### Separate final-source endpoint windows
+
+Both hash-pinned observers completed normally, saw the target and retained the exact executable hash.
+
+| Window | Duration | Samples | TCP rows / UDP bound endpoints (max) | Sample errors | Processes at final sample |
+|---|---:|---:|---|---:|---:|
+| Resumed converter/checksum/hide/restore | 300.103s | 5,998 | 0 / 0 | 0 | 1 |
+| Fresh launch and Ctrl+Q | 90.033s | 1,800 | 0 / 0 | 0 | 0 |
+
+The resumed window had at most two matching processes, a 63.214ms p95 sampling gap and 112.812ms maximum
+gap. It ended with one process and therefore provides **no Quit/post-exit coverage**. The independent
+Quit window had at most one process, a 62.557ms p95 gap and 79.201ms maximum gap. Its first owned sample
+was 26.506s after observer start and its last was 48.553s; approximately 41.480s remained after that last
+owned sample, ending with zero processes following the observed Ctrl+Q exit.
+
+These remain sampled process-owned endpoint observations, not proof of zero network activity. Short
+flows between samples, DNS Client, brokers and unrelated system services remain outside coverage; no
+packet/DNS/ETW trace was performed. Neither window proves all 56 live tool effects or clean-machine
+installer behavior. The pending manual, assistive-technology, hardware, signing and attribution gates
+listed above remain open.

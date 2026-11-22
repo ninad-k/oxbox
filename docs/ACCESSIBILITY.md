@@ -3,6 +3,22 @@
 This record separates source/tree checks from assistive-technology and real-device acceptance. It applies
 to the eframe 0.37 native host. It is not a WCAG conformance statement or a screen-reader certification.
 
+## Final source `8a62ec1`
+
+[Final CI](https://github.com/ninad-k/oxbox/actions/runs/45039126970) passes 150 Windows native tests,
+152 on macOS ARM and 153 on Linux, including all 56 default routes, actual expansion actions/state,
+disabled-input guards and the Enter/Escape/next-Tab focus regression. The exact final Windows EXE
+`101ed74680fc884960ebfaaee33a8f1677b7ed09e0dd83c5cac90083b142b6ac` also passed that keyboard sequence:
+Escape retained the To-selector focus and the next Tab reached Copy. Its native picker preserved a
+generated Japanese filename; checksum comparison, same-result tray restoration and normal Ctrl+Q passed.
+
+Ctrl+Shift+Q left the process alive but the window disappeared; peer source review did not establish
+the hiding cause. This is not a passing negative-visibility check. Specific Narrator announcements
+remain unreported, and the reader was not relaunched during the final session. Full keyboard traversal,
+screen readers, IME, DPI/high contrast and other-OS runtime acceptance remain open. The
+[current receipt](verification/2026-11-22-dependency-accessibility.md) separates these observations from
+intermediate binaries and headless properties. Earlier sections below retain their original scope.
+
 Maintenance source `c30a179` adds seven named native forms (56 catalogue routes total), guarded review/
 recovery branches, numeric annotation controls alongside drag input, and neutral polite cancellation
 status. Windows native tests **112/112** and macOS/Linux **114/114** passed in CI. Current-binary Windows

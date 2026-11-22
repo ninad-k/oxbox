@@ -38,7 +38,7 @@ Useful primary references: [Tauri plugins](https://v2.tauri.app/plugin/), [image
 [age](https://docs.rs/age/), [sysinfo](https://docs.rs/sysinfo/), [xcap](https://docs.rs/xcap/),
 [Jiff](https://docs.rs/jiff/1.0.2/), and [sevenz-rust2](https://docs.rs/sevenz-rust2/).
 
-## Accepted source remediation — 2026-11-22, validation in progress
+## Accepted source remediation — 2026-11-22, implemented and validated in CI
 
 The user approved phases 1 and 2 of [ADR 0005](adr/0005-dependency-security-remediation.md), then the
 separate localization-only fourth source patch in [ADR 0006](adr/0006-age-upgrade-security-gate.md).
@@ -58,6 +58,8 @@ root lockfile. Patched GLib is omitted by the scanner's path-package handling an
 accounted for in source provenance. This is not a warning-free or complete-security claim. The failed
 Age 0.12.1 trial's one-vulnerability/five-warning receipt and the pre-fourth-patch hold's zero/six receipt
 remain historical evidence, not the current selected result.
+The resumed final audit reproduced the selected **zero/five** result with the same advisory database;
+`pnpm audit` reported zero findings.
 
 The exception permits only complete, original-license-preserving published source for these packages,
 with the approved minimal upstream-derived changes. The original registry cache is not modified.
@@ -99,9 +101,8 @@ compatibility evidence, not acceptance of every age recipient, plugin, armor or 
 
 A [small checked-in historical fixture and producer](../crates/oxbox-core/tests/fixtures/age-0.11.5/README.md)
 make the old-writer direction reproducible in Core's normal `legacy_age_0115_` tests, using factor 10
-only for generated test data. Both persistent tests passed in the earlier Rust 1.95 Windows
-workspace run, with no failures or ignored tests; the selected fourth-patch workspace's full rerun is
-tracked separately below. The existing production
+only for generated test data. Both persistent tests passed again in the selected four-patch Rust 1.95
+Windows workspace run recorded below, with no failures or ignored tests. The existing production
 round-trip test retains the factor-18 header assertion without adding another heavy KDF here. The
 [standalone parser compatibility workspace](../tests/dependency-compat/README.md) passed all five generated
 valid/invalid/missing Cargo and localization configurations, Unicode/default values and explicit parent
@@ -119,18 +120,49 @@ human attribution reviews**; notice reproducibility does not close those reviews
 
 Jiff's approved feature selection includes a bundled offline IANA fallback on every target. The
 time/date adapter migration removed the historical direct dependencies; the frozen comparison and
-persisted-value checks passed locally, while the current-revision full checks remain pending below.
+persisted-value checks passed in the local validation recorded below.
 RXing's optional Chrono/Chrono-TZ client/WASM capabilities are retained.
 Cargo may keep optional packages in its lockfile even after compiled application paths stop using them;
 record native/legacy target trees separately from lockfile/audit entries. Do not prune upstream features
 to improve an audit count. Linux AccessKit/AT-SPI, keepawake and capture still have the separately tracked
 Zbus 5 maintenance path; this work does not remove or replace accessibility to silence it.
 
-**Full current-revision all-platform tests/Clippy/builds and new production artifact acceptance remain
-pending.** The approved-resolution audit, macro fixtures and notice generation above are completed
-scoped checks; earlier optimized Linux GLib/CI and runtime hashes do not certify this changed build.
-Clean-machine and human attribution gates
-remain open. Updated validation belongs in [VALIDATION.md](VALIDATION.md) when actual receipts arrive.
+For source `8a62ec1ad7e65ad9b3378dbcb495b897ef725c47`, the selected four-patch workspace passed the Rust **1.95.0** Windows run:
+**294 Core tests, five frozen time-comparison tests, 150 native tests and 12 retained legacy tests**,
+with zero failures or ignored tests. Strict workspace Clippy and formatting checks passed, as did
+**34 Node checks**. The original and patched macro runs each passed the same five generated fixtures;
+the approved-resolution audit and notice counts above are separate completed checks.
+
+[CI run 45039126970](https://github.com/ninad-k/oxbox/actions/runs/45039126970) passed all five jobs for
+that exact source. All three Rust targets passed strict Clippy and production builds on Rust 1.95.0,
+with zero failed or ignored tests in these suites:
+
+| Target | Core | Frozen time comparisons | Native | Localization configuration | Macro fixtures |
+|---|---:|---:|---:|---:|---:|
+| Windows MSVC | 294 | 5 | 150 | 5 | 5 |
+| macOS ARM | 289 | 5 | 152 | 5 | 5 |
+| Linux GNU | 289 | 5 | 153 | 5 | 5 |
+
+The optimized Linux GLib regression also passed: one test, zero failed or ignored, 152 filtered.
+This checks the backported iterator correction; it does not remove the separate source-advisory record.
+The Windows production EXE is **13,637,632 bytes**, SHA-256
+`101ed74680fc884960ebfaaee33a8f1677b7ed09e0dd83c5cac90083b142b6ac`. Its six staged assets passed static
+checks. Bounded desktop checks covered combo Escape/next-Tab focus, a generated Unicode file selection
+with a matching checksum, tray close/second-instance restoration, and normal Ctrl+Q exit.
+
+The existing [release draft](https://github.com/ninad-k/oxbox/releases/tag/untagged-6ee10a588a88a930f10a),
+ID **453727915**, was refreshed to that exact source after the old assets and notes were backed up and
+verified. All **six** replacements were downloaded again and matched their local sizes and SHA-256
+hashes. Local and downloaded installer static-verification runs passed with zero errors; no installer
+was executed. The release remains **draft/prerelease**, with no actual version tag. The
+[verification record](verification/2026-11-22-dependency-accessibility.md#final-approved-source--8a62ec1)
+records the artifact and bounded-runtime scope.
+
+**Full manual acceptance remains pending.** The Ctrl+Shift+Q check left the
+process alive but hid the window for an unexplained reason; complete keyboard acceptance remains open.
+Specific Narrator speech reports, clean-machine installation, hardware/privacy checks and the three
+human attribution reviews also remain open. Keep the release an unpublished draft without a real
+release tag. Record subsequent receipts in [VALIDATION.md](VALIDATION.md).
 
 ## Historical RustSec assessment — 2026-11-21
 

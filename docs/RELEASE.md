@@ -4,7 +4,25 @@ The native migration uses exact eframe 0.37.0 and Rust 1.95, with 56 tool routes
 release target. The existing release must stay an **unpublished draft** until the acceptance gates pass.
 Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the native application.
 
+## Current dependency and accessibility candidate `8a62ec1`
+
+Source `8a62ec1ad7e65ad9b3378dbcb495b897ef725c47` passed all five jobs in
+[CI 45039126970](https://github.com/ninad-k/oxbox/actions/runs/45039126970), including strict Clippy,
+three-platform production builds, minimum Rust 1.95, localization diagnostics and optimized Linux GLib.
+All 56 tools remain. The [current receipt](verification/2026-11-22-dependency-accessibility.md) records
+exact test counts, source provenance, final executable and bounded Windows interactions/endpoint windows.
+
+Release ID **453727915** now targets that source and remains **draft/prerelease**, with no actual version
+tag. Verified backup of the preceding A9 assets/notes completed before replacement; all six downloaded
+assets matched and passed static inspection. MSI **6,062,080 bytes**, NSIS **4,324,931 bytes**, unsigned.
+[Current hashes](VALIDATION.md#dependency-and-accessibility-follow-up-8a62ec1) identify the binaries.
+No installer/custom action executed. Clean-machine install/login/upgrade/uninstall is intentionally
+pending; full manual/hardware/accessibility/privacy and independent human/signing gates stay open.
+Five maintenance findings and the separately accounted GLib source advisory are documented. No publication is authorized.
+
 ## Current 56-tool follow-up `a9b6e1c`
+
+Historical receipt, superseded by `8a62ec1` above.
 
 Checked source `a9b6e1c13a2d15c0a87fa1fa42b364209e915310` passed all five jobs in
 [CI 45027690468](https://github.com/ninad-k/oxbox/actions/runs/45027690468): Windows **285 core / 135 native**,
@@ -59,8 +77,9 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
   and favorite/global hotkeys; `67f0715` covers all 49 default forms, Timer/QR state changes, generated-provider
   Cancel, active-job hide/restoration and Quit. Each remains scoped to its source and executable.
 - [x] Complete review-fix Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks:
-  [run 45027690468](https://github.com/ninad-k/oxbox/actions/runs/45027690468), source `a9b6e1c`;
-  Windows 285 core / 135 native, macOS ARM and Linux 280 / 137 each, with zero failed/ignored tests.
+  [run 45039126970](https://github.com/ninad-k/oxbox/actions/runs/45039126970), source `8a62ec1`;
+  Windows 294 core / 5 golden / 150 native, macOS ARM 289 / 5 / 152, Linux 289 / 5 / 153,
+  with zero failed/ignored tests in the full suites.
 - [x] Complete the parallel agent source/regression review and fix reproduced installer, file, provider,
   passphrase and accessibility issues; [security review](SECURITY_REVIEW.md), [privacy](PRIVACY_ACCEPTANCE.md),
   [accessibility](ACCESSIBILITY.md), [functional review](FEATURE_REVIEW.md) and [installer protocol](INSTALLER_ACCEPTANCE.md) distinguish scope and open gates.
@@ -69,14 +88,14 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [ ] Complete production runtime observations including owned providers and DNS coverage on all three OSes;
   record observation bounds, rather than claim universal zero traffic from finite samples.
 - [x] Record bounded Windows native production endpoint observations, including a quiet-tray/activation/Quit loop.
-  Current `a9b6e1c` has one 300.070-second / 6,000-sample window before startup through generated-file
-  checks, hide/reactivation and normal Quit, ending with zero owned processes. Earlier source/provider
-  measurements retain their own hashes and intervals; no all-provider/DNS claim transfers.
+  Current `8a62ec1` has a 300.103-second / 5,998-sample generated-check/tray-restoration window ending
+  with an app alive, plus a separate 90.033-second / 1,800-sample startup/Quit window ending with zero
+  owned processes. Earlier measurements retain their own scope; no all-provider/DNS claim transfers.
   See [runtime privacy](RUNTIME_PRIVACY.md) for exact intervals and snapshot/DNS limitations.
-- [x] Extract/hash-match the current `a9b6e1c` draft MSI payload; inspect sizes/hashes and native packaging boundaries.
+- [x] Extract/hash-match the current `8a62ec1` draft MSI payload; inspect sizes/hashes and native packaging boundaries.
   Earlier icon/resource pixel and digest observations retain their historical executable scope.
   Verify generated NSIS source and successful compiler output; independent NSIS extraction is still open.
-- [x] Pass local and downloaded Windows static installer checks for `a9b6e1c`; record current-binary
+- [x] Pass local and downloaded Windows static installer checks for `8a62ec1`; record current-binary
   bounded GUI/runtime validation separately from installer execution and full manual acceptance.
 - [ ] Test actual native MSI/NSIS clean install/uninstall and independently inspect NSIS payloads.
 - [ ] Verify first-installed-launch startup default, quiet login-to-tray, opt-out/upgrade preservation, paths with spaces,
@@ -85,7 +104,7 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [ ] Verify keyboard/screen-reader/IME/Unicode, DPI/monitor changes, high contrast and remote/GPU sessions.
 - [ ] Resolve/review dependency findings and outstanding attribution reviews with a human reviewer.
 - [ ] Complete independent human security acceptance and remaining adversarial filesystem/real-provider runtime checks.
-- [x] Record rebuilt review-fix source `a9b6e1c`, installer checksums and all six downloaded remote asset hash
+- [x] Record rebuilt review-fix source `8a62ec1`, installer checksums and all six downloaded remote asset hash
   matches in [VALIDATION.md](VALIDATION.md). Release ID `453727915` remains draft/prerelease;
   no version tag has been pushed or release published.
 

@@ -112,9 +112,9 @@ The wrapper builds oxbox-native and reuses the existing bundler only as an insta
 operate the retained legacy host and are not native release commands. See [AGENTS.md](AGENTS.md) for all checks.
 The current implementation branch is codex/native-renderer. Native Windows MSI/NSIS installers and checksums
 are attached to an unpublished review draft. Their downloaded hashes were verified; clean-machine behavior
-and the other release gates remain open. The uploaded draft targets `a9b6e1c`; all six refreshed assets
-were downloaded, hash-matched and statically inspected. [Current functional-source CI passed](https://github.com/ninad-k/oxbox/actions/runs/45027690468)
-on Windows, macOS ARM and Linux with exact Rust 1.95.0; the [56-tool verification record](docs/verification/2026-11-22-56-tool-pass.md)
+and the other release gates remain open. The uploaded draft targets `8a62ec1`; all six refreshed assets
+were downloaded, hash-matched and statically inspected. [Current functional-source CI passed](https://github.com/ninad-k/oxbox/actions/runs/45039126970)
+on Windows, macOS ARM and Linux with exact Rust 1.95.0; the [dependency and accessibility record](docs/verification/2026-11-22-dependency-accessibility.md)
 distinguishes automated results from current-binary GUI/runtime evidence and pending manual gates.
 There is no public installer download yet. Check [Releases](https://github.com/ninad-k/oxbox/releases) for status.
 Unsigned builds can produce OS warnings. The [release gates](docs/RELEASE.md) remain open.

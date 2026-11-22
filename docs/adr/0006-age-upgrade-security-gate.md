@@ -1,6 +1,6 @@
 # ADR 0006: Hold the Age upgrade and separate localization maintenance
 
-- Status: **Accepted — user approved the fourth vendor package on 2026-11-22; implementation/validation in progress**
+- Status: **Accepted — user approved the fourth vendor package on 2026-11-22; implemented, with automated and scoped binary validation completed; manual release gates remain open**
 - Date: 2026-11-22
 - Scope: retain published Age 0.11.5 for passphrase files; apply only the upstream localization diagnostic-macro change
 - Related decision: [ADR 0005](0005-dependency-security-remediation.md), whose Age 0.12.1 selection failed the post-resolution security gate
@@ -60,8 +60,8 @@ That upstream change replaces proc-macro-error2 with proc-macro-error3, retainin
 | Approved source directory | `vendor/i18n-embed-fl-0.9.4` |
 
 These source identities were checked against published metadata and cached published-package VCS
-records. Before applying the patch, download the listed base archive and independently verify its
-checksum. Metadata is not a claim that the new source tree already exists or has passed integrity checks.
+records. The base archive checksum and modified tree were verified during implementation, as recorded
+below. Reconstruction must independently verify the listed archive checksum before applying the patch.
 Primary [0.9.4 release metadata](https://crates.io/api/v1/crates/i18n-embed-fl/0.9.4) and
 [0.10.1 source](https://github.com/kellpossible/cargo-i18n/tree/d3c20dcc62967abd3d7a8129d6c8a957e2c14173/i18n-embed-fl).
 
@@ -93,7 +93,7 @@ The precise approved changes are:
 +use proc_macro_error3::{abort, emit_error, proc_macro_error};
 ```
 
-The fork's current default error-conversion feature targets Syn 3; the proposed package retains Syn 2,
+The fork's current default error-conversion feature targets Syn 3; the selected package retains Syn 2,
 so it uses the fork's explicit supported
 [`syn2-error` selection](https://docs.rs/proc-macro-error3/3.1.1/proc_macro_error3/).
 This exact pin/feature choice is the small downstream adaptation to upstream's `proc-macro-error3 ^3.0`
@@ -113,10 +113,10 @@ i18n-embed-fl = { path = "vendor/i18n-embed-fl-0.9.4" }
 Read-only comparison of published 0.9.4 and 0.10.1 confirms that their source contains the same three
 diagnostic macro names and exported `fl!` entry point. The 0.10 line also changes its i18n-embed
 requirement to 0.16 and includes unrelated argument-order/internal changes. **Do not import those
-changes or replace the complete 0.9 package with 0.10.1.** The proposed extraction leaves 0.9.4's
+changes or replace the complete 0.9 package with 0.10.1.** The selected extraction leaves 0.9.4's
 parser, localization loader, Fluent/config integration, argument handling, generated application API
-and all runtime cryptography intact. Compilation and negative-diagnostic fixtures still must establish
-actual compatibility; source inspection is not their passing receipt.
+and all runtime cryptography intact. The generated compilation and negative-diagnostic results below
+establish compatibility for those cases; source inspection alone would not establish it.
 
 The user approved a fourth explicit exception to the normal no-vendoring rule, limited to this
 package. Preserve its full published source, unchanged version and MIT notice. Extend
@@ -126,7 +126,7 @@ workspace auto-membership; do not modify the registry cache, spoof versions or a
 The original three-package approval did not authorize this fourth package; its separate approval is
 recorded here. No further package, GTK macro, tray or Zbus source changes are authorized by this decision.
 
-## Implementation record — validation in progress
+## Implementation record — local and CI validation completed
 
 The approved fourth archive was downloaded and matched its recorded checksum before extraction.
 Its ten published files are retained, with only the three approved files changed. The modified source
@@ -154,29 +154,45 @@ are absent from the root lockfile. The scanner omits local patched GLib; its sou
 explicitly recorded and is not silently counted as an unaffected registry release. Regenerated Windows
 notices report **358 packages, zero missing notice texts and three unresolved human attribution reviews**.
 The earlier held/trial counts above remain separate historical receipts.
+The resumed final audit reproduced the selected zero-vulnerability/five-maintenance result using the
+same advisory database, and `pnpm audit` reported zero findings.
 
-**Final current-revision all-platform Clippy/tests/builds and fresh production artifact acceptance
-remain pending.** These scoped checks do not publish or certify the release.
+For source `8a62ec1ad7e65ad9b3378dbcb495b897ef725c47`, the Rust **1.95.0** Windows workspace run passed **294 Core tests, five frozen
+time-comparison tests, 150 native tests and 12 retained legacy tests**, with zero failures or ignored
+tests. Strict workspace Clippy, formatting and **34 Node checks** passed. This includes the persistent
+legacy passphrase tests and the existing production factor-18/maximum-20/streaming/receipt checks.
 
-## Acceptance before using the patch
+[CI run 45039126970](https://github.com/ninad-k/oxbox/actions/runs/45039126970) passed all five jobs for
+that exact source. Core/frozen-comparison/native results were **294/5/150 on Windows, 289/5/152 on
+macOS ARM and 289/5/153 on Linux**, with zero failed or ignored tests. Each target also passed all five
+localization-configuration tests, the five patched macro fixtures, strict Clippy and production build
+on Rust 1.95.0. The optimized Linux GLib regression passed one test with 152 filtered and none failed or
+ignored. The exact Windows production artifact and bounded desktop checks are recorded in
+[DEPENDENCIES.md](../DEPENDENCIES.md); those checks do not establish complete manual acceptance.
 
-- Capture the current Age 0.11.5 graph/audit and a generated valid localization macro fixture first.
-  Add meaningful valid and compile-fail fixtures for message IDs, missing/wrong named arguments and
-  malformed macro input. Preserve useful diagnostics; a panic is not the desired failure mode.
-- After approval and implementation, build the actual Age 0.11.5 localization call sites and run
-  generated macro fixtures on Rust 1.95. Re-run persistent legacy passphrase tests and the existing
-  production factor-18/maximum-20/streaming/receipt tests, without repeatedly adding heavy KDF cases.
-- Verify every new source/patch byte and notice identity; rerun the audit without ignores. Demonstrate
-  removal of the active macro-error2 path and absence of the introduced crypto-bigint instance in the
-  actual resolved application graph. Keep optional lockfile and retained-host findings distinct.
-- Complete selected native/legacy checks and three-platform CI, notices and fresh artifact/runtime
-  receipts. Neither the successful Age 0.12.1 format trial nor an older binary hash certifies this build.
+## Acceptance record and remaining gates
+
+- Completed locally: the original registry macro baseline and patched comparison, each with one valid
+  runtime fixture and four expected compile errors; the selected Age 0.11.5 call sites and persistent
+  passphrase/production-policy tests; source/patch integrity and notice identity checks; and the
+  no-ignore audit and resolved-graph checks recorded above.
+- Completed: the selected native/legacy workspace checks and final three-platform CI on Rust 1.95.0,
+  static checks of the six current staged assets, and bounded desktop checks. The existing release draft,
+  ID **453727915**, was refreshed to the exact checked source after verified backup of old assets/notes;
+  all six replacements were downloaded and matched, and local/downloaded static checks passed with zero
+  errors. No installer was executed. See the
+  [verification record](../verification/2026-11-22-dependency-accessibility.md#final-approved-source--8a62ec1).
+  Optional lockfile findings and retained-host paths remain distinct from active production paths.
+- Pending: clean-machine installation, full keyboard and assistive-technology
+  acceptance, and remaining hardware/privacy checks. In particular, Ctrl+Shift+Q left the process alive
+  but hid the window for an unexplained reason, and specific Narrator speech reports remain pending.
+  Neither the successful Age 0.12.1 format trial nor an older binary hash certifies this build.
 
 The observed post-patch outcome removes the macro-error2 maintenance path while retaining the
 published Age 0.11.5 crypto dependency selection. Chrono's optional lock path,
 GLib's explicit source finding, GTK macro-error1, and protected AccessKit/Zbus maintenance work are not
-resolved by this proposal. Clean-machine, hardware, privacy and human attribution gates remain open;
-the release remains an unpublished draft.
+resolved by this decision. Clean-machine, hardware, privacy and the three human attribution reviews
+remain open; the release remains an unpublished draft without a real release tag.
 
 ## Alternatives
 
