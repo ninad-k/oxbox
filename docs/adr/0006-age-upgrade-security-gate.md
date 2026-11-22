@@ -1,8 +1,8 @@
 # ADR 0006: Hold the Age upgrade and separate localization maintenance
 
-- Status: **Proposed — the fourth vendor package is not approved or applied**
+- Status: **Accepted — user approved the fourth vendor package on 2026-11-22; implementation/validation in progress**
 - Date: 2026-11-22
-- Scope: retain published Age 0.11.5 for passphrase files; propose only the upstream localization diagnostic-macro change
+- Scope: retain published Age 0.11.5 for passphrase files; apply only the upstream localization diagnostic-macro change
 - Related decision: [ADR 0005](0005-dependency-security-remediation.md), whose Age 0.12.1 selection failed the post-resolution security gate
 
 ## Finding and current safe hold
@@ -39,16 +39,16 @@ passphrases, receipts and original preservation remain unchanged. All 56 tools, 
 1.95, AccessKit and the existing GLib/i18n-config/RXing patches remain selected. No new cryptographic
 primitive, protocol, recipient type or renderer is proposed here.
 
-## Proposed smallest maintenance change
+## Accepted smallest maintenance change
 
-Keep Age `=0.11.5` and its compatible **i18n-embed-fl 0.9.4 / i18n-embed 0.15** API family. If the user
-approves a fourth named source package, backport only the diagnostic-macro dependency/import change
+Keep Age `=0.11.5` and its compatible **i18n-embed-fl 0.9.4 / i18n-embed 0.15** API family. The user
+approved a fourth named source package: backport only the diagnostic-macro dependency/import change
 from official cargo-i18n commit
 [`dd46d747fe5b319d5de6b2364a2394c50ab82f54`](https://github.com/kellpossible/cargo-i18n/commit/dd46d747fe5b319d5de6b2364a2394c50ab82f54).
 That upstream change replaces proc-macro-error2 with proc-macro-error3, retaining the imported
 `abort`, `emit_error` and `proc_macro_error` API. It was published in i18n-embed-fl 0.10.1.
 
-| Source identity | Proposed pinned value |
+| Source identity | Approved pinned value |
 |---|---|
 | Package/version, unchanged | `i18n-embed-fl 0.9.4` |
 | Published base archive | `https://static.crates.io/crates/i18n-embed-fl/i18n-embed-fl-0.9.4.crate` |
@@ -57,7 +57,7 @@ That upstream change replaces proc-macro-error2 with proc-macro-error3, retainin
 | Upstream change | `dd46d747fe5b319d5de6b2364a2394c50ab82f54` |
 | Published 0.10.1 VCS containing the change | `d3c20dcc62967abd3d7a8129d6c8a957e2c14173` / `i18n-embed-fl` |
 | License/notice to retain | MIT, original `LICENSE.txt` and package attribution |
-| Proposed source directory | `vendor/i18n-embed-fl-0.9.4` |
+| Approved source directory | `vendor/i18n-embed-fl-0.9.4` |
 
 These source identities were checked against published metadata and cached published-package VCS
 records. Before applying the patch, download the listed base archive and independently verify its
@@ -65,14 +65,14 @@ checksum. Metadata is not a claim that the new source tree already exists or has
 Primary [0.9.4 release metadata](https://crates.io/api/v1/crates/i18n-embed-fl/0.9.4) and
 [0.10.1 source](https://github.com/kellpossible/cargo-i18n/tree/d3c20dcc62967abd3d7a8129d6c8a957e2c14173/i18n-embed-fl).
 
-Only three published-package files would change:
+Only three published-package files may change:
 
 1. `Cargo.toml`: replace the normalized `proc-macro-error2` dependency with the exact maintained
    `proc-macro-error3 =3.1.1`, default features disabled, `syn2-error` enabled.
 2. `Cargo.toml.orig`: make the same dependency change in its original manifest form.
 3. `src/lib.rs`: rename the one imported crate from `proc_macro_error2` to `proc_macro_error3`.
 
-The precise proposed changes are:
+The precise approved changes are:
 
 ```diff
 --- a/Cargo.toml
@@ -100,7 +100,7 @@ This exact pin/feature choice is the small downstream adaptation to upstream's `
 change. It is not a fake package alias: the actual dependency and import name become
 `proc_macro_error3`, matching the attribute macro's generated absolute crate path.
 
-The candidate workspace addition, only after approval, is:
+The approved workspace addition is:
 
 ```toml
 [patch.crates-io]
@@ -118,12 +118,45 @@ parser, localization loader, Fluent/config integration, argument handling, gener
 and all runtime cryptography intact. Compilation and negative-diagnostic fixtures still must establish
 actual compatibility; source inspection is not their passing receipt.
 
-The proposal requests a fourth explicit exception to the normal no-vendoring rule, limited to this
+The user approved a fourth explicit exception to the normal no-vendoring rule, limited to this
 package. Preserve its full published source, unchanged version and MIT notice. Extend
 `vendor/PROVENANCE.json`, its integrity fixtures and patched-source notices with verified base/final
 tree hashes, the exact three-file diff and immutable upstream references. Exclude it from application
 workspace auto-membership; do not modify the registry cache, spoof versions or add an audit ignore.
-The existing three-package approval does not authorize this fourth package by itself.
+The original three-package approval did not authorize this fourth package; its separate approval is
+recorded here. No further package, GTK macro, tray or Zbus source changes are authorized by this decision.
+
+## Implementation record — validation in progress
+
+The approved fourth archive was downloaded and matched its recorded checksum before extraction.
+Its ten published files are retained, with only the three approved files changed. The modified source
+tree SHA-256 is `93079287d7c1f6aa203286f57c1dc5d52defb263965064bbe2b05f7b8803270c`, and the applied
+patch SHA-256 is `5ba3d03e3dc8b4c2d341461f70411dbc0fb14f31ff3a0ea5355fb4b92dfe9f37`.
+The updated [provenance](../../vendor/PROVENANCE.json) retains the base and final source identities.
+All three earlier package trees remain unchanged.
+
+The integrator captured the **original registry 0.9.4** baseline: generated plain/named/attribute
+messages executed correctly, and all four invalid fixtures produced the expected diagnostics without
+a build panic. An initial runner attempt stopped before compilation because it confused Cargo's
+`(proc-macro)` kind annotation with a source path; the harness classifier was corrected after a failing
+fixture and its four pure guards passed. That harness issue is not an application macro defect.
+
+The generic offline integrity verifier passed for 582 package files and six artifacts; its six generated
+guards, nine notice guards and six classifier guards passed locally. The integrator then activated the
+patch and captured the same **five successful patched fixtures**: valid plain/named/attribute runtime
+output and four expected compiler diagnostics, with no build panic. The original and patched outcomes
+therefore agree for these generated cases.
+
+The fresh approved-resolution audit, using database `d1fe6ac3eba823a3515e849045f36dc34543885d`, reports
+**zero vulnerability entries and five maintenance findings**, without ignores: optional Chrono,
+GTK macro-error1 and three Zbus-family packages. Macro-error2, basic-toml, Chrono-TZ and crypto-bigint
+are absent from the root lockfile. The scanner omits local patched GLib; its source fix/advisory remains
+explicitly recorded and is not silently counted as an unaffected registry release. Regenerated Windows
+notices report **358 packages, zero missing notice texts and three unresolved human attribution reviews**.
+The earlier held/trial counts above remain separate historical receipts.
+
+**Final current-revision all-platform Clippy/tests/builds and fresh production artifact acceptance
+remain pending.** These scoped checks do not publish or certify the release.
 
 ## Acceptance before using the patch
 
@@ -139,8 +172,8 @@ The existing three-package approval does not authorize this fourth package by it
 - Complete selected native/legacy checks and three-platform CI, notices and fresh artifact/runtime
   receipts. Neither the successful Age 0.12.1 format trial nor an older binary hash certifies this build.
 
-The expected outcome is removal of one maintenance path while retaining the safer historical crypto
-dependency selection. Actual post-patch audit counts remain pending. Chrono's optional lock path,
+The observed post-patch outcome removes the macro-error2 maintenance path while retaining the
+published Age 0.11.5 crypto dependency selection. Chrono's optional lock path,
 GLib's explicit source finding, GTK macro-error1, and protected AccessKit/Zbus maintenance work are not
 resolved by this proposal. Clean-machine, hardware, privacy and human attribution gates remain open;
 the release remains an unpublished draft.

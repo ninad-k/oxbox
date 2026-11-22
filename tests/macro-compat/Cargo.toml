@@ -1,0 +1,17 @@
+[package]
+name = "oxbox-localization-macro-compatibility"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+i18n-embed = { version = "=0.15.4", features = ["fluent-system", "filesystem-assets"] }
+i18n-embed-fl = "=0.9.4"
+
+[patch.crates-io]
+i18n-config = { path = "../../vendor/i18n-config-0.4.8" }
+i18n-embed-fl = { path = "../../vendor/i18n-embed-fl-0.9.4" }

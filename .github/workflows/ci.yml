@@ -33,7 +33,7 @@ jobs:
         run: node scripts/verify-vendor.mjs
       - name: Test dependency source integrity
         run: node --test scripts/vendor-integrity.test.mjs
-      - run: node --test scripts/build-native.test.mjs scripts/license-inventory.test.mjs scripts/verify-native-installers.test.mjs
+      - run: node --test scripts/build-native.test.mjs scripts/license-inventory.test.mjs scripts/verify-native-installers.test.mjs scripts/macro-compat.test.mjs
 
   rust:
     name: Native Rust (${{ matrix.os }})
@@ -78,6 +78,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Fetch locked localization fixture sources
+        run: cargo fetch --manifest-path tests/macro-compat/Cargo.toml --locked --target ${{ matrix.target }}
+      - name: Verify localization macro expansion and diagnostics
+        run: node scripts/check-macro-compat.mjs --expect patched
       - name: Verify Windows third-party notices
         if: runner.os == 'Windows'
         run: node scripts/generate-third-party-notices.mjs --check

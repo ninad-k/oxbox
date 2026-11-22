@@ -26,6 +26,12 @@ Active runtime graphs must be distinguished from optional packages retained in C
 neither a warning-free audit nor independent security acceptance. Final source, CI and artifact evidence
 must supersede earlier binary receipts before distribution.
 
+The subsequently approved ADR 0006 localization-only backport retains Age 0.11.5 and removes the
+macro-error2 path. Its original/patched generated expansion and compile-error checks pass; the fresh
+approved audit reports zero vulnerability entries and five maintenance warnings, without ignores.
+Four exact package trees retain source/advisory provenance; no cryptographic backend was migrated.
+The final revision's source, CI and production receipts remain separate from the intermediate gate.
+
 ### Complete 56-tool follow-up
 
 The [parallel route review](verification/2026-11-22-56-tool-pass.md) accounts for every canonical ID.

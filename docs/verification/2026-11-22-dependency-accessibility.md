@@ -6,9 +6,15 @@ backports, Age 0.12.1 and Jiff 1.0.2. Exact eframe 0.37.0, Rust 1.95, all 56 sta
 offline defaults and the unpublished draft are retained. Clean-machine acceptance remains intentionally pending.
 
 The Age 0.12.1 candidate subsequently failed its security gate: it adds the vulnerable `crypto-bigint
-0.5.5` family through mandatory HPKE/P-256 paths. The application retains exact Age 0.11.5 while a
-[separate localization-only remedy](../adr/0006-age-upgrade-security-gate.md) is reviewed. Its successful
+0.5.5` family through mandatory HPKE/P-256 paths. The application retains exact Age 0.11.5. The user
+subsequently approved the [separate localization-only remedy](../adr/0006-age-upgrade-security-gate.md);
+its fourth source-package implementation and validation are in progress. The successful Age 0.12.1
 compile/interoperability results below are historical candidate evidence, not acceptance of that upgrade.
+
+This is an **intermediate receipt** for source
+`35d6afc3b9a38057c1164198b2f634083e50e5b9`. Later popup-focus fixes and the newly approved fourth
+source patch are outside this commit's CI, executable and runtime evidence. The GitHub release draft still
+contains the prior A9 candidate's six assets; no version tag has been created.
 
 ## Compatibility evidence
 
@@ -55,13 +61,77 @@ clipboard, deletes user files or changes an OS setting.
 The integrated native accessibility suite passed **146 tests** before the time migration. All 56 default
 routes have named interactive controls and actual combo expansion state. These headless AccessKit checks
 prove those properties; they do not prove spoken announcements, visible focus or complete keyboard traversal.
-The user offered to assist with Narrator speech. Actual final-binary speech evidence remains pending.
+The user assisted with the intermediate binary's Narrator check, described below. Actual final-binary
+speech content and complete keyboard traversal remain unverified.
 
-The final local held-Age Windows workspace run passed **294 core tests, five frozen comparisons,
+The local held-Age Windows workspace run for the intermediate source passed **294 core tests, five frozen comparisons,
 148 native tests and 12 retained-host tests**, zero failed/ignored. It includes three additional checked
 time-range tests and a reproduced/fixed legacy alarm grammar regression for Unicode numeric whitespace
 and signed padded years. Strict all-target workspace Clippy and formatting passed on Rust 1.95.
 The frozen compatibility fixture still has its original hash.
+
+## Intermediate cross-platform CI
+
+[CI run 45035930243](https://github.com/ninad-k/oxbox/actions/runs/45035930243) completed successfully
+for exact source `35d6afc3b9a38057c1164198b2f634083e50e5b9`; all five jobs passed.
+
+| Native runner | Core tests | Frozen comparisons | Native tests | Isolated localization tests | Production build |
+|---|---:|---:|---:|---:|---|
+| Windows x64 | 294 | 5 | 148 | 5 | Passed, 3m 18s |
+| macOS ARM64 | 289 | 5 | 150 | 5 | Passed, 3m 01s |
+| Linux x64 | 289 | 5 | 151 | 5 | Passed, 3m 18s |
+
+Each full suite had zero failed, ignored or filtered tests. Strict all-target Core/native Clippy passed
+on all three runners; formatting passed on Linux, where that CI step runs. The separate minimum-Rust
+job used actual Rust **1.95.0** and passed the locked Core/native all-target Windows check in 38.45s.
+The UI job passed 39 tests across 11 files, zero Svelte errors/warnings, its production build and
+generated contributor-index check, five source-integrity tests and 22 packaging/license/installer tests.
+Fresh-checkout verification accepted the exact approved upstream source bytes.
+
+Linux also ran `approved_glib_backport_string_iterator_methods` successfully in both its normal native
+suite and an optimized release test. The latter reported **one passed, zero failed/ignored, 150 filtered**;
+those filters select the one regression rather than omit tests from the full suite above. Its release-test
+compilation took 4m 45s. This provides actual Linux execution evidence for the reviewed GLib backport.
+The five localization configuration tests, all five immutable time comparisons, the legacy alarm grammar
+regression, three checked time-boundary tests and two corrected future-DST tests passed on each OS.
+
+## Intermediate Windows artifact and observations
+
+The local production executable for the intermediate source is **13,637,120 bytes**, SHA-256
+`cac752c108b9c66cbb7b23159117eeb510303718e112251aeb3e2f6092cbb365`.
+Static installer verification passed, including matching that exact executable in the extracted MSI
+payload. Candidate installer SHA-256 values are:
+
+- MSI: `682312b113e6f64ff4507f9b7d973da24609bccc992ad5e6c01f10e71ec27fca`.
+- NSIS: `f9b0ae541a7ce56c4bd52a6c50cb8a7b08b09c04440c37c9560fc44d3f9b9189`.
+
+These are local intermediate artifacts, not a draft-asset refresh. No installer or MSI custom action was
+executed; independent NSIS payload extraction and clean-machine install/login/upgrade/uninstall remain
+pending. Static compiler-input and MSI extraction evidence does not establish those behaviors.
+
+The consenting desktop check used the exact executable above. Ctrl+K, typing Unit Converter and Enter
+opened that route. Tab/Shift+Tab traversal reached Dashboard, Copy and the To-unit chooser; Enter opened
+the chooser and Escape closed it without leaving the route. **Escape then lost keyboard focus**, an
+actual defect. A new headless regression reproduced that focus loss; a narrow event-filter guard fixed
+it. The subsequent local suite passed 150 native tests and strict workspace Clippy, but that later fix
+is not in this intermediate executable or its CI receipt.
+
+Clicking the input, Ctrl+A and entering invalid input retained focus, exposed a named alert and removed
+Copy. The user confirmed Narrator was audible, but did not report its announcement words; a tool also
+reported Narrator at higher integrity. No speech recap or exact announcement sequence was established.
+These observations do not certify screen-reader output, complete focus order or another assistive tool.
+
+A user report of closing the app did not by itself prove exit: a read-only process check still found an
+app process. Ctrl+Shift+Q left the app running, and Ctrl+Q did not exit during the Narrator session;
+the shortcut outcome is inconclusive rather than a pass. Clicking **Quit Oxbox** later exited all QA app
+processes. That separate desktop observation is not post-exit endpoint coverage.
+
+The hash-pinned endpoint observer completed a valid **300.081-second, 5,999-sample** startup/converter
+window, with zero PID-owned TCP rows, zero UDP bound endpoints and zero sample errors. The executable
+hash stayed unchanged. **One app process remained at the final successful sample**, so this window
+does not cover Quit or post-exit cleanup. Sampling can miss short-lived sockets and excludes DNS Client,
+brokers and unrelated system services; no packet/DNS/ETW trace was performed. This is bounded evidence,
+not proof of zero network activity, and it does not certify the later changed binary.
 
 ## Source identity and supporting checks
 
@@ -74,9 +144,37 @@ The combined source-integrity, notices and installer/build regressions passed **
 tests passed **39/39** across 11 files; Svelte check reported zero errors/warnings; legacy production
 build passed; website generation preserved 56 tools/eight categories and its four regressions passed.
 
+## Approved final local candidate
+
+The user approved ADR 0006's narrow fourth backport. Root activated the exact i18n-embed-fl 0.9.4
+override while retaining Age 0.11.5. Both the original and patched macro packages pass the same valid
+runtime case (plain, named and attribute messages) and four intentional compiler-diagnostic cases,
+without a build panic. Independent review reproduced two evidence-classifier gaps; six final Node
+guards now reject attribute/derive panics mixed with expected diagnostics and a different checkout's
+similarly named vendor directory. The real patched comparison passed again after those guard fixes.
+
+The approved Windows workspace passed **294 core tests, five frozen comparisons, 150 native tests
+and 12 retained-host tests**, zero failed/ignored, with Rust 1.95 formatting and strict all-target
+workspace Clippy. The 150 native tests include the actual Enter/Escape/next-Tab focus regression and
+negative cases that protect other fields and outside pointer clicks.
+
+All **582 upstream files and six provenance/patch artifacts** pass integrity verification; independently
+reading the staged Git blobs confirmed all 582 source files retain their exact recorded bytes. The
+combined Node source/build/notices/installer/macro guards pass **34/34**. Windows notices reproduce
+358 packages, zero missing texts and three unresolved human attribution reviews. The native graph
+still has 345 package names without a browser host. Normal/build graphs for both native and retained
+hosts on Windows/Linux contain no active Chrono, Chrono-TZ, basic-toml, macro-error2 or crypto-bigint.
+
+The approved-resolution audit reports **zero vulnerability entries and five maintenance warnings**
+at the same advisory database, without ignores. The remaining packages are optional locked Chrono,
+GTK macro-error1 and three Zbus-family packages. The local GLib source fix remains separately visible
+because the scanner omits path packages. These results do not establish a warning-free audit or
+independent security acceptance. Final source/CI, rebuilt installer and desktop/runtime receipts follow
+separately; the intermediate `35d6afc` executable does not certify this changed candidate.
+
 ## Final acceptance still required
 
-The fresh audit for the held Age 0.11.5 resolution reports **zero vulnerability entries and six
+The intermediate audit for the held Age 0.11.5 resolution reports **zero vulnerability entries and six
 maintenance warnings**, using advisory database `d1fe6ac3eba823a3515e849045f36dc34543885d`, without
 ignores. Chrono remains locked for RXing's preserved optional client/WASM support; Chrono-TZ,
 basic-toml and the introduced crypto-bigint chain are removed. GLib is a path package omitted by the
@@ -84,10 +182,11 @@ scanner, so the reviewed source advisory remains visible separately. The native 
 passed with **345 package names** and no Tauri/WebView host. Regenerated Windows notices verify
 **358 packages, zero missing texts and three human attribution reviews**.
 
-Optimized Linux GLib execution, cross-platform CI, exact production executable, installer/static and
-runtime observations must still be recorded before calling this candidate verified. Prior executable
-hashes and measurements do not certify changed dependencies. ADR 0006's fourth source-patch proposal
-is pending user approval; it has not been applied.
+The intermediate cross-platform CI, optimized Linux GLib execution, exact executable, static installer
+checks and bounded runtime observations are recorded above. The later popup-focus fix and accepted
+ADR 0006 implementation still require their own final integrated checks, source identity, production
+artifact and runtime receipts. Prior hashes and measurements do not certify changed source or
+dependencies; no passing CI or runtime outcome for the fourth patch is claimed here.
 
 GTK macro and AccessKit/Zbus maintenance migrations remain outside the approved implementation scope.
 Never suppress advisories or disable AccessKit to present a clean audit. Patched GLib retains its original

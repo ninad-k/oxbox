@@ -61,6 +61,21 @@ pub(crate) fn combo_expansion(response: &egui::Response) {
         response.ctx.request_repaint();
     }
     let expanded = egui::ComboBox::is_open(&response.ctx, response.id);
+    if response.has_focus() {
+        // Popup still receives Escape, but egui's next focus pass must not
+        // discard its focused anchor before dismissing the chooser. Never
+        // request focus here: pointer dismissal and another focused widget
+        // keep their ordinary behavior.
+        response.ctx.memory_mut(|memory| {
+            memory.set_focus_lock_filter(
+                response.id,
+                egui::EventFilter {
+                    escape: expanded,
+                    ..Default::default()
+                },
+            );
+        });
+    }
     expansion_state(response, expanded);
 }
 
@@ -211,6 +226,124 @@ pub(crate) fn assert_named_controls(nodes: &[egui::accesskit::Node], scope: &str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn keyboard_combo_frame(
+        context: &egui::Context,
+        events: Vec<egui::Event>,
+    ) -> (egui::Id, egui::Id, egui::Rect, egui::Id) {
+        let mut ids = None;
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                let mut text = "Generated preceding text field".to_owned();
+                let before = ui.text_edit_singleline(&mut text);
+                let chooser = egui::ComboBox::from_label("Generated keyboard chooser")
+                    .selected_text("First")
+                    .show_ui(ui, |ui| {
+                        let _ = ui.selectable_label(true, "First");
+                        let _ = ui.selectable_label(false, "Second");
+                    });
+                combo_expansion(&chooser.response);
+                let after = ui.button("Generated following control");
+                ids = Some((chooser.response.id, before.id, before.rect, after.id));
+            },
+        );
+        output.textures_delta.clear();
+        ids.unwrap()
+    }
+
+    fn keypress(key: egui::Key) -> Vec<egui::Event> {
+        vec![egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }]
+    }
+
+    #[test]
+    fn keyboard_escape_closes_combo_and_preserves_its_focus_for_next_tab() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let frame = |events| keyboard_combo_frame(&context, events);
+        let (chooser, _, _, following) = frame(vec![]);
+        context.memory_mut(|memory| memory.request_focus(chooser));
+        frame(vec![]);
+        assert_eq!(context.memory(|memory| memory.focused()), Some(chooser));
+        frame(keypress(egui::Key::Enter));
+        assert!(
+            egui::ComboBox::is_open(&context, chooser),
+            "Enter must open the real chooser"
+        );
+        frame(keypress(egui::Key::Escape));
+        assert!(
+            !egui::ComboBox::is_open(&context, chooser),
+            "Escape must close the real chooser"
+        );
+        assert_eq!(
+            context.memory(|memory| memory.focused()),
+            Some(chooser),
+            "Escape must return keyboard focus to the chooser instead of the window"
+        );
+        frame(keypress(egui::Key::Tab));
+        assert_eq!(
+            context.memory(|memory| memory.focused()),
+            Some(following),
+            "Tab after Escape must continue after the chooser, not restart the page"
+        );
+    }
+
+    #[test]
+    fn combo_dismissal_does_not_steal_focus_from_another_field_or_pointer_click() {
+        for pointer in [false, true] {
+            let context = egui::Context::default();
+            let frame = |events| keyboard_combo_frame(&context, events);
+            let (chooser, other, other_rect, _) = frame(vec![]);
+            context.memory_mut(|memory| memory.request_focus(chooser));
+            frame(vec![]);
+            frame(keypress(egui::Key::Enter));
+            assert!(egui::ComboBox::is_open(&context, chooser));
+            if pointer {
+                let position = other_rect.center();
+                frame(vec![
+                    egui::Event::PointerMoved(position),
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ]);
+                frame(vec![egui::Event::PointerButton {
+                    pos: position,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: egui::Modifiers::NONE,
+                }]);
+                assert_eq!(
+                    context.memory(|memory| memory.focused()),
+                    Some(other),
+                    "pointer dismissal must keep focus on the clicked text field"
+                );
+            } else {
+                // Another widget can gain focus later in the same frame, after
+                // the combo helper ran. A stale anchor snapshot must not steal it.
+                context.memory_mut(|memory| memory.request_focus(other));
+                frame(keypress(egui::Key::Escape));
+                assert_eq!(
+                    context.memory(|memory| memory.focused()),
+                    None,
+                    "Escape from another field must keep normal focus behavior"
+                );
+            }
+            assert!(!egui::ComboBox::is_open(&context, chooser));
+            assert_ne!(context.memory(|memory| memory.focused()), Some(chooser));
+        }
+    }
 
     #[test]
     fn combo_expansion_actions_operate_the_popup_and_respect_disabled_state() {

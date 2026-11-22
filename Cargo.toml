@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/oxbox-core", "crates/oxbox-native", "src-tauri"]
-exclude = ["vendor/glib-0.18.5", "vendor/i18n-config-0.4.8", "vendor/rxing-0.9.4"]
+exclude = ["vendor/glib-0.18.5", "vendor/i18n-config-0.4.8", "vendor/rxing-0.9.4", "vendor/i18n-embed-fl-0.9.4"]
 default-members = ["crates/oxbox-native"]
 
 [workspace.package]
@@ -23,6 +23,7 @@ jiff = { version = "=1.0.2", default-features = false, features = ["std", "tz-sy
 # User-approved source backports; provenance and integrity are recorded in vendor/.
 glib = { path = "vendor/glib-0.18.5" }
 i18n-config = { path = "vendor/i18n-config-0.4.8" }
+i18n-embed-fl = { path = "vendor/i18n-embed-fl-0.9.4" }
 rxing = { path = "vendor/rxing-0.9.4" }
 
 # Compact native builds. Workers unwind so failures are reported and cleanup can run.

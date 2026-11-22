@@ -4,7 +4,7 @@
 `--locked` flag in CI/release work. Ask before adding dependencies outside the tool's approved plan. Check
 maintenance, license, platform requirements, binary impact, and runtime network behavior in a dependency PR.
 Do not commit downloaded packages, `node_modules`, `target`, installers, or credentials, except for
-the three explicitly approved source backports described below. That exception does not permit
+the four explicitly approved source backports described below. That exception does not permit
 unrelated vendoring or a new dependency/version/backend.
 
 | Area | Direct dependencies and purpose |
@@ -40,18 +40,24 @@ Useful primary references: [Tauri plugins](https://v2.tauri.app/plugin/), [image
 
 ## Accepted source remediation — 2026-11-22, validation in progress
 
-The user approved phases 1 and 2 of [ADR 0005](adr/0005-dependency-security-remediation.md), including
-Age 0.12.1, Jiff 1.0.2 and the named vendoring-policy exception. The selected eframe 0.37.0, AccessKit,
-all 56 tools, application data and offline defaults remain requirements. Macro/tray/Zbus migrations
-described as separate options in the ADR are **not approved or implemented by these changes**.
+The user approved phases 1 and 2 of [ADR 0005](adr/0005-dependency-security-remediation.md), then the
+separate localization-only fourth source patch in [ADR 0006](adr/0006-age-upgrade-security-gate.md).
+The selected application retains Age 0.11.5 after the 0.12.1 trial failed its security gate, plus Jiff
+1.0.2 and the named source-policy exceptions. The selected eframe 0.37.0, AccessKit, all 56 tools,
+application data and offline defaults remain requirements. The separate **GTK** macro/tray/Zbus
+migrations are not approved or implemented by these changes.
 
 **Security gate:** the tested Age 0.12.1 candidate introduced `crypto-bigint 0.5.5` through mandatory
 P-256/HPKE dependencies, matching [RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387.html).
 Its published dependency bounds cannot select the fixed family. The application therefore retains
-exact Age 0.11.5. [ADR 0006](adr/0006-age-upgrade-security-gate.md) proposes a separate, narrow localization
-remedy; its extra source exception needs approval before implementation. The fresh held-candidate audit
-reports zero vulnerability entries and six maintenance warnings, without ignores; patched GLib is omitted
-by the scanner's path-package handling and remains explicitly accounted for in source provenance.
+exact Age 0.11.5. The approved ADR 0006 localization patch is now selected. Using advisory database
+`d1fe6ac3eba823a3515e849045f36dc34543885d`, the fresh approved-resolution audit reports **zero vulnerability
+entries and five maintenance warnings**, without ignores: optional Chrono, GTK macro-error1 and the
+three Zbus-family findings. Macro-error2, basic-toml, Chrono-TZ and crypto-bigint are absent from the
+root lockfile. Patched GLib is omitted by the scanner's path-package handling and remains explicitly
+accounted for in source provenance. This is not a warning-free or complete-security claim. The failed
+Age 0.12.1 trial's one-vulnerability/five-warning receipt and the pre-fourth-patch hold's zero/six receipt
+remain historical evidence, not the current selected result.
 
 The exception permits only complete, original-license-preserving published source for these packages,
 with the approved minimal upstream-derived changes. The original registry cache is not modified.
@@ -61,6 +67,7 @@ with the approved minimal upstream-derived changes. The original registry cache 
 | GLib 0.18.5 | Mutable C out-pointer correction from gtk-rs `05dff0ee696f9bcd8617cd48c4b812d046d440cb` | `a42d6ad83dcdb52c0df284fedd8d373cfa0d346ee48a529aed524d86aeea617d` |
 | i18n-config 0.4.8 | Maintained TOML parser replacement, extracted from cargo-i18n `2ce7b1dfe9a8cc224288bf50cbc2a67a6de863c4` | `0afbebac8143a9bb0c85f51a83ec5c5bdf99f37934dff898d6a8acc4d96495a4` |
 | RXing 0.9.4 | Optional Chrono and standard-clock decoder timestamps from `912b1083ffd164b29e6b244e4845de9df06b107a`; client/WASM support preserved | `b4f75fef1931c796cb21ea3ffebf08736599390da7963eb8b71b058f739261aa` |
+| i18n-embed-fl 0.9.4 | Diagnostic dependency/import change from `dd46d747fe5b319d5de6b2364a2394c50ab82f54`; proc-macro-error3 3.1.1 with explicit Syn 2 support | `93079287d7c1f6aa203286f57c1dc5d52defb263965064bbe2b05f7b8803270c` |
 
 [Vendor provenance](../vendor/PROVENANCE.json) records the verified original archive URLs/checksums,
 published VCS revisions, exact applied patch artifacts and hashes, changed-file before/after hashes,
@@ -70,12 +77,12 @@ lockfiles and Markdown files ignored by the packages' original `.gitignore` file
 do not silently regenerate integrity records to accept missing, edited or reformatted upstream source.
 
 ```sh
-node --test scripts/vendor-integrity.test.mjs scripts/license-inventory.test.mjs
+node --test scripts/vendor-integrity.test.mjs scripts/license-inventory.test.mjs scripts/macro-compat.test.mjs
 node scripts/verify-vendor.mjs
 ```
 
-The five generated integrity fixtures and nine notice fixtures passed locally. The verifier checks 572
-package files and five source/patch artifacts, refuses links/path escapes and unexpected bytes, and
+The six generated integrity fixtures, nine notice fixtures and six macro-runner guards passed locally.
+The verifier checks 582 package files and six source/patch artifacts, refuses links/path escapes and unexpected bytes, and
 does no network or package execution. It is an integrity check, not a security or legal audit. A
 coordinated change to source and provenance still requires review. No advisory ignore or version spoof
 is authorized: GLib's reviewed source fix does not turn version 0.18.5 into a published fixed release,
@@ -92,8 +99,9 @@ compatibility evidence, not acceptance of every age recipient, plugin, armor or 
 
 A [small checked-in historical fixture and producer](../crates/oxbox-core/tests/fixtures/age-0.11.5/README.md)
 make the old-writer direction reproducible in Core's normal `legacy_age_0115_` tests, using factor 10
-only for generated test data. Both current-Core tests passed in the integrator's Rust 1.95 Windows
-workspace run, with no failures or ignored tests. The existing production
+only for generated test data. Both persistent tests passed in the earlier Rust 1.95 Windows
+workspace run, with no failures or ignored tests; the selected fourth-patch workspace's full rerun is
+tracked separately below. The existing production
 round-trip test retains the factor-18 header assertion without adding another heavy KDF here. The
 [standalone parser compatibility workspace](../tests/dependency-compat/README.md) passed all five generated
 valid/invalid/missing Cargo and localization configurations, Unicode/default values and explicit parent
@@ -101,17 +109,27 @@ fallback checks, with zero failures or ignored tests. The minimally patched upst
 two pre-existing lifetime-syntax warnings under Rust 1.95; they are not suppressed or edited out of
 the source-pinned package. These validation workspaces are not application dependencies.
 
-Jiff's approved feature selection includes a bundled offline IANA fallback on every target. Time/date
-adapters, persisted values, DST gaps/folds and rates need the final migration checks before removing
-historical direct dependencies. RXing's optional Chrono/Chrono-TZ client/WASM capabilities are retained.
+The [localization macro comparison](../tests/macro-compat/README.md) passed on both the original registry
+0.9.4 and the approved patched 0.9.4: generated plain/named/attribute messages execute correctly, and
+all four invalid fixtures produce the expected compile errors without a build panic. The selected
+manifest/lock uses the patched source; the original baseline is preserved separately. Age remains the
+published 0.11.5 package, and the backport changes no cryptographic code or application-format API.
+Regenerated Windows notices report **358 packages, zero missing notice texts and three unresolved
+human attribution reviews**; notice reproducibility does not close those reviews.
+
+Jiff's approved feature selection includes a bundled offline IANA fallback on every target. The
+time/date adapter migration removed the historical direct dependencies; the frozen comparison and
+persisted-value checks passed locally, while the current-revision full checks remain pending below.
+RXing's optional Chrono/Chrono-TZ client/WASM capabilities are retained.
 Cargo may keep optional packages in its lockfile even after compiled application paths stop using them;
 record native/legacy target trees separately from lockfile/audit entries. Do not prune upstream features
 to improve an audit count. Linux AccessKit/AT-SPI, keepawake and capture still have the separately tracked
 Zbus 5 maintenance path; this work does not remove or replace accessibility to silence it.
 
-**Final post-resolution audit counts, full all-platform tests/Clippy/builds, optimized Linux GLib iterator
-execution, regenerated notices and new production artifact acceptance remain pending.** Earlier CI and
-runtime hashes do not certify this changed dependency build. Clean-machine and human attribution gates
+**Full current-revision all-platform tests/Clippy/builds and new production artifact acceptance remain
+pending.** The approved-resolution audit, macro fixtures and notice generation above are completed
+scoped checks; earlier optimized Linux GLib/CI and runtime hashes do not certify this changed build.
+Clean-machine and human attribution gates
 remain open. Updated validation belongs in [VALIDATION.md](VALIDATION.md) when actual receipts arrive.
 
 ## Historical RustSec assessment — 2026-11-21

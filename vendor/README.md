@@ -1,7 +1,9 @@
 # Approved dependency source patches
 
-The user approved these three package source patches and the named vendoring-policy exception on
-2026-11-22, in [ADR 0005](../docs/adr/0005-dependency-security-remediation.md). These are upstream
+The user approved the first three package source patches in
+[ADR 0005](../docs/adr/0005-dependency-security-remediation.md) and the fourth localization-only patch in
+[ADR 0006](../docs/adr/0006-age-upgrade-security-gate.md), including their named vendoring-policy exceptions
+on 2026-11-22. These are upstream
 open-source packages, with their original versions, license files and copyright headers preserved.
 No downloaded executable or build artifact belongs here. The normal Cargo registry cache is unchanged.
 
@@ -10,6 +12,7 @@ No downloaded executable or build artifact belongs here. The normal Cargo regist
 | `glib` | 0.18.5 | Exact mutable C out-pointer correction from gtk-rs commit `05dff0ee696f9bcd8617cd48c4b812d046d440cb`; preserves GTK 0.18 types. |
 | `i18n-config` | 0.4.8 | Only the maintained TOML parser replacement from cargo-i18n commit `2ce7b1dfe9a8cc224288bf50cbc2a67a6de863c4`; no unrelated workspace modernization. |
 | `rxing` | 0.9.4 | Exact optional-Chrono/standard-clock change from commit `912b1083ffd164b29e6b244e4845de9df06b107a`; preserves decoder features and optional client/WASM behavior. |
+| `i18n-embed-fl` | 0.9.4 | Diagnostic dependency/import change from commit `dd46d747fe5b319d5de6b2364a2394c50ab82f54`, pinned to proc-macro-error3 3.1.1 with explicit Syn 2 support; preserves i18n-embed 0.15 and the macro/runtime API. |
 
 `PROVENANCE.json` records each official crates.io archive URL and verified SHA-256, the published VCS
 revision, immutable upstream fixes, an exact applied diff, before/after hashes for changed files, the

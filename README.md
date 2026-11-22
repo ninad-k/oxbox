@@ -30,6 +30,10 @@ conflicts can be resolved in Settings. Installed Windows/macOS copies enable log
 > [VALIDATION.md](docs/VALIDATION.md). “Ready” below means the implementation is available in source;
 > it does not imply a published or independently audited release. Contributions welcome.
 
+The [dependency and accessibility follow-up](docs/verification/2026-11-22-dependency-accessibility.md)
+records pinned source backports, maintained offline time zones, compatibility fixtures and keyboard fixes.
+Its current evidence and remaining manual gates supplement the per-tool verification record.
+
 > **Runtime privacy:** the selected eframe/egui host has no embedded browser. The retained Tauri host previously
 > exhibited WebView2 background HTTPS. Bounded Windows production observations found no owned TCP/UDP endpoints
 > in the recorded startup, idle, tool and tray/Quit windows; DNS, provider, other-OS and release gates remain open. See the

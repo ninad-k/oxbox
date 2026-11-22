@@ -95,3 +95,27 @@ test('vendor verifier checks provenance and applied-patch artifacts as well as p
   await writeFile(metadata, JSON.stringify(data));
   await assert.rejects(verifyVendor(directory), /absent\.patch/);
 });
+
+test('vendor verifier checks a fourth approved package instead of stopping at the original three', async (t) => {
+  const { directory, root } = await fixture(t);
+  const packages = [];
+  for (const name of ['example', 'second', 'third', 'fourth']) {
+    const source = name === 'example' ? root : path.join(directory, 'vendor', `${name}-1.2.3`);
+    if (name !== 'example') {
+      await mkdir(source);
+      await writeFile(path.join(source, 'Cargo.toml'), `[package]\nname="${name}"\nversion="1.2.3"\n`);
+      await writeFile(path.join(source, 'LICENSE'), 'Generated fixture license.\n');
+    }
+    packages.push({
+      name, version: '1.2.3', directory: `vendor/${name}-1.2.3`,
+      archive: { url: `https://static.crates.io/crates/${name}/${name}-1.2.3.crate`, sha256: 'a'.repeat(64) },
+      baseVcs: { revision: 'b'.repeat(40), path: '' },
+      upstreamPatches: [{ revision: 'c'.repeat(40), url: 'https://github.com/example/project/commit/' + 'c'.repeat(40) }],
+      ...await snapshotPackage(source),
+    });
+  }
+  await writeFile(path.join(directory, 'vendor', 'PROVENANCE.json'), JSON.stringify({ schemaVersion: 1, packages, artifacts: [] }));
+  assert.equal((await verifyVendor(directory)).packages.length, 4);
+  await writeFile(path.join(directory, 'vendor', 'fourth-1.2.3', 'LICENSE'), 'Unexpected replacement.\n');
+  await assert.rejects(verifyVendor(directory), /source changed/i);
+});

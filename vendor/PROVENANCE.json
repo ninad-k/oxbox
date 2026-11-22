@@ -3,7 +3,14 @@
   "approval": {
     "date": "2026-11-22",
     "adr": "docs/adr/0005-dependency-security-remediation.md",
-    "scope": "User-approved phases 1 and 2 and the named three-package vendor-policy exception. Macro/tray/Zbus source changes remain unapproved."
+    "scope": "User-approved phases 1 and 2 and the named three-package vendor-policy exception. Macro/tray/Zbus source changes remain unapproved.",
+    "additionalApprovals": [
+      {
+        "date": "2026-11-22",
+        "adr": "docs/adr/0006-age-upgrade-security-gate.md",
+        "scope": "User-approved fourth vendor package i18n-embed-fl 0.9.4 localization-only diagnostic dependency/import patch, while retaining published Age 0.11.5. Other source changes remain unapproved."
+      }
+    ]
   },
   "treeHashAlgorithm": "SHA-256 of sorted UTF-8 records: fileSha256 + space + decimal bytes + space + JSON-quoted POSIX path + LF",
   "baseline": "Official crates.io archives were downloaded from the listed URLs and matched their locked SHA-256 before safe regular-file-only extraction. No Cargo registry cache was changed.",
@@ -3003,6 +3010,103 @@
           "bytes": 1032
         }
       ]
+    },
+    {
+      "name": "i18n-embed-fl",
+      "version": "0.9.4",
+      "directory": "vendor/i18n-embed-fl-0.9.4",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE.txt"
+      ],
+      "archive": {
+        "url": "https://static.crates.io/crates/i18n-embed-fl/i18n-embed-fl-0.9.4.crate",
+        "sha256": "04b2969d0b3fc6143776c535184c19722032b43e6a642d710fa3f88faec53c2d"
+      },
+      "baseVcs": {
+        "repository": "https://github.com/kellpossible/cargo-i18n",
+        "revision": "ceb3da0ee3acf91b17a7a52e02642267ddb47a3d",
+        "path": "i18n-embed-fl"
+      },
+      "pristineTreeSha256": "5a48625d9da8b0ee4d07c47b40e191d04952bb6b517e2f61acf63f6b56e37b50",
+      "upstreamPatches": [
+        {
+          "revision": "dd46d747fe5b319d5de6b2364a2394c50ab82f54",
+          "url": "https://github.com/kellpossible/cargo-i18n/commit/dd46d747fe5b319d5de6b2364a2394c50ab82f54",
+          "appliedScope": "Only diagnostic dependency/import replacement from proc-macro-error2 to proc-macro-error3; pin 3.1.1 with explicit syn2-error support. Preserve i18n-embed 0.15, package version, macro API and runtime/cryptographic code."
+        }
+      ],
+      "appliedPatch": "vendor/patches/i18n-embed-fl-0.9.4.patch",
+      "changes": [
+        {
+          "path": "Cargo.toml",
+          "beforeSha256": "0a82b52c8a425b762efe21341bd8ce012bd8397b3494ec0a6187ed1b20e37a8e",
+          "afterSha256": "0207c71889138277d8e2ec1ba26b7e65136598174b30ec50910e6b478e4ef115"
+        },
+        {
+          "path": "Cargo.toml.orig",
+          "beforeSha256": "81117f68d0f84606d0a44ca0ee465c5238fe2aabbe31eafc0094d70e3a420277",
+          "afterSha256": "40e2d526e57471d26158ef2e44cbb04f285da2e52a385be1d81bee44a2c711f5"
+        },
+        {
+          "path": "src/lib.rs",
+          "beforeSha256": "cfc7f5ef3efae615f3f8dc3cd04d5ea0c551a1f005d93e55d7370ac9cb7c2cea",
+          "afterSha256": "ff5a49d6613e1c985df227774600c8a03cb10e0d746cec580e9c356b6a35724f"
+        }
+      ],
+      "treeSha256": "93079287d7c1f6aa203286f57c1dc5d52defb263965064bbe2b05f7b8803270c",
+      "files": [
+        {
+          "path": ".cargo_vcs_info.json",
+          "sha256": "7424649d9eb33b3dda037f7963602df05ed3644bbada25c5fa0cf41a9db28bef",
+          "bytes": 107
+        },
+        {
+          "path": "CHANGELOG.md",
+          "sha256": "1e7ce40b547d34f70e65cc97300b3804fd04be06c7b88035bbf0d50a71d628ba",
+          "bytes": 4920
+        },
+        {
+          "path": "Cargo.toml",
+          "sha256": "0207c71889138277d8e2ec1ba26b7e65136598174b30ec50910e6b478e4ef115",
+          "bytes": 2118
+        },
+        {
+          "path": "Cargo.toml.orig",
+          "sha256": "40e2d526e57471d26158ef2e44cbb04f285da2e52a385be1d81bee44a2c711f5",
+          "bytes": 1309
+        },
+        {
+          "path": "LICENSE.txt",
+          "sha256": "a1d2bd09632724b23c62b05e2fd0dc26c5c9d21b409594cf7da1a1aba555f802",
+          "bytes": 1072
+        },
+        {
+          "path": "README.md",
+          "sha256": "b246b0dc91671551564029838d8731729c34f0374106d8b49d702dcf95db1543",
+          "bytes": 3285
+        },
+        {
+          "path": "i18n.toml",
+          "sha256": "db3fbe9721702cc3e9f56163df1fd4f88c6000d001047bfd80b90c284f88775e",
+          "bytes": 459
+        },
+        {
+          "path": "i18n/en-US/i18n_embed_fl.ftl",
+          "sha256": "b208b01c09fee5acf34ad4416530e872bc17936a0a3f0ae9cfc0cb15e7943b4a",
+          "bytes": 514
+        },
+        {
+          "path": "src/lib.rs",
+          "sha256": "ff5a49d6613e1c985df227774600c8a03cb10e0d746cec580e9c356b6a35724f",
+          "bytes": 31465
+        },
+        {
+          "path": "tests/fl_macro.rs",
+          "sha256": "0f46b7a17b6109631026c74754afea68d31477d6432d5b0c3659eef557ce709b",
+          "bytes": 4148
+        }
+      ]
     }
   ],
   "artifacts": [
@@ -3013,8 +3117,8 @@
     },
     {
       "path": "vendor/README.md",
-      "bytes": 3847,
-      "sha256": "24b4d494f6ad9ea19168e30e90b47a279a9029959e559051fd982f22a5e8cda5"
+      "bytes": 4198,
+      "sha256": "177282b2cb314d0ad31ee710b85f5ce04b85f9761f191ca8c3abd6525941d343"
     },
     {
       "path": "vendor/patches/glib-0.18.5.patch",
@@ -3030,6 +3134,11 @@
       "path": "vendor/patches/rxing-0.9.4.patch",
       "bytes": 3627,
       "sha256": "66897a9a28fca543234d3935ff6f6d2872162e080b2aa323af07e1fd2a8ff58a"
+    },
+    {
+      "path": "vendor/patches/i18n-embed-fl-0.9.4.patch",
+      "bytes": 1174,
+      "sha256": "5ba3d03e3dc8b4c2d341461f70411dbc0fb14f31ff3a0ea5355fb4b92dfe9f37"
     }
   ]
 }

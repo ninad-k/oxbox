@@ -61,6 +61,27 @@ After the approved dependency/time port, the Windows full-workspace run passed *
 failed or ignored. The two additional native tests check preserved date/fetched-time formatting. This is
 current-source headless evidence; production-binary speech and keyboard observations remain pending.
 
+### Follow-up on popup focus and Narrator
+
+The exact intermediate `35d6afc` Windows EXE (`cac752c108b9c66cbb7b23159117eeb510303718e112251aeb3e2f6092cbb365`)
+accepted Ctrl+K search/Enter, forward/reverse Tab and keyboard dropdown opening. Escape correctly closed
+the dropdown without leaving Unit Converter, but focus fell to the window. A new headless regression
+reproduced the lost focus. The shared adapter now locks Escape focus only while an open combo already
+owns focus; it never requests/restores focus after outside clicks. Both the original keyboard sequence
+and negative cases for another focused field and a pointer dismissal pass. The native suite now passes
+**150 tests**, with strict workspace Clippy. Final-binary verification must follow the new source build.
+
+The intermediate executable also preserved Value focus while exposing a named finite-number Alert and
+removing Copy on generated invalid input. Narrator was launched with the user's consent; the user
+confirmed audible speech and offered to report announcements. Exact spoken names, values and state/error
+announcements have not yet been reported, so speech acceptance stays open. The helper reports that
+Narrator's control window has higher Windows integrity; speech-recap inspection was not established.
+No security/privacy setting or integrity boundary was changed. User assistance is required for that
+reader session. Ctrl+Shift+Q left Oxbox running; the Ctrl+Q attempt with Narrator present was inconclusive.
+The explicit Quit Oxbox button stopped the isolated app. These observations do not establish complete
+keyboard traversal or a screen-reader pass. The [receipt](verification/2026-11-22-dependency-accessibility.md)
+retains the exact intermediate scope and outstanding final-binary checks.
+
 All **56 default native routes** are checked for named interactive controls and actual combo expansion
 metadata. Shared combo/disclosure helpers report real collapsed/expanded state and handle enabled,
 idempotent Expand/Collapse requests while preserving normal click and keyboard behavior. Screenshot Area
