@@ -47,13 +47,26 @@ impl Operation {
   Self::Close(targets)=>Ok(format!("Sent normal close requests to {} windows. Complete any save prompts in those applications.",close_apps::close(&targets,true)?)),
   Self::Eject(root)=>{eject_volumes::eject(&root,true)?;Ok("Safe eject request accepted.".into())},
   Self::Profile(id)=>{energy_saver::set(&id,true)?;Ok("Power plan changed. Refresh to inspect the active plan.".into())},
-  Self::Hidden(show)=>{hidden_files::set(show)?;Ok(format!("Hidden files visibility set to {show}."))},
+  Self::Hidden(show)=>set_hidden_visibility_with(show, hidden_files::set),
   Self::Uninstall(id,command)=>Ok(format!("Registered uninstaller started (PID {}). Complete its own prompts, then refresh. User-data folders were kept.",uninstall::uninstall(&id,&command,true)?)),
   Self::Trash(paths)=>Ok(format!("Moved {} reviewed folders to Trash.",oxbox_core::fs_safe::move_to_trash(&paths)?)),
   Self::Core(_)=>Err(runtime::error("Invalid nested native action.")),
  })
 }
     }
+}
+fn set_hidden_visibility_with(
+    requested: bool,
+    set: impl FnOnce(bool) -> CoreResult<bool>,
+) -> CoreResult<String> {
+    let actual = set(requested)?;
+    if actual != requested {
+        return Err(runtime::error(format!(
+            "The operating system did not apply the hidden-file visibility change. Hidden files are currently {}. Refresh and review your file-manager or organization settings.",
+            if actual { "shown" } else { "hidden" }
+        )));
+    }
+    Ok(format!("Hidden files visibility set to {actual}."))
 }
 pub struct WindowsViews {
     read: Task<Read>,
@@ -738,6 +751,30 @@ impl WindowsViews {
 #[cfg(test)]
 mod navigation_tests {
     use super::*;
+
+    #[test]
+    fn hidden_file_change_reports_refused_readback_instead_of_success() {
+        for requested in [false, true] {
+            assert!(
+                set_hidden_visibility_with(requested, |value| {
+                    assert_eq!(value, requested);
+                    Ok(!requested)
+                })
+                .unwrap_err()
+                .to_string()
+                .contains("did not apply")
+            );
+            assert!(set_hidden_visibility_with(requested, Ok).is_ok());
+        }
+        assert!(
+            set_hidden_visibility_with(true, |_| {
+                Err(runtime::error("generated backend refusal"))
+            })
+            .unwrap_err()
+            .to_string()
+            .contains("generated backend refusal")
+        );
+    }
 
     #[test]
     fn leaving_system_tools_cancels_ephemeral_scan_and_clears_review() {

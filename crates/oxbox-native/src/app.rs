@@ -254,12 +254,22 @@ impl App {
         self.settings = false;
     }
     fn show(&mut self, ctx: &egui::Context) {
-        self.leave_active();
+        self.reveal(ctx, RevealIntent::Restore);
+    }
+    fn focus_search(&mut self, ctx: &egui::Context) {
+        self.reveal(ctx, RevealIntent::Search);
+    }
+    fn reveal(&mut self, ctx: &egui::Context, intent: RevealIntent) {
+        let policy = reveal_policy(intent, self.active.is_some(), self.settings);
+        if policy.reset_to_launcher {
+            self.leave_active();
+            self.settings = false;
+            self.active = None;
+        }
         self.host.restore(ctx);
-        self.settings = false;
-        self.active = None;
-        self.utilities.deactivate();
-        ctx.memory_mut(|memory| memory.request_focus(egui::Id::unique("search-tools")));
+        if policy.focus_search {
+            ctx.memory_mut(|memory| memory.request_focus(egui::Id::unique("search-tools")));
+        }
     }
     fn shutdown(&mut self) {
         self.system.recovery_handle().request_shutdown();
@@ -708,7 +718,7 @@ impl eframe::App for App {
             egui::Modifiers::CTRL
         };
         if crate::shortcuts::consume(ctx, command, egui::Key::K) {
-            self.show(ctx);
+            self.focus_search(ctx);
         }
         if crate::shortcuts::consume(ctx, command, egui::Key::Q) {
             self.quit(ctx);
@@ -719,7 +729,7 @@ impl eframe::App for App {
             self.active.is_some() || self.settings,
             !self.query.is_empty(),
         ) {
-            Some(ShellNavigation::FocusSearch) => self.show(ctx),
+            Some(ShellNavigation::FocusSearch) => self.focus_search(ctx),
             Some(ShellNavigation::Back) => {
                 self.leave_active();
                 self.active = None;
@@ -916,6 +926,26 @@ fn native_capture_id(handle: RawWindowHandle) -> u64 {
     }
 }
 
+#[derive(Clone, Copy)]
+enum RevealIntent {
+    Restore,
+    Search,
+}
+#[derive(Debug, PartialEq, Eq)]
+struct RevealPolicy {
+    reset_to_launcher: bool,
+    focus_search: bool,
+}
+fn reveal_policy(intent: RevealIntent, active_tool: bool, settings: bool) -> RevealPolicy {
+    // Revealing a hidden/unfocused surface is not a navigation request. Only
+    // explicit launcher search abandons the active view and its ordinary jobs.
+    let reset_to_launcher = matches!(intent, RevealIntent::Search);
+    RevealPolicy {
+        reset_to_launcher,
+        focus_search: reset_to_launcher || (!active_tool && !settings),
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum ShellNavigation {
     FocusSearch,
@@ -954,6 +984,40 @@ fn shell_navigation(
 #[cfg(test)]
 mod navigation_tests {
     use super::*;
+
+    #[test]
+    fn restoring_a_tool_or_settings_does_not_navigate_or_cancel_its_work() {
+        for (active_tool, settings) in [(true, false), (false, true), (true, true)] {
+            assert_eq!(
+                reveal_policy(RevealIntent::Restore, active_tool, settings),
+                RevealPolicy {
+                    reset_to_launcher: false,
+                    focus_search: false,
+                }
+            );
+        }
+        assert_eq!(
+            reveal_policy(RevealIntent::Restore, false, false),
+            RevealPolicy {
+                reset_to_launcher: false,
+                focus_search: true,
+            }
+        );
+    }
+
+    #[test]
+    fn explicit_search_navigation_still_leaves_the_previous_surface() {
+        for (active_tool, settings) in [(false, false), (true, false), (false, true), (true, true)]
+        {
+            assert_eq!(
+                reveal_policy(RevealIntent::Search, active_tool, settings),
+                RevealPolicy {
+                    reset_to_launcher: true,
+                    focus_search: true,
+                }
+            );
+        }
+    }
 
     #[test]
     fn capture_identity_uses_native_window_ids_and_never_an_appkit_view_pointer() {

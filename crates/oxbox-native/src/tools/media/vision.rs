@@ -136,6 +136,7 @@ impl VisionUi {
         self.preview_button(ui, self.ocr_path.clone(), 0);
         self.ocr_preview.show(ui);
         let old = self.ocr_provider;
+        let old_language = self.ocr_language.clone();
         widgets::choice(
             ui,
             "Recognition engine",
@@ -150,6 +151,12 @@ impl VisionUi {
             };
         }
         widgets::text(ui, "OCR language", &mut self.ocr_language);
+        if old != self.ocr_provider || old_language != self.ocr_language {
+            // The pixels are unchanged, but recognized text and any queued
+            // completion belong to the previous engine/language parameters.
+            self.ocr_job.abandon();
+            self.ocr_text.clear();
+        }
         if self.ocr_provider == 1 {
             self.providers.show(ui);
             widgets::note(
@@ -642,5 +649,136 @@ mod community_tests {
         );
         view.shutdown();
         host.shutdown();
+    }
+
+    fn ocr_frame(
+        view: &mut VisionUi,
+        context: &egui::Context,
+        events: Vec<egui::Event>,
+    ) -> Vec<(egui::accesskit::NodeId, egui::accesskit::Node)> {
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| view.ocr(ui),
+        );
+        output.textures_delta.clear();
+        output.platform_output.accesskit_update.unwrap().nodes
+    }
+
+    fn ocr_action(
+        target_node: egui::accesskit::NodeId,
+        action: egui::accesskit::Action,
+        data: Option<egui::accesskit::ActionData>,
+    ) -> egui::Event {
+        egui::Event::AccessKitActionRequest(egui::accesskit::ActionRequest {
+            action,
+            target_node,
+            target_tree: egui::accesskit::TreeId::ROOT,
+            data,
+        })
+    }
+
+    fn generated_ocr_view() -> VisionUi {
+        let mut view = VisionUi {
+            ocr_path: "generated-ocr.png".into(),
+            ocr_provider: 0,
+            ocr_language: "en-US".into(),
+            ocr_text: "Generated previous recognition".into(),
+            ..Default::default()
+        };
+        view.ocr_job.result = Some("Generated queued previous recognition".into());
+        view.ocr_preview.image = Some(generated_pixels());
+        view
+    }
+
+    fn assert_old_recognition_discarded(view: &VisionUi) {
+        assert!(
+            view.ocr_text.is_empty(),
+            "changed OCR settings kept recognition for the old settings"
+        );
+        assert!(
+            view.ocr_job.result.is_none(),
+            "queued old recognition can reappear"
+        );
+        assert!(
+            view.ocr_preview.image.is_some(),
+            "engine/language edits should retain the same input image preview"
+        );
+    }
+
+    #[test]
+    fn verification2_ocr_language_edit_discards_old_text_and_queued_recognition() {
+        let mut view = generated_ocr_view();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let nodes = ocr_frame(&mut view, &context, vec![]);
+        let field = nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::TextInput && node.value() == Some("en-US"))
+                    .then_some(id)
+            })
+            .unwrap();
+        ocr_frame(
+            &mut view,
+            &context,
+            vec![ocr_action(
+                field,
+                egui::accesskit::Action::SetValue,
+                Some(egui::accesskit::ActionData::Value("de-DE".into())),
+            )],
+        );
+        assert_eq!(
+            view.ocr_language, "de-DE",
+            "fixture must edit the real language control"
+        );
+        assert_old_recognition_discarded(&view);
+        view.shutdown();
+    }
+
+    #[test]
+    fn verification2_ocr_engine_edit_discards_old_text_and_queued_recognition() {
+        let mut view = generated_ocr_view();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let nodes = ocr_frame(&mut view, &context, vec![]);
+        let field = nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::ComboBox
+                    && node.value() == Some("Windows native OCR"))
+                .then_some(id)
+            })
+            .unwrap();
+        ocr_frame(
+            &mut view,
+            &context,
+            vec![ocr_action(field, egui::accesskit::Action::Click, None)],
+        );
+        // Let the popup's initial invisible sizing pass complete before
+        // targeting the accessible engine option.
+        let nodes = ocr_frame(&mut view, &context, vec![]);
+        let option = nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::Button
+                    && node.label() == Some("Local Tesseract"))
+                .then_some(id)
+            })
+            .unwrap();
+        ocr_frame(
+            &mut view,
+            &context,
+            vec![ocr_action(option, egui::accesskit::Action::Click, None)],
+        );
+        assert_eq!(
+            view.ocr_provider, 1,
+            "fixture must edit the real engine combo"
+        );
+        assert_eq!(view.ocr_language, "eng");
+        assert_old_recognition_discarded(&view);
+        view.shutdown();
     }
 }

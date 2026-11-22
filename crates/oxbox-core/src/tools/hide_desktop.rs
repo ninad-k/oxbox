@@ -1,5 +1,38 @@
 //! Tool: **Hide Desktop** (`hide-desktop`). Restores the user's exact original visibility on exit.
 use crate::{CoreResult, platform};
+
+/// Win32 handles can be reused after Explorer exits. Restoration must prove the
+/// saved handle is still the same desktop list view, rather than merely valid.
+#[cfg(any(windows, test))]
+#[derive(Clone, PartialEq, Eq)]
+pub(crate) struct DesktopWindowIdentity {
+    pub handle: isize,
+    pub process: u32,
+    pub thread: u32,
+    pub class_name: String,
+    pub is_desktop: bool,
+}
+
+#[cfg(any(windows, test))]
+pub(crate) fn restore_owned_window(
+    saved: &DesktopWindowIdentity,
+    current: Option<&DesktopWindowIdentity>,
+    restore: impl FnOnce() -> CoreResult<()>,
+) -> CoreResult<()> {
+    if saved.handle == 0
+        || saved.process == 0
+        || saved.thread == 0
+        || saved.class_name != "SysListView32"
+        || !saved.is_desktop
+        || current != Some(saved)
+    {
+        // Explorer's replacement desktop uses its own normal configuration;
+        // it is not a lease acquired by this session.
+        return Ok(());
+    }
+    restore()
+}
+
 /// Keeps the state machine testable without changing the real user's desktop.
 pub trait DesktopBackend {
     type Snapshot;
@@ -59,6 +92,88 @@ impl<B: DesktopBackend> Drop for DesktopState<B> {
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn restore_validates_desktop_window_identity_before_mutating_a_handle() {
+        let saved = DesktopWindowIdentity {
+            handle: 12,
+            process: 30,
+            thread: 40,
+            class_name: "SysListView32".into(),
+            is_desktop: true,
+        };
+        let mut calls = 0;
+        restore_owned_window(&saved, Some(&saved), || {
+            calls += 1;
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(calls, 1, "the still-owned desktop must remain restorable");
+        for current in [
+            None,
+            Some(DesktopWindowIdentity {
+                handle: 13,
+                ..saved.clone()
+            }),
+            Some(DesktopWindowIdentity {
+                process: 31,
+                ..saved.clone()
+            }),
+            Some(DesktopWindowIdentity {
+                thread: 41,
+                ..saved.clone()
+            }),
+            Some(DesktopWindowIdentity {
+                class_name: "Unrelated window".into(),
+                ..saved.clone()
+            }),
+            Some(DesktopWindowIdentity {
+                is_desktop: false,
+                ..saved.clone()
+            }),
+        ] {
+            restore_owned_window(&saved, current.as_ref(), || {
+                panic!("a stale/reused/unrelated handle must never be mutated");
+            })
+            .unwrap();
+        }
+        for invalid in [
+            DesktopWindowIdentity {
+                handle: 0,
+                ..saved.clone()
+            },
+            DesktopWindowIdentity {
+                process: 0,
+                ..saved.clone()
+            },
+            DesktopWindowIdentity {
+                thread: 0,
+                ..saved.clone()
+            },
+            DesktopWindowIdentity {
+                class_name: "Other class".into(),
+                ..saved.clone()
+            },
+            DesktopWindowIdentity {
+                is_desktop: false,
+                ..saved.clone()
+            },
+        ] {
+            restore_owned_window(&invalid, Some(&invalid), || {
+                panic!("an unproven original desktop identity must not authorize restoration");
+            })
+            .unwrap();
+        }
+        assert!(
+            restore_owned_window(&saved, Some(&saved), || {
+                Err(crate::CoreError::InvalidInput(
+                    "generated restore refusal".into(),
+                ))
+            })
+            .is_err()
+        );
+    }
+
     #[derive(Default)]
     struct FakeState {
         visible: bool,

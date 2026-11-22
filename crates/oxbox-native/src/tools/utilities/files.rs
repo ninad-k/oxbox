@@ -36,6 +36,11 @@ fn picker(ui: &mut Ui, label: &str, value: &mut String, kind: u8) {
     });
 }
 fn dropped(ui: &Ui) -> Vec<PathBuf> {
+    // Disabling widgets does not stop closure code from reading RawInput. Ignore
+    // drops here too, so an active job keeps the exact inputs it was started with.
+    if !ui.is_enabled() {
+        return Vec::new();
+    }
     ui.ctx().input(|input| {
         input
             .raw
@@ -84,6 +89,15 @@ struct OriginalCleanup {
     source: PathBuf,
     output: PathBuf,
     trashed: bool,
+}
+#[derive(PartialEq, Eq)]
+struct ArchiveDraft {
+    extract: bool,
+    sources: Vec<PathBuf>,
+    input: String,
+    output: String,
+    tar_gzip: bool,
+    max_mib: u64,
 }
 
 pub(super) struct FileTools {
@@ -366,10 +380,12 @@ impl FileTools {
     }
     fn archive(&mut self, ui: &mut Ui) {
         let busy = self.archive.running();
+        let previous = self.archive_draft();
         ui.add_enabled_ui(!busy,|ui|{
         ui.horizontal(|ui|{ui.selectable_value(&mut self.archive_extract,false,"Create archive");ui.selectable_value(&mut self.archive_extract,true,"Extract archive");});
         if self.archive_extract {picker(ui,"archive input",&mut self.archive_input,0);if let Some(path)=dropped(ui).first(){self.archive_input=path.to_string_lossy().into_owned();}picker(ui,"new destination folder",&mut self.archive_output,2);ui.label("The destination must not exist. Choose or enter a new folder name, not an existing folder.");ui.horizontal(|ui|{let label=ui.label("Maximum extracted size (MiB)");ui.add(egui::DragValue::new(&mut self.max_mib).range(1..=1_048_576)).labelled_by(label.id);});}
         else {ui.checkbox(&mut self.archive_folders,"Select folders in picker");if ui.button("Add archive inputs…").clicked(){let dialog=crate::host::dialogs::file(ui.ctx());let paths=if self.archive_folders{dialog.pick_folders()}else{dialog.pick_files()};if let Some(paths)=paths{for path in paths{if !self.sources.contains(&path){self.sources.push(path);}}}}for path in dropped(ui){if !self.sources.contains(&path){self.sources.push(path);}}list(ui,&mut self.sources);ui.horizontal(|ui|{ui.selectable_value(&mut self.tar,false,"ZIP");ui.selectable_value(&mut self.tar,true,"TAR.GZ");});picker(ui,"new archive filename",&mut self.archive_output,2);}
+        if self.archive_draft()!=previous{self.archive.result=None;self.archive.error=None;self.archive.progress=None;}
         let ready=!self.archive_output.is_empty()&&if self.archive_extract{!self.archive_input.is_empty()}else{!self.sources.is_empty()};
         if ui.add_enabled(ready,egui::Button::new(if self.archive_extract{"Review and extract…"}else{"Create archive"})).clicked(){let output=PathBuf::from(&self.archive_output);if self.archive_extract{let input=PathBuf::from(&self.archive_input);let limit=self.max_mib*1024*1024;if confirm(ui.ctx(), "Review extraction",format!("Extract into a NEW folder:\n{}\n\nOutput limited to {} MiB or 20× compressed size, whichever is smaller. Existing folders are never merged.",output.display(),self.max_mib)){self.archive.start(ui.ctx(),move|cancel,progress|archive::extract_archive(&input,&output,limit,&cancel,progress));}}else{let sources=self.sources.clone();let format=if self.tar{ArchiveFormat::TarGz}else{ArchiveFormat::Zip};self.archive.start(ui.ctx(),move|cancel,progress|archive::create_archive(&sources,&output,format,&cancel,progress));}}
     });
@@ -381,6 +397,16 @@ impl FileTools {
             }
         }
         ui.label("Existing files stay intact. ZIP, TAR, TAR.GZ and 7z extraction rejects links/traversal and bounds metadata/output. A failed extraction may leave its separate new partial folder; review it before retrying.");
+    }
+    fn archive_draft(&self) -> ArchiveDraft {
+        ArchiveDraft {
+            extract: self.archive_extract,
+            sources: self.sources.clone(),
+            input: self.archive_input.clone(),
+            output: self.archive_output.clone(),
+            tar_gzip: self.tar,
+            max_mib: self.max_mib,
+        }
     }
     fn clean(&mut self, ui: &mut Ui) {
         let busy = self.cleanup.running() || self.trash.running();
@@ -552,6 +578,172 @@ impl FileTools {
         self.crypt.result = None;
         self.original_cleanup = None;
         self.message.clear();
+    }
+}
+
+#[cfg(test)]
+mod input_state_tests {
+    use super::*;
+    use std::{
+        path::Path,
+        sync::{Arc, mpsc},
+        time::Duration,
+    };
+
+    #[derive(Debug)]
+    struct GeneratedDrop(PathBuf);
+    impl egui::DroppedFile for GeneratedDrop {
+        fn path(&self) -> &Path {
+            &self.0
+        }
+        fn bytes(&self) -> Result<Vec<u8>, String> {
+            Err("UI draft test must not read the dropped file".into())
+        }
+    }
+    fn render_drop(tools: &mut FileTools, context: &egui::Context, id: &str, path: PathBuf) {
+        let mut output = context.run_ui(
+            egui::RawInput {
+                dropped_files: vec![Arc::new(GeneratedDrop(path))],
+                ..Default::default()
+            },
+            |ui| tools.show(ui, id),
+        );
+        output.textures_delta.clear();
+    }
+    fn hold<T: Send + 'static>(task: &mut Task<T>, context: &egui::Context) -> mpsc::Sender<()> {
+        let (ready_send, ready_receive) = mpsc::channel();
+        let (release_send, release_receive) = mpsc::channel();
+        assert!(task.start(context, move |cancel, _| {
+            ready_send.send(()).unwrap();
+            loop {
+                cancel.check()?;
+                match release_receive.recv_timeout(Duration::from_millis(5)) {
+                    Ok(()) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+                        return Err(oxbox_core::CoreError::Cancelled);
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => {}
+                }
+            }
+        }));
+        ready_receive.recv_timeout(Duration::from_secs(2)).unwrap();
+        release_send
+    }
+    fn drafts(tools: &FileTools) -> (String, Vec<PathBuf>, Vec<PathBuf>, String, String) {
+        (
+            tools.checksum_path.clone(),
+            tools.roots.clone(),
+            tools.sources.clone(),
+            tools.archive_input.clone(),
+            tools.source.clone(),
+        )
+    }
+
+    #[test]
+    fn busy_drop_cannot_relabel_an_active_file_job_with_different_inputs() {
+        for (id, extract) in [
+            ("verify-checksum", false),
+            ("find-duplicates", false),
+            ("archive", false),
+            ("archive", true),
+            ("encrypt-files", false),
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let old = directory.path().join("old-input.txt");
+            let new = directory.path().join("new-input.txt");
+            std::fs::write(&old, b"old fixture").unwrap();
+            std::fs::write(&new, b"new fixture").unwrap();
+            let old_root = directory.path().join("old-root");
+            let new_root = directory.path().join("new-root");
+            std::fs::create_dir(&old_root).unwrap();
+            std::fs::create_dir(&new_root).unwrap();
+            let mut tools = FileTools {
+                checksum_path: old.display().to_string(),
+                roots: vec![old_root],
+                sources: vec![old.clone()],
+                archive_input: old.display().to_string(),
+                source: old.display().to_string(),
+                archive_extract: extract,
+                ..Default::default()
+            };
+            let context = egui::Context::default();
+            let _release = match id {
+                "verify-checksum" => hold(&mut tools.hash, &context),
+                "find-duplicates" => hold(&mut tools.duplicates, &context),
+                "archive" => hold(&mut tools.archive, &context),
+                _ => hold(&mut tools.crypt, &context),
+            };
+            let before = drafts(&tools);
+            render_drop(
+                &mut tools,
+                &context,
+                id,
+                if id == "find-duplicates" {
+                    new_root
+                } else {
+                    new
+                },
+            );
+            assert_eq!(
+                drafts(&tools),
+                before,
+                "busy {id} (extract={extract}) accepted a new drop for an old job"
+            );
+            tools.shutdown();
+        }
+    }
+
+    #[test]
+    fn idle_drop_still_accepts_a_new_checksum_input_and_clears_old_digest() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("new-input.txt");
+        std::fs::write(&path, b"fixture").unwrap();
+        let mut tools = FileTools::default();
+        tools.hash.result = Some("digest of previous input".into());
+        render_drop(
+            &mut tools,
+            &egui::Context::default(),
+            "verify-checksum",
+            path.clone(),
+        );
+        assert_eq!(tools.checksum_path, path.display().to_string());
+        assert!(tools.hash.result.is_none());
+        tools.shutdown();
+    }
+
+    #[test]
+    fn archive_changed_input_does_not_keep_an_old_completion_or_error() {
+        for failed in [false, true] {
+            let directory = tempfile::tempdir().unwrap();
+            let old = directory.path().join("old-input.txt");
+            let new = directory.path().join("new-input.txt");
+            std::fs::write(&old, b"old fixture").unwrap();
+            std::fs::write(&new, b"new fixture").unwrap();
+            let mut tools = FileTools {
+                sources: vec![old],
+                ..Default::default()
+            };
+            if failed {
+                tools.archive.error = Some("previous archive attempt failed".into());
+            } else {
+                tools.archive.result = Some(directory.path().join("previous-output.zip"));
+            }
+            render_drop(
+                &mut tools,
+                &egui::Context::default(),
+                "archive",
+                new.clone(),
+            );
+            assert!(tools.sources.contains(&new));
+            assert!(
+                tools.archive.result.is_none(),
+                "an old archive success survived a changed input set"
+            );
+            assert!(
+                tools.archive.error.is_none(),
+                "an old archive error survived a changed input set"
+            );
+            tools.shutdown();
+        }
     }
 }
 

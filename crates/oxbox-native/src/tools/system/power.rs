@@ -6,6 +6,7 @@ use crate::{host::Host, jobs::Task};
 use eframe::egui;
 use oxbox_core::{
     CoreResult,
+    jobs::CancelToken,
     platform::Os,
     tools::{
         airplane_mode,
@@ -67,6 +68,18 @@ impl PowerView {
         self.task.start(ctx, move |cancel, _| {
             cancel.check()?;
             shared.perform_reserved(action, permit)
+        });
+    }
+    fn settings(&mut self, ctx: &egui::Context, shared: Arc<Shared>, airplane: bool) {
+        let permit = shared.reserve();
+        self.task.start(ctx, move |cancel, _| {
+            open_settings_reserved(&shared, permit, &cancel, airplane, |airplane| {
+                if airplane {
+                    airplane_mode::open_settings()
+                } else {
+                    do_not_disturb::open_settings()
+                }
+            })
         });
     }
     fn result(&mut self, ui: &mut egui::Ui) {
@@ -405,14 +418,7 @@ impl PowerView {
                 }
                 self.presentation = Some(options);
                 if ui.button("Open notification controls").clicked() {
-                    let shared = shared.clone();
-                    self.task.start(ui.ctx(), move |cancel, _| {
-                        cancel.check()?;
-                        shared.with_live(|_| {
-                            do_not_disturb::open_settings()?;
-                            Ok("Choose the notification mode yourself in system settings.".into())
-                        })
-                    });
+                    self.settings(ui.ctx(), shared.clone(), false);
                 }
             }
             "do-not-disturb" | "airplane-mode" => {
@@ -430,19 +436,7 @@ impl PowerView {
                     )
                     .clicked()
                 {
-                    let airplane = id == "airplane-mode";
-                    let shared = shared.clone();
-                    self.task.start(ui.ctx(), move |cancel, _| {
-                        cancel.check()?;
-                        shared.with_live(|_| {
-                            if airplane {
-                                airplane_mode::open_settings()?;
-                            } else {
-                                do_not_disturb::open_settings()?;
-                            }
-                            Ok("System settings opened; choose the setting there.".into())
-                        })
-                    });
+                    self.settings(ui.ctx(), shared.clone(), id == "airplane-mode");
                 }
             }
             _ => return false,
@@ -474,6 +468,21 @@ impl PowerView {
         self.pending = None;
     }
 }
+fn open_settings_reserved(
+    shared: &Shared,
+    permit: u64,
+    cancel: &CancelToken,
+    airplane: bool,
+    open: impl FnOnce(bool) -> CoreResult<()>,
+) -> CoreResult<String> {
+    // Admission belongs to the original click, even if this task starts later.
+    // Check cancellation under the same gate immediately before the OS request.
+    shared.with_reserved(permit, |_| {
+        cancel.check()?;
+        open(airplane)?;
+        Ok("System settings opened; choose the setting there.".into())
+    })
+}
 pub fn stop_mouse(shared: &Shared) -> CoreResult<()> {
     shared.invalidate_pending();
     let _ = shared.mouse.request_stop();
@@ -497,4 +506,58 @@ pub fn number(
         )
         .labelled_by(label.id);
     });
+}
+
+#[cfg(test)]
+mod settings_tests {
+    use super::*;
+    use oxbox_core::jobs::CancelToken;
+
+    #[test]
+    fn settings_open_captured_before_navigation_or_quit_never_calls_backend() {
+        for quit in [false, true] {
+            let shared = Shared::default();
+            let permit = shared.reserve();
+            let cancel = CancelToken::default();
+            if quit {
+                shared.request_shutdown();
+            } else {
+                shared.invalidate_pending();
+            }
+            let mut opened = false;
+            let result = open_settings_reserved(&shared, permit, &cancel, false, |_| {
+                opened = true;
+                Ok(())
+            });
+            assert_eq!(result.unwrap_err().code(), "cancelled");
+            assert!(
+                !opened,
+                "a delayed settings request must not renew its admission"
+            );
+        }
+
+        let shared = Shared::default();
+        let cancel = CancelToken::default();
+        let mut opened = None;
+        open_settings_reserved(&shared, shared.reserve(), &cancel, true, |airplane| {
+            opened = Some(airplane);
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            opened,
+            Some(true),
+            "a new explicit request remains available"
+        );
+
+        cancel.cancel();
+        assert_eq!(
+            open_settings_reserved(&shared, shared.reserve(), &cancel, false, |_| {
+                panic!("a cancelled task must not open settings");
+            })
+            .unwrap_err()
+            .code(),
+            "cancelled"
+        );
+    }
 }

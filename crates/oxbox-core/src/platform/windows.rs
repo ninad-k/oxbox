@@ -29,7 +29,7 @@ pub fn execute_power(action: PowerAction) -> CoreResult<()> {
 }
 
 pub struct DesktopRestore {
-    handle: isize,
+    identity: crate::tools::hide_desktop::DesktopWindowIdentity,
     visible: bool,
 }
 
@@ -70,38 +70,71 @@ unsafe extern "system" fn find_desktop(hwnd: HWND, data: LPARAM) -> i32 {
     0
 }
 
-pub fn hide_desktop() -> CoreResult<DesktopRestore> {
+fn desktop_handle() -> HWND {
     let mut handle: HWND = std::ptr::null_mut();
     // SAFETY: callback is synchronous and the pointer remains valid until it returns.
     unsafe {
         EnumWindows(Some(find_desktop), &mut handle as *mut HWND as LPARAM);
     }
+    handle
+}
+
+fn desktop_identity(
+    handle: HWND,
+    desktop: HWND,
+) -> Option<crate::tools::hide_desktop::DesktopWindowIdentity> {
+    let mut process = 0;
+    // SAFETY: process points to live local storage. Invalid handles return zero.
+    let thread = unsafe { GetWindowThreadProcessId(handle, &mut process) };
+    if thread == 0 || process == 0 {
+        return None;
+    }
+    let mut class_name = [0_u16; 128];
+    // SAFETY: the buffer is writable and its length is passed to Win32.
+    let length = unsafe { GetClassNameW(handle, class_name.as_mut_ptr(), class_name.len() as i32) };
+    if length <= 0 {
+        return None;
+    }
+    Some(crate::tools::hide_desktop::DesktopWindowIdentity {
+        handle: handle as isize,
+        process,
+        thread,
+        class_name: String::from_utf16_lossy(&class_name[..length as usize]),
+        is_desktop: !desktop.is_null() && desktop == handle,
+    })
+}
+
+pub fn hide_desktop() -> CoreResult<DesktopRestore> {
+    let handle = desktop_handle();
     if handle.is_null() {
         return Err(CoreError::InvalidInput(
             "Windows Explorer's desktop icon view was not found.".into(),
         ));
     }
+    let identity = desktop_identity(handle, handle)
+        .filter(|identity| identity.class_name == "SysListView32")
+        .ok_or_else(|| {
+            CoreError::InvalidInput("The desktop icon view changed; try Hide Desktop again.".into())
+        })?;
     let visible = unsafe { IsWindowVisible(handle) } != 0;
     unsafe {
         ShowWindow(handle, SW_HIDE);
     }
-    Ok(DesktopRestore {
-        handle: handle as isize,
-        visible,
-    })
+    Ok(DesktopRestore { identity, visible })
 }
 
 pub fn restore_desktop(state: &DesktopRestore) -> CoreResult<()> {
-    let handle = state.handle as HWND;
-    // SAFETY: validate a previously discovered window before using its handle again.
-    if unsafe { IsWindow(handle) } != 0 {
+    let handle = state.identity.handle as HWND;
+    let current = desktop_identity(handle, desktop_handle());
+    crate::tools::hide_desktop::restore_owned_window(&state.identity, current.as_ref(), || {
+        // SAFETY: identity, PID/thread, class and current desktop membership were
+        // checked immediately above. Win32 offers no atomic identity+ShowWindow
+        // operation, so an external destroy/reuse race remains a platform limit.
         unsafe {
             ShowWindow(handle, if state.visible { SW_SHOWNA } else { SW_HIDE });
         }
-        return Ok(());
-    }
-    // Explorer may have restarted; its new desktop already uses the user's normal setting.
-    Ok(())
+        Ok(())
+    })
 }
 
 /// Best effort primary-monitor fullscreen and idle detection; no keyboard content is inspected.

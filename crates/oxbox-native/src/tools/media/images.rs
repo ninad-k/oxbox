@@ -110,14 +110,17 @@ impl ImageTools {
             ui,
             "Create a QR code or barcode from text. Preview locally, save a new image, or copy it to the clipboard.",
         );
+        let previous = (self.qr_kind, self.qr_ec, self.qr_size);
         let label = ui.label("Text or barcode value");
-        ui.add(
-            egui::TextEdit::multiline(&mut self.qr_text)
-                .desired_rows(3)
-                .desired_width(f32::INFINITY)
-                .char_limit(4096),
-        )
-        .labelled_by(label.id);
+        let text_changed = ui
+            .add(
+                egui::TextEdit::multiline(&mut self.qr_text)
+                    .desired_rows(3)
+                    .desired_width(f32::INFINITY)
+                    .char_limit(4096),
+            )
+            .labelled_by(label.id)
+            .changed();
         widgets::choice(
             ui,
             "Code type",
@@ -139,6 +142,15 @@ impl ImageTools {
             );
         }
         widgets::number(ui, "Image size (pixels)", &mut self.qr_size, 128..=2048);
+        if text_changed || previous != (self.qr_kind, self.qr_ec, self.qr_size) {
+            // Save and Copy must only use a generation matching this form.
+            // Abandon also discards a completion already queued by the worker.
+            self.qr_job.abandon();
+            self.qr_code = None;
+            self.qr_preview = Preview::default();
+            self.qr_action.abandon();
+            self.copy_job.abandon();
+        }
         if ui
             .add_enabled(
                 !self.qr_text.is_empty() && !self.qr_job.running(),
@@ -527,5 +539,168 @@ impl ImageTools {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod verification2_tests {
+    use super::*;
+
+    fn frame(
+        view: &mut ImageTools,
+        context: &egui::Context,
+        shared: &Shared,
+        events: Vec<egui::Event>,
+    ) -> Vec<(egui::accesskit::NodeId, egui::accesskit::Node)> {
+        let mut output = context.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| view.show(ui, "qr-code", shared),
+        );
+        output.textures_delta.clear();
+        output.platform_output.accesskit_update.unwrap().nodes
+    }
+
+    fn action(
+        target_node: egui::accesskit::NodeId,
+        action: egui::accesskit::Action,
+        data: Option<egui::accesskit::ActionData>,
+    ) -> egui::Event {
+        egui::Event::AccessKitActionRequest(egui::accesskit::ActionRequest {
+            action,
+            target_node,
+            target_tree: egui::accesskit::TreeId::ROOT,
+            data,
+        })
+    }
+
+    fn generated_view() -> ImageTools {
+        let mut view = ImageTools {
+            qr_text: "Generated original value".into(),
+            ..Default::default()
+        };
+        view.qr_code = Some(qr::generate(&view.qr_text, CodeKind::Qr, "M", 128).unwrap());
+        view.qr_preview.image = Some(std::sync::Arc::new(image::RgbaImage::from_pixel(
+            1,
+            1,
+            image::Rgba([0, 0, 0, 255]),
+        )));
+        view.qr_job.result = Some(QrResult {
+            code: qr::generate("Queued original value", CodeKind::Qr, "M", 128).unwrap(),
+            asset: Asset::new(image::RgbaImage::from_pixel(
+                1,
+                1,
+                image::Rgba([0, 0, 0, 255]),
+            )),
+        });
+        view.qr_action.result = Some(PathBuf::from("generated-previous-code.png"));
+        view.copy_job.result = Some(());
+        view
+    }
+
+    fn assert_stale_exports_discarded(view: &ImageTools) {
+        assert!(
+            view.qr_code.is_none(),
+            "edited QR parameters kept an exportable old code"
+        );
+        assert!(
+            view.qr_preview.image.is_none(),
+            "edited QR parameters kept the old preview"
+        );
+        assert!(
+            view.qr_job.result.is_none(),
+            "queued old generation can reappear"
+        );
+        assert!(
+            view.qr_action.result.is_none(),
+            "old save receipt remains attached to edited content"
+        );
+        assert!(
+            view.copy_job.result.is_none(),
+            "old copy receipt remains attached to edited content"
+        );
+    }
+
+    #[test]
+    fn verification2_qr_text_edit_discards_exportable_old_code_and_queued_generation() {
+        let mut view = generated_view();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let shared = Shared::default();
+        let nodes = frame(&mut view, &context, &shared, vec![]);
+        let field = nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::MultilineTextInput
+                    && node.value() == Some("Generated original value"))
+                .then_some(id)
+            })
+            .unwrap();
+        frame(
+            &mut view,
+            &context,
+            &shared,
+            vec![action(
+                field,
+                egui::accesskit::Action::SetValue,
+                Some(egui::accesskit::ActionData::Value(
+                    "Generated changed value".into(),
+                )),
+            )],
+        );
+        assert_eq!(
+            view.qr_text, "Generated changed value",
+            "fixture must edit the real text control"
+        );
+        assert_stale_exports_discarded(&view);
+        view.shutdown();
+        assert!(shared.clipboard.snapshot("").unwrap().paused);
+    }
+
+    #[test]
+    fn verification2_qr_type_edit_discards_exportable_old_code_and_queued_generation() {
+        let mut view = generated_view();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let shared = Shared::default();
+        let nodes = frame(&mut view, &context, &shared, vec![]);
+        let field = nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::ComboBox && node.value() == Some("QR code"))
+                    .then_some(id)
+            })
+            .unwrap();
+        frame(
+            &mut view,
+            &context,
+            &shared,
+            vec![action(field, egui::accesskit::Action::Click, None)],
+        );
+        // A newly opened popup first measures its contents in an invisible
+        // sizing pass; its actual accessible options appear on the next frame.
+        let nodes = frame(&mut view, &context, &shared, vec![]);
+        let option = nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::Button && node.label() == Some("Code 128"))
+                    .then_some(id)
+            })
+            .unwrap();
+        frame(
+            &mut view,
+            &context,
+            &shared,
+            vec![action(option, egui::accesskit::Action::Click, None)],
+        );
+        assert_eq!(
+            view.qr_kind, 1,
+            "fixture must edit the real code-type combo"
+        );
+        assert_stale_exports_discarded(&view);
+        view.shutdown();
+        assert!(shared.clipboard.snapshot("").unwrap().paused);
     }
 }

@@ -539,13 +539,26 @@ impl TimeTools {
             });
             ui.horizontal(|ui| {
                 let label = ui.label("Duration (minutes)");
-                ui.add_enabled(
-                    !clock.running() && (clock.elapsed(now) == 0 || clock.completed()),
-                    egui::DragValue::new(&mut self.minutes)
-                        .range(0.01..=10080.0)
-                        .speed(0.1),
-                )
-                .labelled_by(label.id);
+                let editable = !clock.running() && (clock.elapsed(now) == 0 || clock.completed());
+                let changed = ui
+                    .add_enabled(
+                        editable,
+                        egui::DragValue::new(&mut self.minutes)
+                            .range(0.01..=10080.0)
+                            .speed(0.1),
+                    )
+                    .labelled_by(label.id)
+                    .changed();
+                if editable
+                    && changed
+                    && self.minutes.is_finite()
+                    && self.minutes > 0.0
+                    && self.minutes <= 10080.0
+                    && let Ok(timer) = Clock::timer((self.minutes * 60000.0).round() as u64)
+                {
+                    *clock = timer;
+                    clear_notice = true;
+                }
             });
         }
         ui.heading(format_time(if self.stopwatch {
@@ -1086,6 +1099,86 @@ impl TimeTools {
 impl Drop for TimeTools {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod timer_input_tests {
+    use super::*;
+    use egui::accesskit::{Action, ActionData, ActionRequest, TreeId};
+
+    fn edit_custom_minutes(tools: &mut TimeTools, minutes: f64) {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut first = context.run_ui(egui::RawInput::default(), |ui| tools.clocks(ui));
+        first.textures_delta.clear();
+        let target = first
+            .platform_output
+            .accesskit_update
+            .take()
+            .unwrap()
+            .nodes
+            .into_iter()
+            .find_map(|(id, node)| (node.numeric_value() == Some(25.0)).then_some(id))
+            .expect("timer duration input");
+        let mut edited = context.run_ui(
+            egui::RawInput {
+                events: vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                    action: Action::SetValue,
+                    target_tree: TreeId::ROOT,
+                    target_node: target,
+                    data: Some(ActionData::NumericValue(minutes)),
+                })],
+                ..Default::default()
+            },
+            |ui| tools.clocks(ui),
+        );
+        edited.textures_delta.clear();
+    }
+
+    #[test]
+    fn idle_custom_duration_updates_the_timer_preview_before_start() {
+        let mut tools = TimeTools::default();
+        edit_custom_minutes(&mut tools, 10.0);
+        assert_eq!(
+            tools.minutes, 10.0,
+            "real duration control did not receive the edit"
+        );
+        let state = tools.state.lock().unwrap();
+        assert_eq!(
+            state.timer.duration(),
+            600_000,
+            "stopped timer preview still shows the old duration"
+        );
+        assert_eq!(state.timer.remaining(state.ms()), 600_000);
+        assert!(!state.timer.running());
+        assert!(
+            tools.worker.is_none(),
+            "headless input test started background reminders"
+        );
+    }
+    #[test]
+    fn custom_duration_does_not_reset_a_running_or_paused_timer() {
+        for paused in [false, true] {
+            let mut tools = TimeTools::default();
+            {
+                let mut state = tools.state.lock().unwrap();
+                state.timer.start(0);
+                if paused {
+                    state.timer.pause(10_000);
+                }
+            }
+            edit_custom_minutes(&mut tools, 10.0);
+            let state = tools.state.lock().unwrap();
+            assert_eq!(state.timer.duration(), 1_500_000);
+            assert_eq!(
+                state.timer.elapsed(10_000),
+                10_000,
+                "editing reset elapsed time"
+            );
+            assert_eq!(state.timer.running(), !paused);
+            assert!(tools.worker.is_none());
+        }
     }
 }
 
