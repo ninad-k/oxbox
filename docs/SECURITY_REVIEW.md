@@ -145,3 +145,21 @@ cancellation and a same-size/time rewrite of an already-read prefix. The existin
 verifies both hashes and valid/refused fake cleanup. All pass in the 221-core-test Windows run. No live Trash
 was invoked. This narrows ordinary stale-backup races; it is not an atomic lock against concurrent filesystem
 mutation and does not close the independent adversarial filesystem/human review gate.
+
+## Bounded second feature pass
+
+Source `67f0715` adds captured-permit checks for delayed settings requests, actual Hidden Files readback
+validation and a desktop restoration guard bound to HWND, PID, thread, class and current desktop membership.
+The Win32 identity check and mutation are separate calls, so concurrent external destruction and handle
+reuse remain possible. Generated/fake regressions passed on Windows, macOS ARM and Linux; no live
+OS settings or desktop effect was performed. File-drop and QR/OCR result changes also prevent stale
+input/result associations in the native forms. A dependency-free Common Controls manifest retains
+`asInvoker` and `uiAccess=false`; it does not request elevation.
+
+[CI 44994827768](https://github.com/ninad-k/oxbox/actions/runs/44994827768) passes all five jobs, including
+strict Clippy and production builds on all three systems. The
+[dated 49-tool verification](verification/2026-11-22-native-feature-pass.md) distinguishes actual Windows
+default-form/selected lifecycle observations from fake effects and open manual cases. The dependency
+audit still reports the documented Linux GLib unsoundness advisory and maintenance warnings. Human
+security/license review, adversarial filesystem, hardware/provider and clean-machine gates remain open;
+the release stays unpublished.

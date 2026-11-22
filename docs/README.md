@@ -14,7 +14,7 @@ draft; [release gates](RELEASE.md) identify what still needs verification.
 | Find a bounded task | [49-tool matrix](../tasks/native-migration.md), [validation gaps](VALIDATION.md), [task specifications](../tasks/todo.md) |
 | Test safely | [Testing](TESTING.md), [troubleshooting](TROUBLESHOOTING.md) |
 | Get help or report a problem | [Support](../SUPPORT.md), [private security reports](../SECURITY.md) |
-| See the functional review and its limits | [49-tool source review](FEATURE_REVIEW.md), [dated validation](VALIDATION.md) |
+| See the functional review and its limits | [49-tool source review](FEATURE_REVIEW.md), [second native feature pass](verification/2026-11-22-native-feature-pass.md), [dated validation](VALIDATION.md) |
 | Change tool metadata or icons | [Catalogue maintenance](../catalog/README.md) |
 | Work on the public website | [GitHub Pages source and deployment](../website/README.md) |
 | Triage or review contributions | [Maintainer workflow](MAINTAINING.md), [code of conduct](../CODE_OF_CONDUCT.md) |

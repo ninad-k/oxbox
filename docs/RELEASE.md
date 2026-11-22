@@ -4,11 +4,16 @@ The native migration uses exact eframe 0.37.0 and Rust 1.95, with all 49 tool ro
 release target. The existing release must stay an **unpublished draft** until the acceptance gates pass.
 Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the native application.
 
-The current 2026-11-22 review candidate is source `a7c91bd`, including the
-[49-tool functional follow-up](FEATURE_REVIEW.md). All five CI jobs pass: Windows 225 core / 81 native,
-macOS ARM 219 / 82 and Linux 218 / 82, plus strict Clippy, native production builds, Rust 1.95, UI and packaging.
-Its Windows installers were rebuilt, inspected, attached to the existing draft and downloaded/hash-verified.
-A separate exact-binary Windows observation covers startup, IANA search, EAN-13 preview and normal Quit.
+The current 2026-11-22 review candidate is source `67f0715`, including the
+[second bounded 49-tool verification](verification/2026-11-22-native-feature-pass.md). All five CI jobs pass:
+Windows 226 core / 94 native, macOS ARM 220 / 95 and Linux 219 / 95, with zero failed or ignored tests,
+plus strict Clippy, native production builds, Rust 1.95, UI and packaging. Its exact Windows EXE opened all
+49 default native forms; Timer/QR state checks and generated-provider Cancel, hide/restoration and active
+Quit also passed. Two separate bounded endpoint observations are recorded in
+[VALIDATION.md](VALIDATION.md). These checks do not establish full native effect/hardware acceptance.
+Release ID `453727915` now targets `67f0715` and remains **draft / prerelease**. All six refreshed assets
+were downloaded, byte/hash-matched and statically inspected. Earlier `a7c91bd` startup, IANA/EAN-13 and
+Quit measurements remain historical evidence for their own executable.
 Earlier `7132daa`, `54dd593`, `d8d1d1e` and the failed-CI `1ae368c` candidate remain historical evidence.
 The user explicitly left the clean-machine gate pending because no disposable Windows environment is available.
 
@@ -16,10 +21,12 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 
 - [x] Preserve all 49 stable tool IDs and route native forms; keep shared JSON metadata in sync with Pages.
 - [x] Pass local core/native tests, all-target clippy with warnings denied, and formatting.
-- [x] Observe the actual decorated Windows native launcher, favorites, search, a conversion, favorite hotkey,
-  global shortcut hide, single-instance restoration and Quit. This is a bounded subset of manual acceptance.
+- [x] Record actual decorated Windows launcher interactions. Earlier candidates cover favorites, conversion
+  and favorite/global hotkeys; `67f0715` covers all 49 default forms, Timer/QR state changes, generated-provider
+  Cancel, active-job hide/restoration and Quit. Each remains scoped to its source and executable.
 - [x] Complete review-fix Windows/macOS ARM/Linux native CI and Rust 1.95 locked checks:
-  [run 44987974907](https://github.com/ninad-k/oxbox/actions/runs/44987974907), source `a7c91bd`.
+  [run 44994827768](https://github.com/ninad-k/oxbox/actions/runs/44994827768), source `67f0715`;
+  Windows 226 core / 94 native, macOS ARM 220 / 95 and Linux 219 / 95, with zero failed/ignored tests.
 - [x] Complete the parallel agent source/regression review and fix reproduced installer, file, provider,
   passphrase and accessibility issues; [security review](SECURITY_REVIEW.md), [privacy](PRIVACY_ACCEPTANCE.md),
   [accessibility](ACCESSIBILITY.md), [functional review](FEATURE_REVIEW.md) and [installer protocol](INSTALLER_ACCEPTANCE.md) distinguish scope and open gates.
@@ -28,11 +35,15 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [ ] Complete production runtime observations including owned providers and DNS coverage on all three OSes;
   record observation bounds, rather than claim universal zero traffic from finite samples.
 - [x] Record bounded Windows native production endpoint observations, including a quiet-tray/activation/Quit loop.
-  Current `a7c91bd` has a 240.073-second local-tools/Quit window. Historical `d8d1d1e` has separate generated-provider completion and active-job/Quit windows.
+  Current `67f0715` has separate 300.066-second startup/fixture and 120.039-second Cancel/restoration/Quit
+  windows; the first ends with an app alive, and the second begins with an app alive and ends with none.
+  Preceding `a7c91bd` and `d8d1d1e` measurements retain their own exact sources and hashes.
   See [runtime privacy](RUNTIME_PRIVACY.md) for exact intervals and snapshot/DNS limitations.
-- [x] Extract/hash-match the current MSI payload; inspect version, PE imports, sizes and hashes. Original icon
-  resources remain unchanged; the earlier six-resource digest check retains its historical artifact scope.
+- [x] Extract/hash-match the current `67f0715` draft MSI payload; inspect version, PE imports, sizes and hashes.
+  Six icon entries, icon group, version and manifest coexist; the earlier pixel/digest comparison retains its historical scope.
   Verify generated NSIS source and successful compiler output; independent NSIS extraction is still open.
+- [x] Pass local and downloaded Windows static installer checks for `67f0715`; record current-binary
+  bounded GUI/runtime validation separately from installer execution and full manual acceptance.
 - [ ] Test actual native MSI/NSIS clean install/uninstall and independently inspect NSIS payloads.
 - [ ] Verify first-installed-launch startup default, quiet login-to-tray, opt-out/upgrade preservation, paths with spaces,
   OS-disabled choices and ownership-checked uninstall cleanup on a clean Windows account.
@@ -40,7 +51,7 @@ The user explicitly left the clean-machine gate pending because no disposable Wi
 - [ ] Verify keyboard/screen-reader/IME/Unicode, DPI/monitor changes, high contrast and remote/GPU sessions.
 - [ ] Resolve/review dependency findings and outstanding attribution reviews with a human reviewer.
 - [ ] Complete independent human security acceptance and remaining adversarial filesystem/real-provider runtime checks.
-- [x] Record rebuilt review-fix source `a7c91bd`, installer checksums and all six downloaded remote asset hash
+- [x] Record rebuilt review-fix source `67f0715`, installer checksums and all six downloaded remote asset hash
   matches in [VALIDATION.md](VALIDATION.md). Release ID `453727915` remains draft/prerelease;
   no version tag has been pushed or release published.
 

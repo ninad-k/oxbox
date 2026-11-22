@@ -3,6 +3,15 @@
 This record separates source/tree checks from assistive-technology and real-device acceptance. It applies
 to the eframe 0.37 native host. It is not a WCAG conformance statement or a screen-reader certification.
 
+Source `67f0715` adds actual Windows checks for all **49 default native forms** on its exact production
+EXE: Ctrl+K search, accessible field edits and tile activation, matching headings, Back controls and named
+operations. Timer custom-duration preview and QR stale-preview/export-control invalidation were exercised
+with generated values. Normal Ctrl+Q, explicit Cancel and hidden-job restoration also passed. This is UI
+Automation and selected visible-rendering evidence, not complete keyboard-only or screen-reader testing.
+An unavailable-window shortcut attempt and an out-of-bounds automation click remain inconclusive;
+resize/DPI and exact-keyboard manual acceptance stay open. See the
+[dated verification record](verification/2026-11-22-native-feature-pass.md).
+
 Source `a7c91bd` also has a bounded Windows native UI observation on the exact release EXE: named launcher
 search, Ctrl+K / Enter navigation, IANA field/combo values, world-clock actions, EAN-13 inputs and local image
 preview, and normal Quit. Its durable original-file cleanup status has a real-poll/headless regression and

@@ -4,16 +4,18 @@ The MSI and NSIS packages remain unsigned, unpublished review artifacts. Package
 inspection and compiler success do not establish successful installation, login startup, upgrade or removal.
 Keep the release draft until the relevant gates in [RELEASE.md](RELEASE.md) pass.
 
-## Current community candidate `a7c91bd`
+## Current community candidate `67f0715`
 
-The latest six-asset draft uses the rebuilt source `a7c91bd696af0f80c86029336593e3d37d64f78b`, exact
-Rust 1.95.0 and EXE SHA-256 `1c8715a5b9739ad1142bc91475d552ea0384fbd538651704d4f687da6756c7c3`.
+The latest six-asset draft uses the rebuilt source `67f0715452fb601394f45d3296675d3b85df3fb5`, exact
+Rust 1.95.0 and EXE SHA-256 `6606f3d4e172e75bbebbe4201d92b5989fca15ab51b2769cac0893dbac412069`.
 Both the local set and all six re-downloaded assets pass byte-size/hash checks and the no-install verifier:
-`target/installer-verification/run-PHwlIn/report.json` and `run-xW3O75/report.json`. All five MSI payloads,
+`target/installer-verification/run-ndm3cr/report.json` and `run-nExJgA/report.json`. All five MSI payloads,
 lifecycle/upgrade properties, generated NSIS guards and compiler-output identity match. PE metadata records
 Oxbox 0.1.0, NotSigned and 24 Windows system imports, without WebView/VC runtime redistributable matches.
+The Common Controls v6 manifest retains `asInvoker` / `uiAccess=false` and coexists with six icons,
+the icon group and version resource; icon pixel/digest comparison was not repeated.
 
-[The validation record](VALIDATION.md#community-review-candidate-a7c91bd) contains every current artifact
+[The validation record](VALIDATION.md#second-feature-pass-candidate-67f0715) contains every current artifact
 digest and its separate bounded native UI/runtime evidence. Native app execution used a copied EXE with
 an isolated profile, not installation. Independent NSIS extraction and actual clean-machine install/login/
 upgrade/uninstall remain pending. The lifecycle table below stays open; prior candidates remain historical.
@@ -28,13 +30,15 @@ registry values. They create a fresh report/extraction directory below `target/i
 node --test scripts/build-native.test.mjs scripts/verify-native-installers.test.mjs
 
 # Use the exact reviewed EXE digest, not a hash obtained from an unreviewed replacement.
-node scripts/verify-native-installers.mjs --expected-exe-sha256 <reviewed-sha256>
+node scripts/verify-native-installers.mjs --draft <review-assets-directory> --native <reviewed-exe> --expected-exe-sha256 <reviewed-sha256>
 ```
 
 The verifier defaults to the final native binary under `target/native-dist/x86_64-pc-windows-msvc/release/`
 and downloaded review assets under `target/native-release-draft/`. Optional `--draft`, `--native`,
 `--nsis-source` and `--wix-tools` arguments select an explicit review set. The draft must contain its
-`SHA256SUMS.txt` and both installers. Manifest names must be safe basenames without duplicates.
+`SHA256SUMS.txt` and both installers. Use explicit paths to avoid selecting an older default review
+directory; the current download receipt names `target/verification2-remote-download/assets/`.
+Manifest names must be safe basenames without duplicates.
 
 The verifier checks each manifest digest before invoking inspection tools, pins the EXE digest, opens the
 MSI database read-only, extracts its cabinet with WiX, and compares the five payload files with the exact

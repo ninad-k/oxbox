@@ -157,9 +157,28 @@ acceptance remains open.
 
 The [49-tool functional review](../docs/FEATURE_REVIEW.md) traces all native routes and records reproduced
 fixes with meaningful generated/fake regressions. The Windows integrated follow-up passed 221 core and 80
-native tests before the final cleanup-status regression. Final source `a7c91bd` passes all-platform CI:
+native tests before the final cleanup-status regression. Preceding source `a7c91bd` passes all-platform CI:
 Windows 225 core / 81 native, macOS ARM 219 / 82 and Linux 218 / 82, with zero failed/ignored. Its Windows
 draft assets were rebuilt/download-verified and its exact EXE passed a bounded IANA/EAN-13/Quit observation.
 [Dated validation](../docs/VALIDATION.md) records the source, hashes, CI and limits. Contributor onboarding, support, catalogue and maintainer guides
 are linked from the [documentation hub](../docs/README.md). Every full manual row remains pending until its
 actual native actions and supported platform/provider behavior have been recorded.
+
+## Second bounded functional verification
+
+Source [`67f0715452fb601394f45d3296675d3b85df3fb5`](https://github.com/ninad-k/oxbox/commit/67f0715452fb601394f45d3296675d3b85df3fb5)
+passed all five jobs in [CI run 44994827768](https://github.com/ninad-k/oxbox/actions/runs/44994827768):
+Windows **226 core / 94 native**, macOS ARM **220 / 95**, and Linux **219 / 95**, with zero failed/ignored
+tests. All three targets passed strict Clippy and native production builds, including the dependency-free
+Windows activation-manifest build script; the Rust 1.95 locked check, 39 legacy UI tests and 18 packaging
+regressions also passed. The separate local combined-host test passed 94 native and 12 legacy Rust tests.
+
+The [dated second verification record](../docs/verification/2026-11-22-native-feature-pass.md) traces all
+49 routes and scopes the generated/fake/headless regressions for changed inputs, stale outcomes, restore
+navigation, settings admission and owned desktop restoration. Its exact new Windows EXE opened all 49
+default native forms and passed Timer/QR state and generated-provider Cancel/hide/restoration/Quit checks.
+The two separate bounded endpoint windows, static MSI/NSIS checks and all six downloaded asset hash
+matches are recorded in dated validation. The uploaded draft now targets `67f0715`; earlier `a7c91bd`
+observations remain scoped to the earlier executable.
+Every full manual row, hardware/provider/other-OS runtime check, screen-reader check and clean-machine
+install/login/upgrade/uninstall gate remains pending. The release stays unpublished.

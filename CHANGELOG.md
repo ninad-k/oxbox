@@ -7,6 +7,15 @@ the presence of this changelog does not mean installers have been published.
 
 ### Release review fixes — 2026-11-22
 
+- Reopening the tray window preserves the active tool and its work. Explicit search still navigates back.
+- Busy file forms ignore new drops; Archive, QR and OCR parameter changes discard stale outcomes. Editing
+  an idle custom timer updates its preview immediately without resetting running or paused time.
+- Queued OS-settings requests retain their original cancellation permit. Hidden Files rejects refused
+  readback, and desktop restoration checks the saved window identity and current desktop membership.
+- Added a native Windows Common Controls activation manifest so combined legacy/native workspace tests
+  load correctly, without adding dependencies or requesting elevation.
+- Recorded all 49 default forms on the actual Windows production executable, selected result/lifecycle
+  checks, synthetic FFmpeg smoke and bounded privacy observations in a dated contributor verification record.
 - Added a contributor documentation hub, first-contribution walkthrough, complete generated feature index,
   troubleshooting and maintainer guides, plus focused documentation/validation issue templates.
 - Restored the stopped local legacy preview and added explicit module-download recovery with an unsaved-input

@@ -20,6 +20,11 @@ The native package selects eframe/egui 0.37 with Glow, without a webview. The le
 comparison/catalogue checks; they do not certify native interaction. Packaging uses the build-native wrapper
 and must be checked separately. See [the 49-row native matrix](../tasks/native-migration.md).
 
+The dated [native feature verification record](verification/2026-11-22-native-feature-pass.md)
+separates the 49-tool source/control pass, reproduced regressions and actual synthetic-provider smoke
+from pending native, hardware and clean-machine acceptance. Record new results against their own source
+and executable; do not treat proposed safe GUI cases as completed checks.
+
 ## Automated coverage
 
 - Native tasks: cancel/abandon/late-result handling, latest-only bounded progress, shutdown and joined workers.

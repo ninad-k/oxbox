@@ -9,6 +9,11 @@ Use [FEATURES.md](FEATURES.md) for the generated catalogue and platform/provider
 [native migration matrix](../tasks/native-migration.md) for each route's verification state. This review
 records functional findings rather than maintaining another list of 49 names or marking manual gates complete.
 
+The [second bounded native feature pass](verification/2026-11-22-native-feature-pass.md) records the
+follow-up review of all 49 forms, new parameter/drop/admission regressions, actual synthetic FFmpeg
+smoke and the separate native/hardware checks still pending. Its final validation receipt must be
+completed for the revision being released; proposed GUI cases are not performed evidence.
+
 ## What was examined
 
 | Group | Source and checks |
@@ -71,7 +76,7 @@ The final source, CI and artifact
 mapping belongs in [VALIDATION.md](VALIDATION.md). Initial REDs, generated fixture passes, source review and
 production runtime observations are different evidence.
 
-Final functional source `a7c91bd` passed [all five CI jobs](https://github.com/ninad-k/oxbox/actions/runs/44987974907):
+The preceding functional source `a7c91bd` passed [all five CI jobs](https://github.com/ninad-k/oxbox/actions/runs/44987974907):
 Windows 225 core / 81 native, macOS ARM 219 / 82, Linux 218 / 82, zero failed/ignored. The follow-up also
 corrected Darwin exited-group cleanup and replaced the mouse test's fixed scheduling assumption with a
 bounded worker acknowledgement. Original raw-byte coverage remains enabled; macOS additionally passes
@@ -86,6 +91,15 @@ The earlier `d8d1d1e` all-platform CI and bounded Windows GUI/provider observati
 that exact source/artifact. They are not silently transferred to these newer functional changes.
 [Privacy acceptance](PRIVACY_ACCEPTANCE.md) records the hashes, separate windows, completion Status and
 controlled no-effect job Quit proof, including an earlier inconclusive attempt.
+
+The second bounded pass is source `67f0715`, with
+[all five CI jobs passing](https://github.com/ninad-k/oxbox/actions/runs/44994827768): Windows 226 core / 94
+native, macOS ARM 220 / 95 and Linux 219 / 95, zero failed/ignored. Its exact production Windows EXE
+opened all 49 default forms through Ctrl+K search and accessible field/tile controls. Timer preview,
+generated QR invalidation, actual no-effect-provider Cancel, hidden-job restoration and active Quit
+were also checked. The [dated record](verification/2026-11-22-native-feature-pass.md) separates those
+cases, actual synthetic FFmpeg smoke and two independently bounded endpoint windows from remaining
+effect/hardware/manual acceptance. Earlier measurements are retained with their original artifact hashes.
 
 ## Remaining acceptance work
 

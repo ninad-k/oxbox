@@ -530,3 +530,91 @@ The final documentation pass verified 267 local file references across 22 contri
 acceptance documents and checked the generated feature index again. New issue forms remain staged in the
 native branch until its reviewed merge into the default branch; private vulnerability reporting itself is
 enabled now. Documentation-only evidence updates do not change the functional source or installer mapping.
+
+### Second feature-pass candidate `67f0715`
+
+Three parallel reviews completed a bounded pass over all 49 tools. The
+[dated verification record](verification/2026-11-22-native-feature-pass.md) contains the per-tool evidence,
+new defects, meaningful REDs and remaining effect/hardware acceptance. Functional source is
+`67f0715452fb601394f45d3296675d3b85df3fb5`; [CI 44994827768](https://github.com/ninad-k/oxbox/actions/runs/44994827768)
+passed all five jobs:
+
+| Platform | Core tests | Native tests | Strict Clippy / production build |
+| --- | ---: | ---: | --- |
+| Windows x64 | 226 | 94 | Passed |
+| macOS ARM | 220 | 95 | Passed |
+| Linux x64 | 219 | 95 | Passed |
+
+Zero tests failed or were ignored. Rust 1.95 checks, Svelte zero errors/warnings, 39 UI tests, 18 packaging
+tests and the 49-tool generated index pass. Local observer guards also pass 3 tests. The initial full local
+workspace attempt passed 226 core tests, then failed to load the native harness: legacy dialog feature
+unification introduced `TaskDialogIndirect` without Common Controls v6 activation. A dependency-free
+native manifest fixed that actual loader RED. The combined-host retry passed 94 native and 12 legacy tests;
+final workspace Clippy and formatting passed. The core suite was not needlessly rerun after the app-only
+linker change. All-platform CI then reran the native/core suites on the final source.
+
+The actual installed FFmpeg also passed `provider_smoke --media` using one second of generated orange
+video and a synthetic tone: WebM conversion, GIF/header and overwrite refusal. This core-example check
+does not certify every native preset, playback, recording device or provider build.
+
+The release wrapper rebuilt the exact source with Rust 1.95.0 and static CRT. New unsigned artifacts are:
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Native EXE | 13,577,216 | `6606f3d4e172e75bbebbe4201d92b5989fca15ab51b2769cac0893dbac412069` |
+| `Oxbox-native_0.1.0_x64_en-US.msi` | 5,730,304 | `cc3aaead5ecb418bdc67d288fac124aeee434da6976f5291f8151d33b32c2f58` |
+| `Oxbox-native_0.1.0_x64-setup.exe` | 4,040,270 | `32617304ce9541c21ad2bcebc6bbcbd1c7c4f0c78828fc64530476bae424f588` |
+| `SHA256SUMS.txt` | 447 | `aa06e20fa7a72cbedf763af8f53c2a4590e39886272c58de3517b02f67d86703` |
+| `THIRD_PARTY_NOTICES.txt` | 3,696,014 | `6f22422e0098e8dc70702a06d63a321627d695fd0e9fbb952a137c8a85c792d2` |
+| `LICENSE-MIT` | 1,076 | `dff2f23bad58d45b0830bf91f27ef278996da5ca00f1ab198969c854e8060f4f` |
+| `LICENSE-APACHE` | 11,358 | `c95bae1d1ce0235ecccd3560b772ec1efb97f348a79f0fbe0a634f0c2ccefe2c` |
+
+Local static verifier report `target/installer-verification/run-ndm3cr/report.json` passes: five MSI
+payload hashes match, cleanup/upgrade/lifecycle guards match, and NSIS source/compiler-output identity
+matches. SDK PE inspection confirms Oxbox 0.1.0, NotSigned, 24 direct system imports with no WebView/VC
+runtime matches, and Common Controls v6 / `asInvoker` / `uiAccess=false`. Six icon entries, one icon group,
+version and manifest resources coexist; pixel/digest comparison was not repeated. No installer/custom
+action ran. Local build/static/PE receipts are `target/verification2-artifacts.json` and
+`target/verification2-pe-metadata.json`.
+
+A hash-matching copy with fresh explicit profiles opened **49/49 default native forms**, using Ctrl+K
+search and accessible field/tile controls, with canonical headings, Back controls and named operations.
+The Timer custom value `10` immediately displayed `00:10:00`. Generated QR text editing removed its old
+preview and Save/Copy controls. Currency refresh was disabled by default; single-instance activation
+preserved its view. These are initial-form and selected state checks, not full keyboard-only/effect
+acceptance. The saved route evidence excludes private monitoring rows.
+
+The 30-second no-output provider naturally finished before a Cancel attempt; that attempt is not a pass.
+It produced the expected missing-output error. A new 120-second no-effect provider verified explicit
+Cancel, same active tool/job/child after hide and restoration, and normal Ctrl+Q stopping app and child
+about 35 seconds after child creation, before its deadline. Neither output existed. Evidence is
+`target/native-qa/verification2/`. An extra-modifier shortcut attempt and an out-of-bounds automation click
+were inconclusive; broader keyboard/DPI acceptance stays open.
+
+Two independently checked endpoint windows use the unchanged published observer and exact EXE:
+
+| Window | Duration / rows | First / last owned seconds | Final processes / post-last seconds | p95 / max gap ms |
+| --- | --- | --- | --- | --- |
+| Startup / short fixture / next profile | 300.066 s / 6,000 | 30.513 / 299.964 | 1 / no post-Quit claim | 62.884 / 104.766 |
+| Already-running app, Cancel / restore / active Quit | 120.039 s / 2,400 | 0.025 / 78.505 | 0 / 41.534 | 62.729 / 76.270 |
+
+Both strict all-row assessments pass: zero failures, all owned TCP/UDP maxima and sums zero, unchanged
+app/script hashes and matching metadata. At most four owned processes were sampled, including activation
+instances and the generated provider/console. The second window starts with an app already running and
+does not independently cover its startup. Raw evidence is under `target/native-privacy-qa/run-verification2/`
+and `run-verification2-final/`; see [runtime privacy](RUNTIME_PRIVACY.md) for exact scopes. DNS, brokers,
+packets, short-lived flows, actual providers and other platforms are outside these bounds.
+
+Release ID `453727915` now targets `67f0715` and remains **draft / prerelease**, with exactly six assets.
+All six were downloaded to `target/verification2-remote-download/assets/`, byte-size/SHA-256 matched,
+and the downloaded installer verifier passed in `target/installer-verification/run-nExJgA/report.json`.
+The preceding six assets were backed up and hash-checked before replacement. GitHub rewrote the draft's
+tag placeholder during the source/notes update; an explicit draft-label update restored `v0.1.0` without
+creating a Git tag or replacing assets again. The original failed precondition journal was retained,
+and the completion receipt independently rechecked unchanged remote asset IDs, exact notes/source and
+absence of a real version tag. `target/verification2-remote-assets.json` records the final receipt.
+No release was published or installer executed.
+
+The clean-machine gate remains pending at the user's request. Full native effect/hardware/provider and
+cross-OS runtime, screen-reader/IME/DPI, independent NSIS extraction, signing, human security/attribution
+and the known Linux GLib finding remain open. The release must remain an unpublished draft.

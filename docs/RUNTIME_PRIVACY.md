@@ -6,7 +6,79 @@ network feature is separately opted-in, manually requested ECB currency refresh,
 The approved native migration removes the embedded browser from the production host. Finite network observations
 do not establish a universal zero-network guarantee; the historical browser investigation is retained below.
 
-## Current community candidate — 2026-11-22
+## Current native candidate 67f0715 — 2026-11-22
+
+Source `67f0715452fb601394f45d3296675d3b85df3fb5`, built with Rust 1.95.0, was observed using the exact
+13,577,216-byte Windows executable, SHA-256
+`6606f3d4e172e75bbebbe4201d92b5989fca15ab51b2769cac0893dbac412069`.
+The published read-only observer remained pinned to SHA-256
+`9ecd93ed4f70b9717173d3075c4301668be3b3c50476cd0bc47781163631fdf0`.
+These are **two separate windows**, not a continuous startup-to-Quit trace.
+
+| Measurement | Startup and first controlled job | Already-running host: Cancel, hide/restore and Quit |
+|---|---|---|
+| UTC interval, 2026-11-22 | 07:03:13.756–07:08:13.875 | 07:08:26.593–07:10:26.678 |
+| Full requested window / successful samples | 300.066 s / 6,000 of 6,000 | 120.039 s / 2,400 of 2,400 |
+| First / last sampled ownership | 30.513 / 299.964 s | 0.025 / 78.505 s |
+| Sampled ownership span | 269.451 s | 78.480 s |
+| Owned processes at end / maximum | 1 / 4 | 0 / 4 |
+| Post-Quit ownership coverage | Not established: an app was still alive at the end | 41.534 s after the last owned sample |
+| Requested interval; actual p95 / maximum gap | 50 ms; 62.884 / 104.766 ms | 50 ms; 62.729 / 76.270 ms |
+| Query / phase-marker failures | 0 / 0 | 0 / 0 |
+| Every-row all-TCP maximum / sum | 0 / 0, including listeners and loopback | 0 / 0, including listeners and loopback |
+| Every-row UDP-binding maximum / sum | 0 / 0 | 0 / 0 |
+| Executable / observer hashes at end | Unchanged / unchanged | Unchanged / unchanged |
+
+Independent assessment of all 8,400 rows found monotonic, well-formed samples, consistent row/summary
+counts, ownership timings, gaps and endpoint aggregates, matching ready/pin metadata, and completion
+of each requested duration. All recorded TCP subclasses—loopback, non-loopback, established non-loopback
+and public—and UDP bindings had zero maxima and sums. The observed own-process names were
+`oxbox-native.exe`, generated `ffmpeg.exe` and `conhost.exe`; deliberate second-instance activation can
+add a transient native process. Neither assessment labels its window a complete before-startup-to-post-Quit
+lifecycle: the first ended with an app alive, and the second began with the host already alive.
+
+The second window's first raw row already has one owned process at elapsed **0.025 seconds**. Its summary
+stores `firstOwnedSeenMs` in milliseconds; this is not a 25-second delay or startup coverage. Phase names
+are coarse annotations: even its initial default `before-launch` label does not imply that the app had
+not started. Ownership comes from the sampled rows and separate process evidence.
+
+### Controlled job evidence and limits
+
+The first window began before host 20556 launched. Its generated 30-second provider stayed alive with
+the same busy tool after hide and second-instance restoration approximately 28 seconds into the job.
+It then finished naturally before Cancel, producing the expected missing-output error. **That attempt
+does not establish cancellation.** Host 20556 quit, and host 10684 subsequently started during the same
+window; host 10684 was still alive at its end. There is no first-window post-Quit claim.
+
+The second window used an already-running, isolated-profile host 10684 and a generated **120-second**
+no-effect provider executable, SHA-256
+`fcafe14121ea093f91cb7d5eab819384ad6d642276fe33861b2ba6b7aa233c19`, supplied only through that app's
+child `PATH`. The fixture's version branch prints fixed text; its job branch only waits and prints a
+constant. It does not decode media, open files/devices/sockets or print arguments/environment data.
+
+- **Explicit Cancel:** provider 43788 was created at 07:08:45.412 UTC. After native Cancel, it was absent
+  by 07:08:56.983 UTC, approximately 11.571 seconds later, while the host remained alive. The native UI
+  displayed Cancelled and no output was created. This precedes its 120-second natural exit.
+- **Hide/restoration and active-job Quit:** provider 21256 was created at 07:09:09.982 UTC. After hiding,
+  second-instance activation restored the same busy tool with the same provider PID and Cancel control.
+  Native Ctrl+Q left both host and provider absent by 07:09:45.434 UTC, approximately 35.453 seconds after
+  child creation and well before natural exit. No output was created; the observer then continued with
+  no owned processes, including 41.534 seconds after the last owned sample.
+
+Raw aggregate evidence, pins, Root scenario records and independent strict reports remain in
+`target/native-privacy-qa/run-verification2/` and `target/native-privacy-qa/run-verification2-final/`.
+Separate sanitized GUI evidence under `target/native-qa/verification2/` records opening all 49 canonical
+default forms, headings/Back/control presence, an idle 10-minute Timer preview and QR edit invalidation.
+That GUI run preceded these observation windows. It is not every tool's end-to-end acceptance and is
+not network observation of all 49 forms. See [the dated feature pass](verification/2026-11-22-native-feature-pass.md).
+
+No real provider codec/device, live clipboard collection, screen capture, OS settings change, destructive
+action or ECB request was used in these windows. The separate real synthetic FFmpeg core smoke in the
+feature record is not part of these endpoint traces. Snapshot timing, DNS/OS-broker/driver attribution,
+packets, actual-provider and other-OS runtime gates remain open. No host security/privacy/network setting
+was changed, and no universal zero-network claim or release publication is authorized by these results.
+
+## Earlier community candidate a7c91bd — 2026-11-22
 
 Source `a7c91bd696af0f80c86029336593e3d37d64f78b`, Rust 1.95.0 Windows EXE SHA-256
 `1c8715a5b9739ad1142bc91475d552ea0384fbd538651704d4f687da6756c7c3` (13,581,312 bytes), completed a
@@ -26,7 +98,7 @@ capture, clipboard collection, network refresh, OS settings or destructive tool 
 profile prevented startup registration. Raw evidence remains under `target/native-privacy-qa/run-community-native/`.
 
 Owner-PID snapshots can miss short flows and do not measure DNS/OS-broker/driver or other-provider traffic.
-This is current bounded Windows evidence, not a universal offline guarantee. Earlier runs below retain their
+This is bounded Windows evidence for that earlier executable, not a universal offline guarantee. Other runs retain their
 own exact hashes/scenarios; generated-provider/active-job evidence is not silently transferred to this binary.
 See [the final artifact mapping](VALIDATION.md#community-review-candidate-a7c91bd) and [remaining gates](RELEASE.md).
 
