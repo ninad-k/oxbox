@@ -2,6 +2,21 @@ name: Bug report
 description: Something in Oxbox doesn't work as expected
 labels: [bug]
 body:
+  - type: markdown
+    attributes:
+      value: "Please use generated fixtures and redact personal paths/content. Report security vulnerabilities privately using SECURITY.md."
+  - type: dropdown
+    id: host
+    attributes:
+      label: Interface
+      options:
+        - Native desktop (eframe)
+        - Legacy Tauri desktop
+        - Browser preview (desktop commands unavailable)
+        - GitHub Pages website
+        - Installer
+    validations:
+      required: true
   - type: input
     id: tool
     attributes:
@@ -31,5 +46,10 @@ body:
   - type: input
     id: version
     attributes:
-      label: Oxbox version
-      placeholder: 0.1.0
+      label: Oxbox version and source commit
+      placeholder: "0.1.0 native; git rev-parse HEAD or artifact SHA256"
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant context
+      description: "Exact error code, provider version, X11/Wayland, DPI or accessibility tool as relevant. Include redacted logs only."

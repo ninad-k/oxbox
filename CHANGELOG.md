@@ -7,6 +7,16 @@ the presence of this changelog does not mean installers have been published.
 
 ### Release review fixes — 2026-11-22
 
+- Added a contributor documentation hub, first-contribution walkthrough, complete generated feature index,
+  troubleshooting and maintainer guides, plus focused documentation/validation issue templates.
+- Restored the stopped local legacy preview and added explicit module-download recovery with an unsaved-input
+  warning. The selected native host does not load browser modules.
+- Reminder removal now reviews the exact saved record. CPU temperature refreshes while its view is open;
+  app-set cancellation stops remaining requests and navigation discards stale scans/reviews.
+- World Time accepts pasted IANA zone IDs as well as readable city searches. Optional post-encryption Trash
+  revalidates the processed original and saved output against a transient streamed receipt before acting.
+- EAN-13 generation accepts its advertised 12-digit input. Changed OCR, barcode, color and clipboard filters
+  discard stale results. Currency refresh owns its cancellable provider and commits accepted cache updates atomically.
 - Installer running-app checks no longer force-terminate Oxbox and bypass its cleanup. NSIS asks for tray Quit;
   MSI disables automatic Restart Manager shutdown while retaining files-in-use detection.
 - Duplicate cleanup revalidates selected copies and kept files against the scanned content before any Trash call.

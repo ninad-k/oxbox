@@ -29,6 +29,8 @@ When adding or changing a tool:
    wording override; it cannot change platform metadata or source status.
 5. Run the relevant Rust checks, `pnpm check`, `pnpm test`, `node scripts/build-website.mjs`, and
    `node --test scripts/website.test.mjs`. Record native and website visual acceptance separately.
+6. Regenerate the public [feature index](../docs/FEATURES.md) with `node scripts/build-community-docs.mjs`.
+   CI runs `node scripts/build-community-docs.mjs --check` to reject drift from the canonical metadata.
 
 Registry tests compare the complete ordered metadata and use a changed catalogue fixture to prove the
 legacy UI derives values and icons from JSON. Website tests compare generated data with the same catalogue

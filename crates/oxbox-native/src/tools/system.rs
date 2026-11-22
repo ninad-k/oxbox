@@ -201,6 +201,41 @@ impl SystemTools {
         }
         handled
     }
+    pub fn leave_tool(&mut self, id: &str) {
+        if matches!(
+            id,
+            "system-monitor"
+                | "network-usage"
+                | "cpu-temperature"
+                | "do-not-sleep"
+                | "sleep-timer"
+                | "mouse-activity"
+                | "lock-screen"
+                | "hide-desktop"
+                | "presentation-mode"
+                | "do-not-disturb"
+                | "airplane-mode"
+                | "window-on-top"
+                | "window-manager"
+                | "show-desktop"
+                | "focus-window"
+                | "close-apps"
+                | "switch-resolution"
+                | "eject-volumes"
+                | "energy-saver"
+                | "hidden-files"
+                | "uninstall-apps"
+                | "launch-app-sets"
+        ) {
+            // Revoke delayed effects before cancelling view jobs. Explicitly
+            // active controllers and their independent deadlines remain owned.
+            self.runtime.shared.invalidate_pending();
+            self.monitor.leave_tool(id);
+            self.power.leave_tool();
+            self.windows.leave_tool(id);
+            self.apps.leave_tool(id);
+        }
+    }
     fn banner_action(&mut self, ctx: &egui::Context, action: runtime::Action) {
         let shared = self.runtime.shared.clone();
         let permit = shared.reserve_action(&action);
@@ -398,5 +433,31 @@ mod accessibility_tests {
         tools.shutdown();
         host.shutdown();
         assert_eq!(count, 22);
+    }
+
+    #[test]
+    fn leaving_a_power_form_keeps_an_explicitly_armed_fake_timer() {
+        let mut tools = SystemTools::default();
+        {
+            let mut state = runtime::lock(&tools.runtime.shared.state).unwrap();
+            state
+                .timer
+                .arm(
+                    100,
+                    60,
+                    oxbox_core::tools::sleep_timer::PowerAction::Shutdown,
+                )
+                .unwrap();
+        }
+        tools.leave_tool("sleep-timer");
+        assert!(
+            runtime::lock(&tools.runtime.shared.state)
+                .unwrap()
+                .timer
+                .status()
+                .is_some()
+        );
+        assert!(!tools.loaded, "fixture must not initialize native services");
+        tools.shutdown();
     }
 }

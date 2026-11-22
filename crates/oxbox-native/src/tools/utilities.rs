@@ -18,6 +18,7 @@ impl UtilitiesTools {
         match id {
             "transform-text" => self.text.transform(ui),
             "unit-converter" => {
+                let was_currency = self.text.currency_mode;
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.text.currency_mode, false, "Measurement units");
                     ui.selectable_value(
@@ -26,6 +27,9 @@ impl UtilitiesTools {
                         "Currency reference rates",
                     );
                 });
+                if was_currency && !self.text.currency_mode {
+                    self.currency.leave();
+                }
                 if self.text.currency_mode {
                     self.currency.show(ui, host)
                 } else {
@@ -57,6 +61,9 @@ impl UtilitiesTools {
     }
     pub fn leave_tool(&mut self, id: &str) {
         self.files.leave_tool(id);
+        if matches!(id, "currency-converter" | "unit-converter") {
+            self.currency.leave();
+        }
     }
     /// A synchronous tray Quit may signal reminders while a UI dialog is open.
     pub fn shutdown_request(&self) -> std::sync::Arc<std::sync::atomic::AtomicBool> {

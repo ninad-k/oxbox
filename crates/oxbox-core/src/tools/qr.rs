@@ -66,8 +66,10 @@ pub fn generate(
             (bits.into_iter().map(|v| v != 0).collect(), width, 1, 10)
         }
         CodeKind::Ean13 => {
-            if text.len() != 13 || !text.bytes().all(|c| c.is_ascii_digit()) {
-                return Err(invalid("EAN-13 needs 13 digits including its check digit"));
+            if !matches!(text.len(), 12 | 13) || !text.bytes().all(|c| c.is_ascii_digit()) {
+                return Err(invalid(
+                    "EAN-13 needs 12 digits, or 13 digits including a valid check digit",
+                ));
             }
             let bits = barcoders::sym::ean13::EAN13::new(text)
                 .map_err(invalid)?
@@ -142,6 +144,15 @@ pub fn decode_image(code: &GeneratedCode) -> CoreResult<image::RgbaImage> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn community_ean13_twelve_digits_match_the_checked_thirteen_digit_code() {
+        let unchecked = generate("400638133393", CodeKind::Ean13, "M", 512).unwrap();
+        let checked = generate("4006381333931", CodeKind::Ean13, "M", 512).unwrap();
+        assert_eq!(unchecked.svg, checked.svg);
+        assert_eq!(unchecked.png, checked.png);
+        assert!(generate("4006381333932", CodeKind::Ean13, "M", 512).is_err());
+    }
+
     #[test]
     fn release_qr_output_keeps_existing_files() {
         let dir = tempfile::tempdir().unwrap();

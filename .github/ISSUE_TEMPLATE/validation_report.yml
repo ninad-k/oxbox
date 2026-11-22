@@ -1,0 +1,41 @@
+name: Native validation report
+description: Record a reproducible tool, accessibility or installer acceptance case
+body:
+  - type: markdown
+    attributes:
+      value: "Use generated/disposable data on a consenting test desktop. This is evidence for a bounded case, not certification of all tools. Report vulnerabilities privately using SECURITY.md."
+  - type: input
+    id: scope
+    attributes:
+      label: Tool ID or acceptance gate
+      placeholder: "alarm / keyboard focus / clean-machine MSI upgrade"
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Source commit and artifact hash
+      description: "Identify the native build; a version number alone can refer to different candidates."
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Test environment
+      description: "OS/build, architecture, desktop/session, DPI, assistive technology and local provider versions as relevant. Redact identifying details."
+    validations:
+      required: true
+  - type: textarea
+    id: procedure
+    attributes:
+      label: Procedure and results
+      description: "Generated inputs, exact actions, expected/actual result and relevant Back/hide/Stop/Quit behavior. Include only redacted evidence."
+    validations:
+      required: true
+  - type: textarea
+    id: limits
+    attributes:
+      label: Coverage limits and outstanding cases
+      description: "Distinguish real native interactions, automated fixtures, source inspection and tests not performed."
+    validations:
+      required: true

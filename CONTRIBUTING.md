@@ -1,6 +1,13 @@
 # Contributing to Oxbox
 
-Thanks for helping. Oxbox grows one tool at a time, and each tool is a small, self-contained pull request.
+Help is welcome with bugs, tests, documentation, accessibility and platform acceptance. Keep each pull request
+focused on one tool or one shared concern. All 49 tool routes are implemented; remaining acceptance boxes
+identify verification work, not necessarily missing features.
+
+For fork/clone commands, a real code path to follow and your first pull request, start with the
+[contribution walkthrough](docs/GETTING_STARTED.md). The [documentation hub](docs/README.md) links the
+feature catalogue, architecture, testing, troubleshooting and maintainer guides. Current native work lives
+on `codex/native-renderer`; use it as the base for related contributions while migration review is open.
 
 ## Quick start
 
@@ -17,6 +24,7 @@ Thanks for helping. Oxbox grows one tool at a time, and each tool is a small, se
    cargo clippy -p oxbox-core -p oxbox-native --all-targets --locked -- -D warnings
    cargo test -p oxbox-core -p oxbox-native --locked
    node scripts/build-native.mjs --check
+   node scripts/build-community-docs.mjs --check
    pnpm check
    pnpm test
    pnpm build
@@ -73,6 +81,7 @@ the installed bundler is packaging tooling, not an embedded runtime.
 - **Safety first.** Tools never delete permanently by default and always confirm destructive actions.
 - **Offline.** No network calls or telemetry without prior discussion in an issue.
 - **New dependencies** need a short justification in the PR (what it does, license, maintenance, size).
+  Obtain approval before adding a dependency outside the approved task/ADR set; a justification alone is not approval.
 - **Use AI assistants freely**, but you are responsible for every line you submit. Make sure it builds, is tested, and you understand it.
 - Unless explicitly stated otherwise and agreed with maintainers, submitted contributions use the project's
   existing dual MIT OR Apache-2.0 licensing. Include attribution for any permitted third-party material.
@@ -83,5 +92,6 @@ the installed bundler is packaging tooling, not an embedded runtime.
 
 ## Code of conduct
 
-Be kind and constructive. Harassment or discrimination of any kind is not tolerated; maintainers may remove
-comments, commits or contributors that break this.
+Follow the [community code of conduct](CODE_OF_CONDUCT.md). Reviewers should explain requested changes and
+contributors should be able to ask for help without harassment. Report vulnerabilities privately using
+[SECURITY.md](SECURITY.md), not a public issue containing sensitive details.

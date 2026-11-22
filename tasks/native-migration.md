@@ -152,3 +152,12 @@ and isolated profiles cannot mutate login startup; the portable Linux archive om
 Default login hides only when the tray is available. Startup never resumes input simulation or media/history.
 Core policy/transaction/quoted-path/ownership tests use fakes; actual clean-machine install/login/uninstall
 acceptance remains open.
+
+## Community functional follow-up
+
+The [49-tool functional review](../docs/FEATURE_REVIEW.md) traces all native routes and records reproduced
+fixes with meaningful generated/fake regressions. The Windows integrated follow-up passed 221 core and 80
+native tests before the final cleanup-status regression. [Dated validation](../docs/VALIDATION.md) records
+the final source, CI and artifact evidence. Contributor onboarding, support, catalogue and maintainer guides
+are linked from the [documentation hub](../docs/README.md). Every full manual row remains pending until its
+actual native actions and supported platform/provider behavior have been recorded.

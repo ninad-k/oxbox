@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ninad-k/oxbox/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ninad-k/oxbox/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/ninad-k/oxbox/actions/workflows/ci.yml?query=branch%3Acodex%2Fnative-renderer"><img alt="Native migration CI" src="https://github.com/ninad-k/oxbox/actions/workflows/ci.yml/badge.svg?branch=codex%2Fnative-renderer" /></a>
   <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue" />
   <img alt="Status: early development" src="https://img.shields.io/badge/status-early%20development-orange" />
 </p>
@@ -114,6 +114,9 @@ src/ and src-tauri/ trees remain available for parity comparison.
 
 
 - [SPEC.md](SPEC.md): goals, scope, boundaries
+- [docs/README.md](docs/README.md): documentation hub for users, contributors and maintainers
+- [docs/FEATURES.md](docs/FEATURES.md): all 49 features, stable IDs, platforms and provider limits
+- [docs/FEATURE_REVIEW.md](docs/FEATURE_REVIEW.md): source audit, reproduced fixes and remaining manual checks
 - [tasks/plan.md](tasks/plan.md): phased roadmap with acceptance criteria
 - [AGENTS.md](AGENTS.md): conventions and the step-by-step recipe for adding a tool (for humans and AI agents)
 - [docs/adr](docs/adr): architecture decisions
@@ -135,8 +138,11 @@ src/ and src-tauri/ trees remain available for parity comparison.
 
 ## Contributing
 
-Pick a planned tool from [tasks/todo.md](tasks/todo.md), follow the recipe in [AGENTS.md](AGENTS.md),
-and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [first contribution walkthrough](docs/GETTING_STARTED.md).
+Help fix a reproducible bug, improve documentation or tests, or record a native acceptance case using
+disposable fixtures. The [49-tool matrix](tasks/native-migration.md) identifies open verification work.
+Current native changes target `codex/native-renderer`; see the [maintainer workflow](docs/MAINTAINING.md)
+for review expectations and the [code of conduct](CODE_OF_CONDUCT.md) for community standards.
 
 ## Privacy
 

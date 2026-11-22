@@ -1,10 +1,11 @@
 //! Streaming age passphrase encryption; originals are always preserved.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::time::SystemTime;
 
 use age::secrecy::{ExposeSecret, SecretString};
 
@@ -20,6 +21,193 @@ const MAX_HEADER_BYTES: usize = 64 * 1024;
 // bytes, plus implementation overhead. Avoid CPU-calibrated unbounded RAM use.
 const ENCRYPT_WORK_FACTOR: u8 = 18;
 const MAX_DECRYPT_WORK_FACTOR: u8 = 20;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FileStamp {
+    len: u64,
+    modified: Option<SystemTime>,
+    identity: (u64, u64),
+}
+impl FileStamp {
+    fn read(file: &File) -> CoreResult<Self> {
+        let metadata = file.metadata()?;
+        if !metadata.is_file() {
+            return Err(crypt_error("choose a regular file"));
+        }
+        Ok(Self {
+            len: metadata.len(),
+            modified: metadata.modified().ok(),
+            identity: file_identity(file, &metadata)?,
+        })
+    }
+}
+fn file_identity(file: &File, metadata: &fs::Metadata) -> CoreResult<(u64, u64)> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::{
+            BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+        };
+        let _ = metadata;
+        let mut information: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+        if unsafe { GetFileInformationByHandle(file.as_raw_handle() as _, &mut information) } == 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        Ok((
+            u64::from(information.dwVolumeSerialNumber),
+            (u64::from(information.nFileIndexHigh) << 32) | u64::from(information.nFileIndexLow),
+        ))
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        let _ = file;
+        Ok((metadata.dev(), metadata.ino()))
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        let _ = (file, metadata);
+        Err(crypt_error("file identity is unavailable on this platform"))
+    }
+}
+
+/// Transient proof of the bytes processed and output written by one successful job.
+/// No passphrase is retained, and the receipt is deliberately not serializable.
+#[derive(Debug, Clone)]
+pub struct TransformReceipt {
+    pub source: PathBuf,
+    pub output: PathBuf,
+    source_stamp: FileStamp,
+    source_hash: [u8; 32],
+    output_stamp: FileStamp,
+    output_hash: [u8; 32],
+}
+struct DigestReader<R> {
+    input: R,
+    digest: Rc<RefCell<blake3::Hasher>>,
+}
+impl<R: Read> Read for DigestReader<R> {
+    fn read(&mut self, bytes: &mut [u8]) -> std::io::Result<usize> {
+        let count = self.input.read(bytes)?;
+        self.digest.borrow_mut().update(&bytes[..count]);
+        Ok(count)
+    }
+}
+struct DigestWriter<W> {
+    output: W,
+    digest: Rc<RefCell<blake3::Hasher>>,
+}
+impl<W: Write> Write for DigestWriter<W> {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        let count = self.output.write(bytes)?;
+        self.digest.borrow_mut().update(&bytes[..count]);
+        Ok(count)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.output.flush()
+    }
+}
+
+fn changed_receipt() -> CoreError {
+    crypt_error(
+        "the original or saved output is missing, replaced or changed; keep both files and process/review them again before Trash",
+    )
+}
+fn capture_fingerprint(
+    path: &Path,
+    cancel: &CancelToken,
+    progress: &mut dyn FnMut(Progress),
+) -> CoreResult<(FileStamp, [u8; 32])> {
+    cancel.check()?;
+    crate::fs_safe::reject_symlink_components(path)?;
+    let mut file = File::open(path)?;
+    let before = FileStamp::read(&file)?;
+    let mut hash = blake3::Hasher::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    let mut done = 0_u64;
+    loop {
+        cancel.check()?;
+        let count = file.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        done = done.saturating_add(count as u64);
+        if done > before.len {
+            return Err(changed_receipt());
+        }
+        hash.update(&buffer[..count]);
+        progress(Progress {
+            done,
+            total: before.len,
+            message: "Revalidating original and saved output before Trash".into(),
+        });
+    }
+    cancel.check()?;
+    if done != before.len || FileStamp::read(&file)? != before {
+        return Err(changed_receipt());
+    }
+    Ok((before, *hash.finalize().as_bytes()))
+}
+fn validate_stamp(path: &Path, expected: &FileStamp) -> CoreResult<()> {
+    crate::fs_safe::reject_symlink_components(path)?;
+    if FileStamp::read(&File::open(path)?)? != *expected {
+        return Err(changed_receipt());
+    }
+    Ok(())
+}
+
+/// Revalidate both processed bytes and saved backup before an explicitly confirmed Trash request.
+/// This preflight narrows ordinary replacement/edit races; it is not an atomic filesystem transaction.
+pub fn trash_original(
+    receipt: &TransformReceipt,
+    confirmed: bool,
+    cancel: &CancelToken,
+    progress: &mut dyn FnMut(Progress),
+) -> CoreResult<usize> {
+    trash_original_with(
+        receipt,
+        confirmed,
+        cancel,
+        progress,
+        crate::fs_safe::move_to_trash,
+    )
+}
+fn trash_original_with(
+    receipt: &TransformReceipt,
+    confirmed: bool,
+    cancel: &CancelToken,
+    progress: &mut dyn FnMut(Progress),
+    trash: impl FnOnce(&[PathBuf]) -> CoreResult<usize>,
+) -> CoreResult<usize> {
+    cancel.check()?;
+    if !confirmed {
+        return Err(crypt_error("confirm the reviewed original before Trash"));
+    }
+    let source = crate::fs_safe::validate_trash_path(&receipt.source)?;
+    for (path, stamp, hash) in [
+        (&receipt.source, &receipt.source_stamp, &receipt.source_hash),
+        (&receipt.output, &receipt.output_stamp, &receipt.output_hash),
+    ] {
+        cancel.check()?;
+        validate_stamp(path, stamp).map_err(|_| changed_receipt())?;
+        let current = capture_fingerprint(path, cancel, progress).map_err(|error| {
+            if matches!(error, CoreError::Cancelled) {
+                error
+            } else {
+                changed_receipt()
+            }
+        })?;
+        if current.0 != *stamp || current.1 != *hash {
+            return Err(changed_receipt());
+        }
+    }
+    // Recheck earlier identities/stamps after both full streaming comparisons.
+    // Files must remain closed/unchanged; another process can still race the OS Trash call.
+    validate_stamp(&receipt.source, &receipt.source_stamp).map_err(|_| changed_receipt())?;
+    validate_stamp(&receipt.output, &receipt.output_stamp).map_err(|_| changed_receipt())?;
+    cancel.check()?;
+    trash(&[source])
+}
 
 /// Limit age's accumulating header parser, then lift only that budget for the
 /// streaming encrypted payload. Cancellation remains active for all reads.
@@ -125,6 +313,17 @@ pub fn transform_file(
     cancel: &CancelToken,
     progress: &mut dyn FnMut(Progress),
 ) -> CoreResult<()> {
+    transform_file_with_receipt(source, output, passphrase, decrypt, cancel, progress).map(|_| ())
+}
+
+pub fn transform_file_with_receipt(
+    source: &Path,
+    output: &Path,
+    passphrase: String,
+    decrypt: bool,
+    cancel: &CancelToken,
+    progress: &mut dyn FnMut(Progress),
+) -> CoreResult<TransformReceipt> {
     let passphrase = SecretString::from(passphrase);
     if passphrase.expose_secret().is_empty() || passphrase.expose_secret().len() > 4096 {
         return Err(CoreError::InvalidInput(
@@ -133,12 +332,15 @@ pub fn transform_file(
     }
     cancel.check()?;
     let input = File::open(source)?;
-    let metadata = input.metadata()?;
-    if !metadata.is_file() {
-        return Err(CoreError::InvalidInput("choose a regular file".into()));
-    }
-    let total = metadata.len();
-    let mut input = BufReader::new(input);
+    let source_stamp = FileStamp::read(&input)?;
+    let total = source_stamp.len;
+    let source_hash = Rc::new(RefCell::new(blake3::Hasher::new()));
+    let output_hash = Rc::new(RefCell::new(blake3::Hasher::new()));
+    let mut input = BufReader::new(DigestReader {
+        input,
+        digest: source_hash.clone(),
+    });
+    let source_path = std::path::absolute(source)?;
     // Resolve the parent before creating output; never replace an existing destination.
     let parent = output
         .parent()
@@ -163,7 +365,10 @@ pub fn transform_file(
         ));
     }
     let result = (|| {
-        let mut writer = BufWriter::new(file);
+        let mut writer = DigestWriter {
+            output: BufWriter::new(file),
+            digest: output_hash.clone(),
+        };
         if decrypt {
             let decryptor = bounded_decryptor(input, cancel)?;
             if !decryptor.is_scrypt() {
@@ -198,7 +403,17 @@ pub fn transform_file(
             encrypted.finish().map_err(crypt_error)?;
         }
         writer.flush()?;
-        writer.get_ref().sync_all()?;
+        writer.output.get_ref().sync_all()?;
+        let written_stamp = FileStamp::read(writer.output.get_ref())?;
+        drop(writer);
+        // Closing a Windows write handle can finalize its last-write timestamp.
+        // Retain the original identity if an external actor replaced the output path.
+        let current_stamp = FileStamp::read(&File::open(&destination)?)?;
+        let output_stamp = if current_stamp.identity == written_stamp.identity {
+            current_stamp
+        } else {
+            written_stamp
+        };
         cancel.check()?;
         progress(Progress {
             done: total,
@@ -210,7 +425,14 @@ pub fn transform_file(
             }
             .into(),
         });
-        Ok(())
+        Ok(TransformReceipt {
+            source: source_path,
+            output: destination.clone(),
+            source_stamp,
+            source_hash: *source_hash.borrow().finalize().as_bytes(),
+            output_stamp,
+            output_hash: *output_hash.borrow().finalize().as_bytes(),
+        })
     })();
     let result = if result.is_err() && cancel.check().is_err() {
         Err(CoreError::Cancelled)
@@ -231,6 +453,165 @@ pub fn transform_file(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fixture_receipt(source: &Path, output: &Path) -> TransformReceipt {
+        let token = CancelToken::default();
+        let (source_stamp, source_hash) = capture_fingerprint(source, &token, &mut |_| {}).unwrap();
+        let (output_stamp, output_hash) = capture_fingerprint(output, &token, &mut |_| {}).unwrap();
+        TransformReceipt {
+            source: source.to_path_buf(),
+            output: output.to_path_buf(),
+            source_stamp,
+            source_hash,
+            output_stamp,
+            output_hash,
+        }
+    }
+
+    #[test]
+    fn encryption_trash_receipt_refuses_changed_original_or_missing_changed_backup() {
+        for changed in ["source", "output", "missing-output", "replacement-source"] {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source.txt");
+            let output = directory.path().join("backup.age");
+            fs::write(&source, b"source fixture").unwrap();
+            fs::write(&output, b"output fixture").unwrap();
+            let receipt = fixture_receipt(&source, &output);
+            let held_original = File::open(&source).unwrap();
+            match changed {
+                "source" => fs::write(&source, b"edited source!").unwrap(),
+                "output" => fs::write(&output, b"edited backup!").unwrap(),
+                "missing-output" => fs::remove_file(&output).unwrap(),
+                _ => {
+                    fs::remove_file(&source).unwrap();
+                    fs::write(&source, b"source fixture").unwrap();
+                    File::options()
+                        .write(true)
+                        .open(&source)
+                        .unwrap()
+                        .set_modified(receipt.source_stamp.modified.unwrap())
+                        .unwrap();
+                }
+            }
+            let mut effected = false;
+            let result =
+                trash_original_with(&receipt, true, &CancelToken::default(), &mut |_| {}, |_| {
+                    effected = true;
+                    Ok(1)
+                });
+            assert!(
+                result.is_err(),
+                "{changed} must invalidate the backup receipt"
+            );
+            assert!(!effected, "changed files must not reach the Trash backend");
+            assert!(source.exists());
+            drop(held_original);
+        }
+    }
+
+    #[test]
+    fn encryption_trash_receipt_requires_confirmation_and_cancellation_preflight() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("source.txt");
+        let output = directory.path().join("backup.age");
+        fs::write(&source, b"source fixture").unwrap();
+        fs::write(&output, b"output fixture").unwrap();
+        let receipt = fixture_receipt(&source, &output);
+        let mut calls = 0;
+        assert_eq!(
+            trash_original_with(
+                &receipt,
+                true,
+                &CancelToken::default(),
+                &mut |_| {},
+                |paths| {
+                    calls += 1;
+                    assert_eq!(paths, &[source.canonicalize().unwrap()]);
+                    assert!(output.exists());
+                    Ok(1)
+                }
+            )
+            .unwrap(),
+            1
+        );
+        assert_eq!(calls, 1);
+        assert!(
+            trash_original_with(
+                &receipt,
+                false,
+                &CancelToken::default(),
+                &mut |_| {},
+                |_| panic!("unconfirmed Trash")
+            )
+            .is_err()
+        );
+        let cancel = CancelToken::default();
+        cancel.cancel();
+        assert_eq!(
+            trash_original_with(&receipt, true, &cancel, &mut |_| {}, |_| panic!(
+                "cancelled Trash"
+            ))
+            .unwrap_err()
+            .code(),
+            "cancelled"
+        );
+    }
+
+    #[test]
+    fn encryption_receipt_hashes_actual_stream_when_source_rewrites_preserve_metadata() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("source.txt");
+        let output = directory.path().join("backup.fixture");
+        fs::write(&source, vec![b'a'; 128 * 1024]).unwrap();
+        let input_file = File::open(&source).unwrap();
+        let source_stamp = FileStamp::read(&input_file).unwrap();
+        let source_digest = Rc::new(std::cell::RefCell::new(blake3::Hasher::new()));
+        let output_digest = Rc::new(std::cell::RefCell::new(blake3::Hasher::new()));
+        let mut reader = DigestReader {
+            input: input_file,
+            digest: source_digest.clone(),
+        };
+        let mut writer = DigestWriter {
+            output: File::create(&output).unwrap(),
+            digest: output_digest.clone(),
+        };
+        let mut changed = false;
+        stream_copy(
+            &mut reader,
+            &mut writer,
+            source_stamp.len,
+            &CancelToken::default(),
+            &mut |_| {
+                if !changed {
+                    changed = true;
+                    let mut edit = File::options().write(true).open(&source).unwrap();
+                    edit.write_all(b"changed already-read prefix").unwrap();
+                    edit.set_modified(source_stamp.modified.unwrap()).unwrap();
+                }
+            },
+        )
+        .unwrap();
+        writer.flush().unwrap();
+        let receipt = TransformReceipt {
+            source: source.clone(),
+            output: output.clone(),
+            source_stamp,
+            source_hash: *source_digest.borrow().finalize().as_bytes(),
+            output_stamp: FileStamp::read(&writer.output).unwrap(),
+            output_hash: *output_digest.borrow().finalize().as_bytes(),
+        };
+        assert!(
+            trash_original_with(
+                &receipt,
+                true,
+                &CancelToken::default(),
+                &mut |_| {},
+                |_| panic!("mixed snapshot Trash")
+            )
+            .is_err()
+        );
+        assert_ne!(fs::read(source).unwrap(), fs::read(output).unwrap());
+    }
     #[test]
     fn privacy_excessive_work_is_distinct_without_running_an_expensive_kdf() {
         let directory = tempfile::tempdir().unwrap();
@@ -311,7 +692,7 @@ mod tests {
         let decrypted = dir.path().join("restored");
         std::fs::write(&source, b"original contents\0with binary".repeat(5000)).unwrap();
         let token = crate::jobs::CancelToken::default();
-        transform_file(
+        let receipt = transform_file_with_receipt(
             &source,
             &encrypted,
             "correct horse battery staple".into(),
@@ -320,6 +701,27 @@ mod tests {
             &mut |_| {},
         )
         .unwrap();
+        assert_eq!(
+            receipt.source_hash,
+            *blake3::hash(&fs::read(&source).unwrap()).as_bytes()
+        );
+        assert_eq!(
+            receipt.output_hash,
+            *blake3::hash(&fs::read(&encrypted).unwrap()).as_bytes()
+        );
+        assert_eq!(
+            trash_original_with(&receipt, true, &token, &mut |_| {}, |_| Ok(1)).unwrap(),
+            1
+        );
+        let original = fs::read(&source).unwrap();
+        fs::write(&source, b"edited original after encryption").unwrap();
+        assert!(
+            trash_original_with(&receipt, true, &token, &mut |_| {}, |_| panic!(
+                "stale real encryption receipt reached Trash"
+            ))
+            .is_err()
+        );
+        fs::write(&source, original).unwrap();
         assert!(source.exists());
         let mut header = BufReader::new(File::open(&encrypted).unwrap()).lines();
         assert_eq!(header.next().unwrap().unwrap(), "age-encryption.org/v1");

@@ -405,3 +405,39 @@ Clean-machine installation/login/upgrade/uninstall remains pending at the user's
 extraction, full devices/monitor/IME/screen-reader/runtime matrix, real-provider/DNS coverage, human security/
 attribution review and the documented Linux GLib finding remain open. No final universal privacy or release
 acceptance is inferred from these bounded checks.
+
+## 2026-11-22 community and functional follow-up
+
+Three parallel source audits traced all **49 native routes** (13 utilities, 14 media, 22 system) through
+their concrete controls and core APIs. [The functional review](FEATURE_REVIEW.md) lists reproduced gaps,
+test names and remaining limits. No full native manual row is closed by this source review.
+
+- Fixed confirmed reminder removal, currency cancellation/atomic cache admission, temperature polling,
+  app-set cancellation/review cleanup, system navigation, stale media/search results, advertised EAN-13
+  input and pasted IANA search. Optional original-file Trash now binds to streamed input/output hashes,
+  file identities and stamps; generated-effect guards and the real age round trip pass.
+- The exact Rust 1.95.0 integrated Windows run passed **221 core + 80 native tests**, zero failed/ignored;
+  strict all-target Clippy and formatting passed. The core suite took 164.04 seconds, dominated by the
+  existing real passphrase test; native tests took 0.46 seconds. Later native-only status checks are recorded
+  with the final source/artifact mapping below rather than silently included in these counts.
+- The final native-only run passed **81 tests**, zero failed/ignored (0.48 seconds), after the independent
+  review caught consumed cleanup status. Its actual poll/headless regression now preserves success, avoids
+  repeated Trash offers and reports uncertainty after a cancelled/errored OS cleanup attempt. Strict Clippy
+  and formatting passed again; core source was unchanged after its 221-test run.
+- Svelte/TypeScript check: zero errors/warnings. All **39 UI unit tests** and the production legacy build pass.
+  All 49 lazy view imports remain covered. Packaging/notice/observer regressions: **21 passed**; website:
+  **3 passed**, with 49 canonical tools and 7 categories.
+- The new generated community feature index matches canonical metadata. A local check verified **156 file
+  references across 14 contributor/architecture documents**; a separate review checked heading anchors and
+  corrected fork instructions, preview-only advice and Focus overlay terminology.
+- The reported `127.0.0.1:4174` module load failure was reproduced as a refused connection to a stopped
+  preview server. The existing chunk remained on disk; after restoring the server, its exact URL returned
+  HTTP 200 JavaScript and the Unit Converter form loaded in the browser. A regression-tested explicit reload
+  action now explains unavailable modules and warns about unsaved input. Desktop commands still require a host.
+- Windows notices remain 355 packages, zero missing texts and three human attribution reviews. No dependency
+  or lockfile change was needed for this follow-up. The Linux GLib finding and other human reviews stay open.
+
+This section records source/test evidence. Replacement production artifacts, all-platform CI and any new
+runtime observation must identify their own source/hash before replacing the draft. The earlier `d8d1d1e`
+artifacts and endpoint windows remain historical. Clean-machine testing remains pending at the user's request;
+full manual/hardware/provider/DNS/accessibility and independent human acceptance remain release gates.

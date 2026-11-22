@@ -1,15 +1,12 @@
 use super::{bytes, field};
 use crate::jobs::Task;
 use eframe::egui::{self, Ui};
-use oxbox_core::{
-    fs_safe,
-    tools::{
-        archive::{self, ArchiveFormat},
-        checksum::{self, Algorithm},
-        clean_drive::{self, CleanCategory},
-        duplicates::{self, DuplicateResult},
-        encrypt,
-    },
+use oxbox_core::tools::{
+    archive::{self, ArchiveFormat},
+    checksum::{self, Algorithm},
+    clean_drive::{self, CleanCategory},
+    duplicates::{self, DuplicateResult},
+    encrypt,
 };
 use std::{collections::HashSet, path::PathBuf};
 
@@ -83,6 +80,12 @@ fn list(ui: &mut Ui, paths: &mut Vec<PathBuf>) {
     }
 }
 
+struct OriginalCleanup {
+    source: PathBuf,
+    output: PathBuf,
+    trashed: bool,
+}
+
 pub(super) struct FileTools {
     checksum_path: String,
     algorithm: Algorithm,
@@ -110,7 +113,8 @@ pub(super) struct FileTools {
     password: String,
     confirmation: String,
     offer_trash: bool,
-    crypt: Task<(PathBuf, PathBuf)>,
+    crypt: Task<encrypt::TransformReceipt>,
+    original_cleanup: Option<OriginalCleanup>,
 }
 impl Default for FileTools {
     fn default() -> Self {
@@ -142,6 +146,7 @@ impl Default for FileTools {
             confirmation: String::new(),
             offer_trash: false,
             crypt: Task::default(),
+            original_cleanup: None,
         }
     }
 }
@@ -167,6 +172,7 @@ impl FileTools {
             "encrypt-files" => {
                 self.crypt.abandon();
                 self.trash.abandon();
+                self.reset_crypt_result();
                 self.clear_secrets();
             }
             _ => {}
@@ -180,12 +186,34 @@ impl FileTools {
         self.trash.poll();
         self.crypt.poll();
         if let Some(count) = self.trash.result.take() {
+            if self
+                .original_cleanup
+                .as_ref()
+                .is_some_and(|state| !state.trashed)
+            {
+                if count == 1 {
+                    if let Some(state) = &mut self.original_cleanup {
+                        state.trashed = true;
+                    }
+                } else {
+                    self.original_cleanup = None;
+                }
+            }
             self.message =
                 format!("Moved {count} files to Trash. Scan again before further cleanup.");
             self.duplicates.result = None;
             self.cleanup.result = None;
             self.selected.clear();
             self.categories.clear();
+        }
+        if !self.trash.running()
+            && self.trash.error.is_some()
+            && self
+                .original_cleanup
+                .as_ref()
+                .is_some_and(|state| !state.trashed)
+        {
+            self.original_cleanup = None;
         }
     }
     pub fn shutdown(&mut self) {
@@ -394,7 +422,7 @@ impl FileTools {
                     self.output.clear();
                     self.password.clear();
                     self.confirmation.clear();
-                    self.crypt.result = None;
+                    self.reset_crypt_result();
                 }
             });
             picker(ui, "source file", &mut self.source, 0);
@@ -403,7 +431,7 @@ impl FileTools {
             }
             picker(ui, "new output filename", &mut self.output, 2);
             if self.source != previous_source || self.output != previous_output {
-                self.crypt.result = None;
+                self.reset_crypt_result();
             }
             password_field(ui, "Passphrase", &mut self.password);
             if !self.decrypt {
@@ -438,48 +466,163 @@ impl FileTools {
                 let password = std::mem::take(&mut self.password);
                 self.confirmation.clear();
                 let decrypt = self.decrypt;
+                self.reset_crypt_result();
+                self.trash.result = None;
+                self.trash.error = None;
+                self.message.clear();
                 self.crypt.start(ui.ctx(), move |cancel, progress| {
-                    encrypt::transform_file(
+                    encrypt::transform_file_with_receipt(
                         &source, &output, password, decrypt, &cancel, progress,
-                    )?;
-                    Ok((source, output))
+                    )
                 });
             }
         });
         self.crypt.show(ui);
-        if let Some((source, output)) = &self.crypt.result {
-            ui.label(format!("Saved {}. Original kept.", output.display()));
-            if self.offer_trash
-                && ui
-                    .add_enabled(
-                        !self.trash.running(),
-                        egui::Button::new("Review original for Trash…"),
-                    )
-                    .clicked()
-            {
-                let source = source.clone();
-                if confirm(
-                    ui.ctx(),
-                    "Move original to Trash?",
-                    format!(
-                        "Output saved successfully to:\n{}\n\nMove ONLY the original to Recycle Bin / Trash?\n{}",
-                        output.display(),
-                        source.display()
-                    ),
-                ) {
-                    self.trash.start(ui.ctx(), move |cancel, _| {
-                        cancel.check()?;
-                        fs_safe::move_to_trash(&[source])
-                    });
+        if let Some(receipt) = &self.crypt.result
+            && self.original_cleanup_review(ui, &receipt.source, &receipt.output)
+        {
+            let receipt = receipt.clone();
+            if confirm(
+                ui.ctx(),
+                "Move original to Trash?",
+                format!(
+                    "Output saved successfully to:\n{}\n\nMove ONLY the original to Recycle Bin / Trash?\n{}\n\nBoth files will be revalidated against the bytes processed by this job. Keep them closed and unchanged; this check is not an atomic lock against other programs.",
+                    receipt.output.display(),
+                    receipt.source.display()
+                ),
+            ) {
+                let source = receipt.source.clone();
+                let output = receipt.output.clone();
+                if self.trash.start(ui.ctx(), move |cancel, progress| {
+                    encrypt::trash_original(&receipt, true, &cancel, progress)
+                }) {
+                    self.track_original_cleanup(&source, &output);
                 }
             }
         }
+    }
+    fn track_original_cleanup(&mut self, source: &std::path::Path, output: &std::path::Path) {
+        self.original_cleanup = Some(OriginalCleanup {
+            source: source.to_path_buf(),
+            output: output.to_path_buf(),
+            trashed: false,
+        });
+    }
+    fn original_was_trashed(&self, source: &std::path::Path, output: &std::path::Path) -> bool {
+        self.original_cleanup
+            .as_ref()
+            .is_some_and(|state| state.trashed && state.source == source && state.output == output)
+    }
+    fn original_cleanup_review(
+        &self,
+        ui: &mut Ui,
+        source: &std::path::Path,
+        output: &std::path::Path,
+    ) -> bool {
+        let trashed = self.original_was_trashed(source, output);
+        let summary = format!(
+            "Saved {}. {}",
+            output.display(),
+            if trashed {
+                "Original moved to Trash."
+            } else if self.trash.error.is_some() {
+                // Cancellation cannot undo a Trash call already admitted to the OS.
+                "Check the original and Trash before retrying cleanup."
+            } else if self.original_cleanup.is_some() && self.trash.running() {
+                "Original cleanup is in progress."
+            } else {
+                "Original kept."
+            }
+        );
+        if trashed {
+            crate::accessibility::status(ui, &summary);
+        } else {
+            ui.label(summary);
+        }
+        self.offer_trash
+            && !trashed
+            && ui
+                .add_enabled(
+                    !self.trash.running(),
+                    egui::Button::new("Review original for Trash…"),
+                )
+                .clicked()
+    }
+    fn reset_crypt_result(&mut self) {
+        self.crypt.result = None;
+        self.original_cleanup = None;
+        self.message.clear();
     }
 }
 
 #[cfg(test)]
 mod privacy_tests {
     use super::*;
+
+    #[test]
+    fn encrypted_original_cleanup_survives_poll_and_does_not_reoffer_trash() {
+        let source = PathBuf::from("generated-original.txt");
+        let output = PathBuf::from("generated-backup.age");
+        let mut tools = FileTools {
+            offer_trash: true,
+            ..Default::default()
+        };
+        tools.track_original_cleanup(&source, &output);
+        tools.trash.result = Some(1);
+        tools.poll();
+        assert!(
+            tools.trash.result.is_none(),
+            "shared poller consumes the completion"
+        );
+        let nodes = crate::accessibility::test_tree(|ui| {
+            tools.original_cleanup_review(ui, &source, &output);
+        });
+        assert!(
+            nodes.iter().any(|node| {
+                node.label()
+                    .or_else(|| node.value())
+                    .is_some_and(|label| label.contains("Original moved to Trash"))
+            }),
+            "cleanup state={}, nodes={nodes:?}",
+            tools.original_was_trashed(&source, &output)
+        );
+        assert!(
+            !nodes
+                .iter()
+                .any(|node| node.role() == egui::accesskit::Role::Button
+                    && node.label() == Some("Review original for Trash…"))
+        );
+        tools.poll();
+        assert!(tools.original_was_trashed(&source, &output));
+        tools.reset_crypt_result();
+        assert!(!tools.original_was_trashed(&source, &output));
+        tools.trash.result = Some(1); // unrelated generic cleanup completion
+        tools.poll();
+        assert!(!tools.original_was_trashed(&source, &output));
+        tools.track_original_cleanup(&source, &output);
+        tools.trash.error = Some("Cancelled".into());
+        tools.poll();
+        assert!(!tools.original_was_trashed(&source, &output));
+        let nodes = crate::accessibility::test_tree(|ui| {
+            tools.original_cleanup_review(ui, &source, &output);
+        });
+        assert!(nodes.iter().any(|node| {
+            node.label()
+                .or_else(|| node.value())
+                .is_some_and(|text| text.contains("Check the original and Trash"))
+        }));
+        assert!(!nodes.iter().any(|node| {
+            node.label()
+                .or_else(|| node.value())
+                .is_some_and(|text| text.contains("Original kept."))
+        }));
+        tools.track_original_cleanup(&source, &output);
+        tools.trash.result = Some(1);
+        tools.trash.error = None;
+        tools.poll();
+        tools.leave_tool("encrypt-files");
+        assert!(!tools.original_was_trashed(&source, &output));
+    }
 
     fn render_password(
         context: &egui::Context,

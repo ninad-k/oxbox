@@ -101,6 +101,7 @@ Do not tick a phase checkpoint or publish a release until its recorded acceptanc
 ## Website checks
 
 ```bash
+node scripts/build-community-docs.mjs --check
 node scripts/build-website.mjs
 node --test scripts/website.test.mjs
 ```

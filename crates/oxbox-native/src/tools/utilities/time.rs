@@ -84,6 +84,67 @@ struct Draft {
     later: bool,
     notify: bool,
 }
+#[derive(Clone)]
+enum ReminderRemoval {
+    Alarm(Alarm),
+    Countdown(Countdown),
+}
+impl ReminderRemoval {
+    fn identity(&self) -> CoreResult<serde_json::Value> {
+        match self {
+            Self::Alarm(item) => serde_json::to_value(&item.input),
+            Self::Countdown(item) => serde_json::to_value(&item.input),
+        }
+        .map_err(|error| {
+            CoreError::InvalidInput(format!("Could not review this reminder: {error}"))
+        })
+    }
+    fn matches(&self, alarms: &AlarmBook, dates: &CountdownBook) -> CoreResult<()> {
+        let current = match self {
+            Self::Alarm(reviewed) => alarms
+                .items
+                .iter()
+                .find(|item| item.id == reviewed.id)
+                .map(|item| serde_json::to_value(&item.input)),
+            Self::Countdown(reviewed) => dates
+                .items
+                .iter()
+                .find(|item| item.id == reviewed.id)
+                .map(|item| serde_json::to_value(&item.input)),
+        }
+        .transpose()
+        .map_err(|error| CoreError::InvalidInput(error.to_string()))?;
+        if current.as_ref() != Some(&self.identity()?) {
+            return Err(CoreError::InvalidInput(
+                "The reviewed reminder changed. Review its current details before removing it."
+                    .into(),
+            ));
+        }
+        Ok(())
+    }
+    fn description(&self) -> (&'static str, String) {
+        let (kind, label, date, zone) = match self {
+            Self::Alarm(item) => (
+                "alarm",
+                &item.input.label,
+                &item.input.local_date_time,
+                &item.input.zone,
+            ),
+            Self::Countdown(item) => (
+                "date countdown",
+                &item.input.label,
+                &item.input.local_date_time,
+                &item.input.zone,
+            ),
+        };
+        (
+            kind,
+            format!(
+                "Remove ONLY this saved {kind}?\n\nName: {label}\nLocal time: {date}\nTime zone: {zone}\n\nOther reminders are kept."
+            ),
+        )
+    }
+}
 impl Default for Draft {
     fn default() -> Self {
         Self {
@@ -560,16 +621,12 @@ impl TimeTools {
     }
     fn world(&mut self, ui: &mut Ui, host: &mut Host) {
         field(ui, "Search IANA time zones", &mut self.query);
-        let query = self.query.to_lowercase();
         let Ok(mut state) = self.state.lock() else {
             return;
         };
-        let matches = world_time::zones()
+        let matches = world_time::search_zones(&self.query)
             .into_iter()
-            .filter(|zone| {
-                !state.zones.iter().any(|current| current == zone)
-                    && zone.to_lowercase().replace('_', " ").contains(&query)
-            })
+            .filter(|zone| !state.zones.iter().any(|current| current == zone))
             .take(100)
             .collect::<Vec<_>>();
         if !matches.contains(&self.zone.as_str()) {
@@ -693,6 +750,60 @@ impl TimeTools {
             }
         }
     }
+    fn remove_with(
+        &self,
+        host: &Host,
+        reviewed: ReminderRemoval,
+        confirm: impl FnOnce(&str, &str) -> bool,
+    ) {
+        if self.stopping.load(Ordering::Acquire) {
+            return;
+        }
+        let valid = {
+            let Ok(state) = self.state.lock() else {
+                return;
+            };
+            if !state.ready {
+                return;
+            }
+            reviewed.matches(&state.alarms, &state.countdowns)
+        };
+        if let Err(error) = valid {
+            if let Ok(mut state) = self.state.lock() {
+                state.error = error.to_string();
+            }
+            return;
+        }
+        // No reminder mutex is held across the synchronous native dialog: hidden
+        // notifications and tray Quit must continue while the decision is pending.
+        let (kind, description) = reviewed.description();
+        if !confirm(&format!("Remove {kind}?"), &description)
+            || self.stopping.load(Ordering::Acquire)
+        {
+            return;
+        }
+        self.books(host, move |alarms, dates| {
+            if self.stopping.load(Ordering::Acquire) {
+                return Err(CoreError::Cancelled);
+            }
+            reviewed.matches(alarms, dates)?;
+            match reviewed {
+                ReminderRemoval::Alarm(item) => alarms.remove(item.id),
+                ReminderRemoval::Countdown(item) => dates.remove(item.id),
+            }
+        });
+    }
+    fn confirm_remove(&self, ui: &Ui, host: &Host, reviewed: ReminderRemoval) {
+        self.remove_with(host, reviewed, |title, description| {
+            crate::host::dialogs::message(ui.ctx())
+                .set_title(title)
+                .set_description(description)
+                .set_level(rfd::MessageLevel::Warning)
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .show()
+                == rfd::MessageDialogResult::Yes
+        });
+    }
     fn draft(ui: &mut Ui, draft: &mut Draft) {
         field(ui, "Name", &mut draft.label);
         field(
@@ -749,6 +860,7 @@ impl TimeTools {
             .map(|state| state.alarms.items.clone())
             .unwrap_or_default();
         let mut action = None;
+        let mut removal = None;
         for alarm in items {
             ui.group(|ui| {
                 ui.heading(&alarm.input.label);
@@ -801,7 +913,7 @@ impl TimeTools {
                     )
                     .clicked()
                     {
-                        action = Some((alarm.id, 3, false));
+                        removal = Some(ReminderRemoval::Alarm(alarm.clone()));
                     }
                 });
             });
@@ -811,8 +923,11 @@ impl TimeTools {
                 0 => alarms.set_enabled(id, enabled, unix_now()),
                 1 => alarms.snooze(id, unix_now(), 5),
                 2 => alarms.dismiss(id),
-                _ => alarms.remove(id),
+                _ => Ok(()),
             });
+        }
+        if let Some(reviewed) = removal {
+            self.confirm_remove(ui, host, reviewed);
         }
         ui.label("Alarms and ringing state persist. Due notifications run while the launcher is hidden; recurring alarms follow the chosen IANA zone.");
     }
@@ -871,12 +986,12 @@ impl TimeTools {
                 )
                 .clicked()
                 {
-                    remove = Some(snapshot.item.id);
+                    remove = Some(ReminderRemoval::Countdown(snapshot.item.clone()));
                 }
             });
         }
-        if let Some(id) = remove {
-            self.books(host, move |_, dates| dates.remove(id));
+        if let Some(reviewed) = remove {
+            self.confirm_remove(ui, host, reviewed);
         }
         ui.ctx().request_repaint_after(Duration::from_secs(1));
     }
@@ -971,6 +1086,162 @@ impl TimeTools {
 impl Drop for TimeTools {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod removal_tests {
+    use super::*;
+
+    fn fixture() -> (tempfile::TempDir, Host, TimeTools) {
+        let directory = tempfile::tempdir().unwrap();
+        let host = Host::new(directory.path().to_path_buf()).unwrap();
+        let mut tools = TimeTools::default();
+        tools.loaded = true;
+        {
+            let mut state = tools.state.lock().unwrap();
+            state.ready = true;
+            for label in ["Reviewed reminder", "Keep this reminder"] {
+                state
+                    .alarms
+                    .add(
+                        AlarmInput {
+                            label: label.into(),
+                            local_date_time: "2100-01-01T12:00".into(),
+                            zone: "UTC".into(),
+                            recurrence: Recurrence::Once,
+                            ambiguity: Ambiguity::Earlier,
+                        },
+                        0,
+                    )
+                    .unwrap();
+                state
+                    .countdowns
+                    .add(
+                        CountdownInput {
+                            label: label.into(),
+                            local_date_time: "2100-01-01T12:00".into(),
+                            zone: "UTC".into(),
+                            notify: false,
+                            ambiguity: Ambiguity::Earlier,
+                        },
+                        0,
+                    )
+                    .unwrap();
+            }
+            host.save("native-utilities.json", &state.stored()).unwrap();
+        }
+        (directory, host, tools)
+    }
+    fn review(tools: &TimeTools, alarm: bool) -> ReminderRemoval {
+        let state = tools.state.lock().unwrap();
+        if alarm {
+            ReminderRemoval::Alarm(state.alarms.items[0].clone())
+        } else {
+            ReminderRemoval::Countdown(state.countdowns.items[0].clone())
+        }
+    }
+    fn snapshot(tools: &TimeTools) -> serde_json::Value {
+        serde_json::to_value(tools.state.lock().unwrap().stored()).unwrap()
+    }
+
+    #[test]
+    fn cancel_removal_preserves_runtime_and_disk_and_releases_runtime_lock_for_review() {
+        for alarm in [true, false] {
+            let (directory, mut host, tools) = fixture();
+            let before = snapshot(&tools);
+            let disk = std::fs::read(directory.path().join("native-utilities.json")).unwrap();
+            let mut asked = false;
+            tools.remove_with(&host, review(&tools, alarm), |title, detail| {
+                asked = true;
+                assert!(title.contains(if alarm { "alarm" } else { "countdown" }));
+                assert!(
+                    detail.contains("Reviewed reminder")
+                        && detail.contains("2100-01-01T12:00")
+                        && detail.contains("UTC")
+                );
+                assert!(
+                    tools.state.try_lock().is_ok(),
+                    "confirmation blocked the hidden reminder worker"
+                );
+                false
+            });
+            assert!(asked, "saved reminder removal skipped user confirmation");
+            assert_eq!(snapshot(&tools), before);
+            assert_eq!(
+                std::fs::read(directory.path().join("native-utilities.json")).unwrap(),
+                disk
+            );
+            assert!(tools.worker.is_none());
+            host.shutdown();
+        }
+    }
+
+    #[test]
+    fn acceptance_removes_only_the_reviewed_record_and_persists_other_reminders() {
+        for alarm in [true, false] {
+            let (_directory, mut host, tools) = fixture();
+            tools.remove_with(&host, review(&tools, alarm), |_, _| true);
+            let saved: Stored = host.load("native-utilities.json").unwrap().unwrap();
+            let (changed, untouched) = if alarm {
+                (
+                    saved.alarms.iter().map(|item| item.id).collect::<Vec<_>>(),
+                    saved.countdowns.len(),
+                )
+            } else {
+                (
+                    saved
+                        .countdowns
+                        .iter()
+                        .map(|item| item.id)
+                        .collect::<Vec<_>>(),
+                    saved.alarms.len(),
+                )
+            };
+            assert_eq!(changed, vec![2]);
+            assert_eq!(untouched, 2);
+            host.shutdown();
+        }
+    }
+
+    #[test]
+    fn changed_identity_or_quit_during_confirmation_rejects_late_removal() {
+        for alarm in [true, false] {
+            for quitting in [true, false] {
+                let (directory, mut host, tools) = fixture();
+                let disk = std::fs::read(directory.path().join("native-utilities.json")).unwrap();
+                tools.remove_with(&host, review(&tools, alarm), |_, _| {
+                    if quitting {
+                        tools.stopping.store(true, Ordering::Release);
+                    } else {
+                        let mut state = tools.state.lock().unwrap();
+                        if alarm {
+                            state.alarms.items[0].input.zone = "Asia/Tokyo".into();
+                        } else {
+                            state.countdowns.items[0].input.zone = "Asia/Tokyo".into();
+                        }
+                    }
+                    true
+                });
+                let state = tools.state.lock().unwrap();
+                assert_eq!(
+                    state.alarms.items.len(),
+                    2,
+                    "late confirmation removed an alarm"
+                );
+                assert_eq!(
+                    state.countdowns.items.len(),
+                    2,
+                    "late confirmation removed a countdown"
+                );
+                drop(state);
+                assert_eq!(
+                    std::fs::read(directory.path().join("native-utilities.json")).unwrap(),
+                    disk
+                );
+                host.shutdown();
+            }
+        }
     }
 }
 

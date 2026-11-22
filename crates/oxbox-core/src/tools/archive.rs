@@ -1243,4 +1243,26 @@ mod tests {
             b"seven-z original contents"
         );
     }
+
+    #[test]
+    fn extensionless_created_zip_and_tar_gz_round_trip() {
+        for (index, format) in [ArchiveFormat::Zip, ArchiveFormat::TarGz]
+            .into_iter()
+            .enumerate()
+        {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("fixture.txt");
+            let contents = b"Generated extensionless archive continuity fixture";
+            std::fs::write(&source, contents).unwrap();
+            let output = directory.path().join(format!("archive-{index}"));
+            let token = CancelToken::default();
+            create_archive(&[source], &output, format, &token, &mut |_| {}).unwrap();
+            let restored = directory.path().join("restored");
+            extract_archive(&output, &restored, 1_048_576, &token, &mut |_| {}).unwrap();
+            assert_eq!(
+                std::fs::read(restored.join("fixture.txt")).unwrap(),
+                contents
+            );
+        }
+    }
 }

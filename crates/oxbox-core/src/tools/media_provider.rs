@@ -349,6 +349,18 @@ pub fn run_text(
     timeout: Duration,
     max_text: usize,
 ) -> CoreResult<String> {
+    let bytes = run_bytes(executable, args, cancel, timeout, max_text)?;
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+/// The same bounded owned-process runner without lossy text conversion. Binary
+/// consumers such as the strict ECB XML importer retain their UTF-8 validation.
+pub(crate) fn run_bytes(
+    executable: &Path,
+    args: &[String],
+    cancel: &CancelToken,
+    timeout: Duration,
+    max_text: usize,
+) -> CoreResult<Vec<u8>> {
     cancel.check()?;
     let mut child = ManagedChild::spawn(
         command(executable)
@@ -410,7 +422,8 @@ pub fn run_text(
             String::from_utf8_lossy(&stderr)
         )));
     }
-    Ok(String::from_utf8_lossy(&stdout).into_owned())
+    cancel.check()?;
+    Ok(stdout)
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct ProviderStatus {
@@ -830,6 +843,32 @@ mod tests {
             "tools::media_provider::tests::provider_fixture_version",
             process_fixture::Mode::Version,
         );
+    }
+    #[test]
+    fn provider_fixture_raw_bytes() {
+        let args = std::env::args().collect::<Vec<_>>();
+        if args.iter().any(|arg| arg == "--exact")
+            && args
+                .iter()
+                .any(|arg| arg == "tools::media_provider::tests::provider_fixture_raw_bytes")
+        {
+            std::io::stdout().write_all(&[0xff, 0, 0x80, b'X']).unwrap();
+            std::io::stdout().flush().unwrap();
+        }
+    }
+    #[test]
+    fn bounded_raw_runner_preserves_binary_bytes_and_text_runner_keeps_its_contract() {
+        let executable = std::env::current_exe().unwrap();
+        let args = [
+            "--exact".into(),
+            "tools::media_provider::tests::provider_fixture_raw_bytes".into(),
+            "--nocapture".into(),
+        ];
+        let cancel = CancelToken::default();
+        let bytes = run_bytes(&executable, &args, &cancel, Duration::from_secs(2), 65536).unwrap();
+        assert!(bytes.windows(4).any(|part| part == [0xff, 0, 0x80, b'X']));
+        let text = run_text(&executable, &args, &cancel, Duration::from_secs(2), 65536).unwrap();
+        assert!(text.contains('\u{fffd}'));
     }
 
     #[test]

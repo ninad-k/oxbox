@@ -4,6 +4,10 @@ The native migration uses exact eframe 0.37.0 and Rust 1.95, with all 49 tool ro
 release target. The existing release must stay an **unpublished draft** until the acceptance gates pass.
 Historical Tauri evidence in [VALIDATION.md](VALIDATION.md) does not certify the native application.
 
+The subsequent [49-tool functional follow-up](FEATURE_REVIEW.md) passes local Rust 1.95 checks (221 core,
+81 native), UI/site/packaging regressions and contributor-document consistency. Its replacement CI/artifact
+mapping must be recorded before treating it as the draft's source; the preceding mapping below remains historical.
+
 The 2026-11-22 review candidate is source `d8d1d1e`, rebuilt and attached to the existing draft with downloaded
 asset hashes verified. Earlier `7132daa` and `54dd593` artifacts remain historical evidence.
 The user explicitly left the clean-machine gate pending because no disposable Windows environment is available.

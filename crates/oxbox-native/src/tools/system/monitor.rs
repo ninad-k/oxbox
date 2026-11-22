@@ -19,6 +19,8 @@ pub struct MonitorViews {
     sensors: Task<Vec<cpu_temperature::Sensor>>,
     last: Instant,
     last_network: Instant,
+    sampling_origin: Instant,
+    last_sensor_ms: Option<u64>,
     history: VecDeque<f32>,
     virtuals: bool,
 }
@@ -32,6 +34,8 @@ impl Default for MonitorViews {
             sensors: Default::default(),
             last: Instant::now() - Duration::from_secs(2),
             last_network: Instant::now() - Duration::from_secs(2),
+            sampling_origin: Instant::now(),
+            last_sensor_ms: None,
             history: VecDeque::new(),
             virtuals: false,
         }
@@ -183,18 +187,25 @@ impl MonitorViews {
                 ui.ctx().request_repaint_after(Duration::from_secs(1));
             }
             "cpu-temperature" => {
-                ui.label("Only CPU sensors exposed by the operating system are shown. Many Windows systems expose none; no driver or service is installed.");
-                if ui
-                    .add_enabled(
-                        !self.sensors.running(),
-                        egui::Button::new("Refresh temperature sensors"),
-                    )
-                    .clicked()
-                {
-                    self.sensors.start(ui.ctx(), |cancel, _| {
+                ui.label("CPU sensors refresh every two seconds while this view is open. Many systems expose none; no driver or service is installed.");
+                let busy = self.sensors.running();
+                let refresh = ui
+                    .add_enabled(!busy, egui::Button::new("Refresh temperature sensors"))
+                    .clicked();
+                let now_ms = self
+                    .sampling_origin
+                    .elapsed()
+                    .as_millis()
+                    .min(u128::from(u64::MAX)) as u64;
+                if !busy
+                    && (refresh
+                        || cpu_temperature::sample_due(true, busy, self.last_sensor_ms, now_ms))
+                    && self.sensors.start(ui.ctx(), |cancel, _| {
                         cancel.check()?;
                         Ok(cpu_temperature::sample())
-                    });
+                    })
+                {
+                    self.last_sensor_ms = Some(now_ms);
                 }
                 if let Some(sensors) = &self.sensors.result {
                     if sensors.is_empty() {
@@ -210,7 +221,8 @@ impl MonitorViews {
                         ));
                     }
                 }
-                self.sensors.show(ui);
+                self.sensors.show_quiet(ui);
+                ui.ctx().request_repaint_after(Duration::from_secs(2));
             }
             _ => return false,
         }
@@ -220,6 +232,14 @@ impl MonitorViews {
         self.snapshot.shutdown();
         self.traffic.shutdown();
         self.sensors.shutdown();
+    }
+    pub fn leave_tool(&mut self, id: &str) {
+        match id {
+            "system-monitor" => self.snapshot.abandon(),
+            "network-usage" => self.traffic.abandon(),
+            "cpu-temperature" => self.sensors.abandon(),
+            _ => {}
+        }
     }
 }
 pub fn bytes(value: u64) -> String {

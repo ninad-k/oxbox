@@ -43,7 +43,7 @@ impl Operation {
     fn execute(self, shared: &Shared, permit: u64) -> CoreResult<String> {
         match self{
  Self::Core(action)=>shared.perform_reserved(action, permit),
- operation=>shared.with_live(|_|match operation{
+ operation=>shared.with_reserved(permit, |_|match operation{
   Self::Close(targets)=>Ok(format!("Sent normal close requests to {} windows. Complete any save prompts in those applications.",close_apps::close(&targets,true)?)),
   Self::Eject(root)=>{eject_volumes::eject(&root,true)?;Ok("Safe eject request accepted.".into())},
   Self::Profile(id)=>{energy_saver::set(&id,true)?;Ok("Power plan changed. Refresh to inspect the active plan.".into())},
@@ -708,5 +708,69 @@ impl WindowsViews {
     pub fn shutdown(&mut self) {
         self.read.shutdown();
         self.task.shutdown();
+    }
+    pub fn leave_tool(&mut self, id: &str) {
+        if matches!(
+            id,
+            "window-on-top"
+                | "window-manager"
+                | "show-desktop"
+                | "focus-window"
+                | "close-apps"
+                | "switch-resolution"
+                | "eject-volumes"
+                | "energy-saver"
+                | "hidden-files"
+                | "uninstall-apps"
+        ) {
+            self.read.abandon();
+            self.task.abandon();
+            self.pending = None;
+            self.leftovers.clear();
+            self.leftover_checked.clear();
+            self.on_success_refresh = None;
+            self.needs_refresh = None;
+            self.on_success_trash.clear();
+        }
+    }
+}
+
+#[cfg(test)]
+mod navigation_tests {
+    use super::*;
+
+    #[test]
+    fn leaving_system_tools_cancels_ephemeral_scan_and_clears_review() {
+        let ctx = egui::Context::default();
+        let mut view = WindowsViews::default();
+        let (ready, started) = std::sync::mpsc::channel();
+        let (cancelled, observed) = std::sync::mpsc::channel();
+        assert!(view.read.start(&ctx, move |cancel, _| {
+            ready.send(()).unwrap();
+            for _ in 0..400 {
+                if cancel.check().is_err() {
+                    cancelled.send(()).unwrap();
+                    return Err(oxbox_core::CoreError::Cancelled);
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            Err(runtime::error("fake scan safety timeout"))
+        }));
+        started
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .unwrap();
+        view.pending = Some((Operation::Hidden(true), "Generated review only".into()));
+        view.leftover_checked
+            .insert(PathBuf::from("generated-fixture"));
+        view.leave_tool("uninstall-apps");
+        observed
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .expect("navigation must cancel the fake scan without UI polling");
+        assert!(view.pending.is_none());
+        assert!(view.leftover_checked.is_empty());
+        view.read.poll();
+        assert!(view.read.result.is_none());
+        assert!(view.read.error.is_none());
+        view.shutdown();
     }
 }

@@ -97,9 +97,7 @@ impl AppSetsView {
             self.pending_delete = None;
         }
         if ui.button("New application set").clicked() {
-            self.draft = empty_set();
-            self.selected = self.draft.id.clone();
-            self.message = None;
+            self.new_set();
         }
         let label = ui.label("Set name");
         ui.text_edit_singleline(&mut self.draft.name)
@@ -245,17 +243,21 @@ impl AppSetsView {
                         ui.monospace(format!("Argument: {arg}"));
                     }
                 }
-                ui.label("Launched applications may perform their own actions, including network activity. Unsaved edits are not used.");
+                ui.label("Launched applications may perform their own actions, including network activity. Unsaved edits are not used. Cancel/Quit prevents remaining launch requests; applications already requested remain under your control.");
                 ui.horizontal(|ui| {
                     if ui.add_enabled(!self.task.running(), egui::Button::new("Confirm launch")).clicked() {
                         self.pending_launch = None;
                         let shared = shared.clone();
+                        let permit = shared.reserve();
                         self.task.start(ui.ctx(), move |cancel, _| {
-                            cancel.check()?;
-                            shared.with_live(|_| {
-                                let count = launch_apps::launch(&set, &mut |path| open::that(path).map_err(|e| runtime::error(e.to_string())))?;
-                                Ok(format!("Requested launch of {count} saved applications/files."))
-                            })
+                            let count = launch_saved_set(&shared, permit, &set, &cancel, &mut |path| {
+                                // Observe immediate launcher failures without waiting for an
+                                // intentionally external application to exit. A request already
+                                // admitted to the OS cannot be revoked by a later cancellation.
+                                open::that_detached_with_timeout(path, std::time::Duration::from_millis(250))
+                                    .map_err(|e| runtime::error(e.to_string()))
+                            })?;
+                            Ok(format!("Requested launch of {count} saved applications/files."))
                         });
                     }
                     if ui.button("Cancel launch review").clicked() {
@@ -265,9 +267,12 @@ impl AppSetsView {
             });
         }
         if let Some(id) = self.pending_delete.clone() {
-            ui.label(
-                "Delete this saved configuration? The applications and files themselves are kept.",
-            );
+            let name = stored
+                .sets
+                .iter()
+                .find(|set| set.id == id)
+                .map_or(id.as_str(), |set| set.name.as_str());
+            ui.label(format!("Delete saved configuration “{name}”? The applications and files themselves are kept."));
             ui.horizontal(|ui| {
                 if ui
                     .add_enabled(ready, egui::Button::new("Confirm configuration deletion"))
@@ -306,6 +311,36 @@ impl AppSetsView {
     pub fn shutdown(&mut self) {
         self.task.shutdown();
     }
+    fn new_set(&mut self) {
+        self.draft = empty_set();
+        self.selected = self.draft.id.clone();
+        self.pending_launch = None;
+        self.pending_delete = None;
+        self.message = None;
+        self.error = None;
+    }
+    pub fn leave_tool(&mut self, id: &str) {
+        if id == "launch-app-sets" {
+            self.task.abandon();
+            self.pending_launch = None;
+            self.pending_delete = None;
+        }
+    }
+}
+
+fn launch_saved_set(
+    shared: &Shared,
+    permit: u64,
+    set: &AppSet,
+    cancel: &oxbox_core::jobs::CancelToken,
+    open: &mut dyn FnMut(&str) -> CoreResult<()>,
+) -> CoreResult<usize> {
+    cancel.check()?;
+    // Admission is synchronized with shutdown, without holding system state
+    // across an external file handler. Per-target checks stop the remaining list.
+    // Cancellation cannot revoke an OS call admitted immediately before it.
+    shared.with_reserved(permit, |_| Ok(()))?;
+    launch_apps::launch_with_cancel(set, cancel, open)
 }
 
 fn persist(candidate: &mut Stored, host: &Host, shared: &Shared) -> CoreResult<()> {
@@ -361,5 +396,62 @@ mod accessibility_tests {
         assert!(!view.task.running());
         view.shutdown();
         host.shutdown();
+    }
+
+    #[test]
+    fn launch_admission_releases_system_gate_and_honors_cancel_between_targets() {
+        let directory = tempfile::tempdir().unwrap();
+        let shared = Shared::default();
+        let cancel = oxbox_core::jobs::CancelToken::default();
+        let mut set = empty_set();
+        set.name = "Generated launch fixture".into();
+        for name in ["first.txt", "second.txt"] {
+            let filename = directory.path().join(name);
+            std::fs::write(&filename, "generated").unwrap();
+            set.entries.push(LaunchEntry {
+                kind: LaunchKind::File,
+                target: filename.to_string_lossy().into_owned(),
+                args: vec![],
+            });
+        }
+        let mut opened = 0;
+        assert_eq!(
+            launch_saved_set(&shared, shared.reserve(), &set, &cancel, &mut |_| {
+                assert!(
+                    shared.state.try_lock().is_ok(),
+                    "external handler must not hold system state gate"
+                );
+                opened += 1;
+                cancel.cancel();
+                Ok(())
+            })
+            .unwrap_err()
+            .code(),
+            "cancelled"
+        );
+        assert_eq!(opened, 1);
+        let stale = shared.reserve();
+        shared.invalidate_pending();
+        let fresh_token = oxbox_core::jobs::CancelToken::default();
+        assert_eq!(
+            launch_saved_set(&shared, stale, &set, &fresh_token, &mut |_| {
+                panic!("stale launch must not reach a backend");
+            })
+            .unwrap_err()
+            .code(),
+            "cancelled"
+        );
+    }
+
+    #[test]
+    fn a_new_application_set_discards_reviews_for_the_preceding_set() {
+        let mut view = AppSetsView::default();
+        view.pending_launch = Some(view.draft.clone());
+        view.pending_delete = Some(view.draft.id.clone());
+        view.new_set();
+        assert!(view.pending_launch.is_none());
+        assert!(view.pending_delete.is_none());
+        assert_eq!(view.selected, view.draft.id);
+        assert!(view.draft.name.is_empty());
     }
 }

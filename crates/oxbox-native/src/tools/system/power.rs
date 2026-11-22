@@ -469,6 +469,10 @@ impl PowerView {
         self.task.shutdown();
         self.pending = None;
     }
+    pub fn leave_tool(&mut self) {
+        self.task.abandon();
+        self.pending = None;
+    }
 }
 pub fn stop_mouse(shared: &Shared) -> CoreResult<()> {
     shared.invalidate_pending();

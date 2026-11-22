@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Read the native contributor and support guides
+    url: https://github.com/ninad-k/oxbox/blob/codex/native-renderer/docs/README.md
+    about: Usage, troubleshooting, first contributions and current release gates.
   - name: Report a security vulnerability privately
     url: https://github.com/ninad-k/oxbox/security/advisories/new
     about: Do not include vulnerabilities, passphrases, or private files in public bug reports.

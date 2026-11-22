@@ -242,6 +242,7 @@ impl App {
         if let Some(id) = &self.active {
             self.utilities.leave_tool(id);
             self.media.leave_tool(id);
+            self.system.leave_tool(id);
         }
         self.utilities.deactivate();
     }

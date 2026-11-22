@@ -38,6 +38,7 @@ pub struct VisionUi {
     color_preview: Preview,
     error: Option<String>,
 }
+
 impl Default for VisionUi {
     fn default() -> Self {
         Self {
@@ -73,6 +74,30 @@ impl Default for VisionUi {
     }
 }
 impl VisionUi {
+    fn input_changed(&mut self, slot: usize) {
+        // A preview/result belongs to the file that produced it. Discard even
+        // an already-queued completion before another frame can publish it.
+        self.preview_job.abandon();
+        match slot {
+            0 => {
+                self.ocr_job.abandon();
+                self.ocr_text.clear();
+                self.ocr_preview = Preview::default();
+            }
+            1 => {
+                self.barcode_job.abandon();
+                self.barcodes.clear();
+                self.barcode_preview = Preview::default();
+            }
+            _ => {
+                self.color_job.abandon();
+                self.color = None;
+                self.color_preview = Preview::default();
+                self.error = None;
+            }
+        }
+    }
+
     pub fn show(&mut self, ui: &mut egui::Ui, id: &str, host: &mut Host, shared: &Shared) {
         match id {
             "recognize-text" => self.ocr(ui),
@@ -100,12 +125,14 @@ impl VisionUi {
             ui,
             "Recognize text in a local image using an installed offline engine. The image is never uploaded.",
         );
-        widgets::file(
+        if widgets::file(
             ui,
             "Image to recognize",
             &mut self.ocr_path,
             &["png", "jpg", "jpeg", "webp"],
-        );
+        ) {
+            self.input_changed(0);
+        }
         self.preview_button(ui, self.ocr_path.clone(), 0);
         self.ocr_preview.show(ui);
         let old = self.ocr_provider;
@@ -183,12 +210,14 @@ impl VisionUi {
             ui,
             "Read QR, Code 128, EAN-13 and other supported barcode formats from a local image. Decoded links are displayed as text, never opened automatically.",
         );
-        widgets::file(
+        if widgets::file(
             ui,
             "Barcode image",
             &mut self.barcode_path,
             &["png", "jpg", "jpeg", "webp"],
-        );
+        ) {
+            self.input_changed(1);
+        }
         self.preview_button(ui, self.barcode_path.clone(), 1);
         self.barcode_preview.show(ui);
         if ui
@@ -234,12 +263,14 @@ impl VisionUi {
             &["Local image", "Display coordinates", "Cursor · Windows"],
         );
         if self.color_source == 0 {
-            widgets::file(
+            if widgets::file(
                 ui,
                 "Image to sample",
                 &mut self.color_path,
                 &["png", "jpg", "jpeg", "webp"],
-            );
+            ) {
+                self.input_changed(2);
+            }
             self.preview_button(ui, self.color_path.clone(), 2);
             if let Some(response) = self.color_preview.show(ui)
                 && response.clicked()
@@ -413,7 +444,7 @@ impl VisionUi {
             self.monitor = 0;
         }
         if let Some(value) = self.color_job.result.take() {
-            self.color = Some(value);
+            self.apply_color(Ok(value));
         }
         if self.hidden && !self.color_job.running() {
             self.hidden = false;
@@ -470,5 +501,146 @@ impl VisionUi {
         }
         // A hidden sampling operation restores the launcher from tick after
         // cancellation completes; Host retains authoritative visibility.
+    }
+}
+
+#[cfg(test)]
+mod community_tests {
+    use super::*;
+    use std::sync::Arc;
+
+    fn generated_pixels() -> Arc<screenshot::RgbaImage> {
+        Arc::new(screenshot::RgbaImage::from_pixel(
+            1,
+            1,
+            image::Rgba([255, 0, 0, 255]),
+        ))
+    }
+
+    fn edit_image_path(view: &mut VisionUi, tool_id: &str, previous: &str) {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let shared = Shared::default();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut first = context.run_ui(egui::RawInput::default(), |ui| {
+            view.show(ui, tool_id, &mut host, &shared)
+        });
+        first.textures_delta.clear();
+        let field = first
+            .platform_output
+            .accesskit_update
+            .unwrap()
+            .nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::TextInput && node.value() == Some(previous))
+                    .then_some(id)
+            })
+            .unwrap();
+        let mut second = context.run_ui(
+            egui::RawInput {
+                events: vec![egui::Event::AccessKitActionRequest(
+                    egui::accesskit::ActionRequest {
+                        action: egui::accesskit::Action::SetValue,
+                        target_node: field,
+                        target_tree: egui::accesskit::TreeId::ROOT,
+                        data: Some(egui::accesskit::ActionData::Value(
+                            "new-generated-input.png".into(),
+                        )),
+                    },
+                )],
+                ..Default::default()
+            },
+            |ui| view.show(ui, tool_id, &mut host, &shared),
+        );
+        second.textures_delta.clear();
+        host.shutdown();
+        assert!(shared.clipboard.snapshot("").unwrap().paused);
+    }
+
+    #[test]
+    fn community_editing_color_image_discards_old_pixels_and_queued_preview() {
+        let mut view = VisionUi {
+            color_path: "old-generated-color.png".into(),
+            color: Some(color_picker::color(255, 0, 0)),
+            ..Default::default()
+        };
+        view.color_preview.image = Some(generated_pixels());
+        view.preview_job.result = Some((2, Asset::new((*generated_pixels()).clone())));
+        edit_image_path(&mut view, "measure-color", "old-generated-color.png");
+        assert_eq!(view.color_path, "new-generated-input.png");
+        assert!(
+            view.color_preview.image.is_none(),
+            "new image path kept old sampleable pixels"
+        );
+        assert!(view.color.is_none());
+        assert!(
+            view.preview_job.result.is_none(),
+            "old queued preview can reappear"
+        );
+        view.shutdown();
+    }
+
+    #[test]
+    fn community_editing_ocr_image_discards_old_result_and_queued_completion() {
+        let mut view = VisionUi {
+            ocr_path: "old-generated-ocr.png".into(),
+            ocr_text: "Old generated recognition result".into(),
+            ..Default::default()
+        };
+        view.ocr_job.result = Some("Queued result for old input".into());
+        view.ocr_preview.image = Some(generated_pixels());
+        edit_image_path(&mut view, "recognize-text", "old-generated-ocr.png");
+        assert_eq!(view.ocr_path, "new-generated-input.png");
+        assert!(view.ocr_text.is_empty(), "new OCR path kept an old result");
+        assert!(view.ocr_job.result.is_none());
+        assert!(view.ocr_preview.image.is_none());
+        view.shutdown();
+    }
+
+    #[test]
+    fn community_editing_barcode_image_discards_old_decoded_values() {
+        let mut view = VisionUi {
+            barcode_path: "old-generated-barcode.png".into(),
+            barcodes: vec![BarcodeResult {
+                text: "Old generated barcode".into(),
+                format: "QR_CODE".into(),
+            }],
+            ..Default::default()
+        };
+        view.barcode_job.result = Some(vec![BarcodeResult {
+            text: "Queued old barcode".into(),
+            format: "QR_CODE".into(),
+        }]);
+        view.barcode_preview.image = Some(generated_pixels());
+        edit_image_path(&mut view, "barcode-reader", "old-generated-barcode.png");
+        assert_eq!(view.barcode_path, "new-generated-input.png");
+        assert!(
+            view.barcodes.is_empty(),
+            "new barcode path kept old decoded values"
+        );
+        assert!(view.barcode_job.result.is_none());
+        assert!(view.barcode_preview.image.is_none());
+        view.shutdown();
+    }
+
+    #[test]
+    fn community_successful_async_color_clears_an_earlier_validation_error() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut host = Host::new(directory.path().to_path_buf()).unwrap();
+        let mut view = VisionUi::default();
+        view.apply_color(Err(oxbox_core::CoreError::InvalidInput(
+            "Generated earlier coordinate error".into(),
+        )));
+        view.color_job.result = Some(color_picker::color(0, 255, 0));
+        view.tick(None, &mut host);
+        assert_eq!(view.color.as_ref().unwrap().hex, "#00FF00");
+        assert!(
+            view.error.is_none(),
+            "successful color result still shows an old error"
+        );
+        view.shutdown();
+        host.shutdown();
     }
 }

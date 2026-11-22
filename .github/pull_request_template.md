@@ -1,16 +1,23 @@
-## What
+## Change
 
-<!-- Tool id and a one-line summary, e.g. "feat(unit-converter): add Unit Converter" -->
+<!-- Concrete problem and visible before/after behavior. Include stable tool ID or shared concern.
+     Native migration PRs currently target codex/native-renderer; check your base branch. -->
 
-## Checklist (see AGENTS.md → Definition of done)
+## Validation
 
-- [ ] Core logic in `crates/oxbox-core` with unit tests
-- [ ] `cargo fmt`, `cargo clippy -D warnings`, `cargo test`, `pnpm check`, `pnpm test` pass
-- [ ] Tested by hand on: <!-- Windows / macOS / Linux -->
-- [ ] Empty, busy, success and error states handled; works with keyboard only
-- [ ] Offline by default; any network exception has a prior issue; no permanent deletion or unlisted dependencies
-- [ ] `tasks/todo.md` and `README.md` updated
+<!-- Exact commands/results, OS/session and commit. Distinguish fake/headless tests from manual actions.
+     Identify applicable checks not run and why; do not mark unsupported hardware/VM gates complete. -->
 
-## Screenshot
+- [ ] Regression observed before the fix; normal/edge/error/cancellation cases covered where relevant
+- [ ] Native fmt, strict all-target clippy and core/native tests pass
+- [ ] Relevant legacy UI, catalogue/site, packaging and generated community-doc checks pass
+- [ ] Native manual review records keyboard/focus, empty/busy/success/error, Back/hide/Stop/Quit where applicable
+- [ ] User data, exclusive outputs, confirmations, bounded work and owned cleanup reviewed
+- [ ] Offline by default; dependency/network changes have prior approval and linked discussion
+- [ ] Catalogue, documentation, changelog and acceptance evidence updated as applicable
 
-<!-- Drag an image of the tool here -->
+## Evidence and limits
+
+<!-- Redacted screenshot for UI changes, generated fixture, prior dependency/network approval links,
+     known limitations and remaining platform/manual checks. No secrets, personal paths or private files.
+     CONTRIBUTING.md and docs/MAINTAINING.md explain review expectations. -->

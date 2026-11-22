@@ -16,6 +16,14 @@ pub struct Clock {
 pub fn zones() -> Vec<&'static str> {
     TZ_VARIANTS.iter().map(|zone| zone.name()).collect()
 }
+/// Search canonical IANA names and the readable city labels shown by the host.
+pub fn search_zones(query: &str) -> Vec<&'static str> {
+    let query = query.trim().to_lowercase().replace('_', " ");
+    zones()
+        .into_iter()
+        .filter(|zone| zone.to_lowercase().replace('_', " ").contains(&query))
+        .collect()
+}
 pub fn clock_at(zone: &str, timestamp: i64) -> CoreResult<Clock> {
     let zone: Tz = zone
         .parse()
@@ -53,5 +61,17 @@ mod tests {
         assert!(clock_at("Not/AZone", 0).is_err());
         assert!(clock_at("UTC", i64::MAX).is_err());
         assert_eq!(clock_at("UTC", 0).unwrap().date, "1970-01-01");
+    }
+    #[test]
+    fn zone_search_accepts_canonical_iana_and_readable_city_queries() {
+        for query in ["America/New_York", " new_york ", "NEW YORK", "new york"] {
+            assert!(
+                search_zones(query).contains(&"America/New_York"),
+                "valid pasted IANA/city query had no matching clock: {query}"
+            );
+        }
+        assert!(search_zones("uTc").contains(&"UTC"));
+        assert!(search_zones("not a real time zone").is_empty());
+        assert_eq!(search_zones(""), zones());
     }
 }

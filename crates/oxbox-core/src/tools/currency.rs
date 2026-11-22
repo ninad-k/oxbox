@@ -1,4 +1,5 @@
 //! Dated ECB reference rates. Import and conversion work offline; downloads require explicit opt-in.
+use crate::jobs::CancelToken;
 use crate::{CoreError, CoreResult};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -6,7 +7,7 @@ use std::{
     collections::BTreeMap,
     io::Read,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    time::Duration,
 };
 pub const MAX_DOCUMENT: usize = 1024 * 1024;
 pub const PROVIDER_URL: &str = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
@@ -212,11 +213,22 @@ pub fn import(path: &Path, now: u64) -> CoreResult<RateBook> {
 }
 /// No shell, credentials, redirects, uploads, or user-selected URLs.
 pub fn download(approved: bool) -> CoreResult<RateBook> {
+    download_with_cancel(approved, &CancelToken::default())
+}
+pub fn download_with_cancel(approved: bool, cancel: &CancelToken) -> CoreResult<RateBook> {
+    download_using(approved, cancel, provider_bytes)
+}
+fn download_using(
+    approved: bool,
+    cancel: &CancelToken,
+    fetch: impl FnOnce(&Path, &[String], &CancelToken, Duration, usize) -> CoreResult<Vec<u8>>,
+) -> CoreResult<RateBook> {
     if !approved {
         return Err(invalid(
             "enable ECB network access explicitly before refreshing rates",
         ));
     }
+    cancel.check()?;
     let program = if cfg!(windows) {
         PathBuf::from(std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into()))
             .join("System32/curl.exe")
@@ -226,53 +238,30 @@ pub fn download(approved: bool) -> CoreResult<RateBook> {
     if !program.is_absolute() {
         return Err(invalid("the system curl path is unavailable"));
     }
-    let mut child = Command::new(program)
-        .args([
-            "--disable",
-            "--fail",
-            "--silent",
-            "--show-error",
-            "--proto",
-            "=https",
-            "--max-time",
-            "20",
-            "--max-filesize",
-            "1048576",
-            PROVIDER_URL,
-        ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?;
-    let result = (|| -> CoreResult<Vec<u8>> {
-        let mut output = child
-            .stdout
-            .take()
-            .ok_or_else(|| invalid("currency provider output unavailable"))?;
-        let mut bytes = Vec::new();
-        let mut buffer = [0u8; 8192];
-        loop {
-            let count = output.read(&mut buffer)?;
-            if count == 0 {
-                break;
-            }
-            if bytes.len() + count > MAX_DOCUMENT {
-                return Err(invalid("provider response exceeds 1 MiB"));
-            }
-            bytes.extend_from_slice(&buffer[..count]);
-        }
-        Ok(bytes)
-    })();
-    if result.is_err() {
-        let _ = child.kill();
-    }
-    let status = child.wait()?;
-    let bytes = result?;
-    if !status.success() {
-        return Err(invalid(
-            "ECB refresh failed; the previous cache is unchanged",
-        ));
-    }
+    let args = [
+        "--disable",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--proto",
+        "=https",
+        "--max-time",
+        "20",
+        "--max-filesize",
+        "1048576",
+        PROVIDER_URL,
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect::<Vec<_>>();
+    let bytes = fetch(
+        &program,
+        &args,
+        cancel,
+        Duration::from_secs(20),
+        MAX_DOCUMENT,
+    )?;
+    cancel.check()?;
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |v| v.as_secs());
@@ -280,6 +269,15 @@ pub fn download(approved: bool) -> CoreResult<RateBook> {
         std::str::from_utf8(&bytes).map_err(|_| invalid("invalid provider response encoding"))?,
         now,
     )
+}
+fn provider_bytes(
+    program: &Path,
+    args: &[String],
+    cancel: &CancelToken,
+    timeout: Duration,
+    max_bytes: usize,
+) -> CoreResult<Vec<u8>> {
+    super::media_provider::run_bytes(program, args, cancel, timeout, max_bytes)
 }
 
 #[cfg(test)]
@@ -324,5 +322,66 @@ mod tests {
         assert!(!needs_refresh(100, 101));
         assert!(needs_refresh(100, 100 + 86400));
         assert!(download(false).is_err());
+    }
+    #[test]
+    fn refresh_cancel_before_start_skips_the_transport() {
+        let cancel = CancelToken::default();
+        cancel.cancel();
+        let mut invoked = false;
+        let result = download_using(true, &cancel, |_, _, _, _, _| {
+            invoked = true;
+            Ok(XML.as_bytes().to_vec())
+        });
+        assert!(matches!(result, Err(CoreError::Cancelled)));
+        assert!(!invoked, "cancelled refresh still started its provider");
+    }
+    #[test]
+    fn refresh_active_cancel_interrupts_generated_provider_without_network() {
+        let cancel = CancelToken::default();
+        let signal = cancel.clone();
+        let stopper = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(150));
+            signal.cancel();
+        });
+        let began = std::time::Instant::now();
+        let result = download_using(true, &cancel, |_, _, token, timeout, max_bytes| {
+            provider_bytes(
+                &std::env::current_exe().unwrap(),
+                &[
+                    "--exact".into(),
+                    "tools::media_provider::tests::provider_fixture_descendant".into(),
+                    "--nocapture".into(),
+                ],
+                token,
+                timeout,
+                max_bytes,
+            )
+        });
+        stopper.join().unwrap();
+        assert!(
+            began.elapsed() < Duration::from_secs(2),
+            "Cancel waited {:?} for the generated provider",
+            began.elapsed()
+        );
+        assert!(
+            matches!(result, Err(CoreError::Cancelled)),
+            "unexpected result: {result:?}"
+        );
+    }
+    #[test]
+    fn refresh_preserves_fixed_request_and_strict_utf8_policy() {
+        let cancel = CancelToken::default();
+        let book = download_using(true, &cancel, |_, args, _, timeout, limit| {
+            assert_eq!(args.first().map(String::as_str), Some("--disable"));
+            assert_eq!(args.last().map(String::as_str), Some(PROVIDER_URL));
+            assert!(args.windows(2).any(|pair| pair == ["--proto", "=https"]));
+            assert!(!args.iter().any(|arg| arg == "--location"));
+            assert_eq!(timeout, Duration::from_secs(20));
+            assert_eq!(limit, MAX_DOCUMENT);
+            Ok(XML.as_bytes().to_vec())
+        })
+        .unwrap();
+        assert_eq!(book.rates["USD"], 1.1);
+        assert!(download_using(true, &cancel, |_, _, _, _, _| Ok(vec![0xff])).is_err());
     }
 }

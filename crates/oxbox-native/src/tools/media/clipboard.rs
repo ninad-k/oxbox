@@ -112,6 +112,8 @@ impl ClipboardUi {
             .labelled_by(search_label.id)
             .changed()
         {
+            self.snapshot_job.abandon();
+            self.snapshot = None;
             self.last = Instant::now() - Duration::from_secs(1);
         }
         if let Some(snapshot) = &self.snapshot {
@@ -226,6 +228,73 @@ mod tests {
         atomic::{AtomicBool, Ordering},
         mpsc,
     };
+
+    #[test]
+    fn community_search_edit_discards_old_filter_rows_and_queued_snapshot() {
+        let old = Snapshot {
+            paused: true,
+            bytes: 8,
+            total_items: 1,
+            error: None,
+            items: vec![oxbox_core::tools::clipboard_history::EntrySummary {
+                id: 1,
+                pinned: false,
+                captured_at: 0,
+                kind: "text",
+                preview: "Generated old-query match".into(),
+                bytes: 8,
+            }],
+        };
+        let mut view = ClipboardUi {
+            query: "old search".into(),
+            snapshot: Some(old.clone()),
+            ..Default::default()
+        };
+        view.snapshot_job.result = Some(old);
+        let shared = Shared::default();
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut first = context.run_ui(egui::RawInput::default(), |ui| view.show(ui, &shared));
+        first.textures_delta.clear();
+        let field = first
+            .platform_output
+            .accesskit_update
+            .unwrap()
+            .nodes
+            .into_iter()
+            .find_map(|(id, node)| {
+                (node.role() == egui::accesskit::Role::TextInput
+                    && node.value() == Some("old search"))
+                .then_some(id)
+            })
+            .unwrap();
+        let mut second = context.run_ui(
+            egui::RawInput {
+                events: vec![egui::Event::AccessKitActionRequest(
+                    egui::accesskit::ActionRequest {
+                        action: egui::accesskit::Action::SetValue,
+                        target_node: field,
+                        target_tree: egui::accesskit::TreeId::ROOT,
+                        data: Some(egui::accesskit::ActionData::Value("new search".into())),
+                    },
+                )],
+                ..Default::default()
+            },
+            |ui| view.show(ui, &shared),
+        );
+        second.textures_delta.clear();
+        assert_eq!(view.query, "new search");
+        assert!(
+            view.snapshot.is_none(),
+            "new filter kept rows for the old query"
+        );
+        assert!(
+            view.snapshot_job.result.is_none(),
+            "old query completion can reappear"
+        );
+        assert!(shared.clipboard.snapshot("").unwrap().paused);
+        view.shutdown();
+    }
 
     #[test]
     fn generated_clipboard_rows_have_distinct_named_actions_without_observing_clipboard() {

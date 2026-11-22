@@ -48,14 +48,14 @@ catalogue regression tests. Toolkit-independent rules and tests still belong in 
 | Mouse Activity | Explicit idle-by-default Windows worker; timing-only hooks/message pump and final input/desktop checks; Stop/expiry/error/Quit releases observers |
 | Utilities time runtime | Dedicated 250 ms worker for monotonic timer, breaks and persisted alarms/dates; persist-before-notify with rollback; stop/join on Quit |
 | Media shared services | Explicit recording child, paused-by-default clipboard history, frozen selectors and owned capture/preview tasks; clean up on leave/Stop/Quit |
-| Native overlays | Owned selection/focus viewports with monitor/DPI geometry and native identity; close/cancel/error/Quit restore state |
+| Native overlays | Owned egui selection viewports and Win32 focus shades with monitor/DPI geometry and native identity; close/cancel/error/Quit restore state |
 
 UI rendering is not the clock for hidden reminders. Timer/stopwatch elapsed time derives from injected
 monotonic timestamps; calendar reminders use explicit IANA zones and tested DST resolution. Navigation
 abandons ordinary view jobs, discarding stale/enqueued payloads while retaining join ownership. User Cancel
 retains the report. Hiding clears unsubmitted passphrase drafts and preserves active file work. Explicit
-background controllers continue until their own Stop/expiry/Quit; manual currency import/refresh can finish
-and save its cache after leaving the view.
+background controllers continue until their own Stop/expiry/Quit. Manual currency import/refresh is a view
+job: navigation abandons its candidate, and only an admitted successful result reaches the atomic cache commit.
 
 ## Persistence and migration
 
@@ -65,14 +65,16 @@ originals; settings transactions restore preceding runtime/storage state when wr
 
 | Native store | Data imported/owned |
 |---|---|
-| native-shell.json | Theme, favorites, launcher key/login preferences; legacy settings preferences imported once |
+| native-shell.json | Theme, favorites and launcher key; legacy settings preferences imported once |
+| native-startup.json | Explicit login-startup choice, separate from imported launcher preferences |
 | native-system.json | Local app sets and presentation options, including existing legacy stores |
 | native-utilities.json | Alarms, date countdowns, world zones and break settings; legacy settings keys preserved |
 | native-currency.json | Dated rate cache and native manual-refresh opt-in; legacy rates imported, initial native network flag off |
 
 Legacy settings.json, app-sets.json and currency.json are not rewritten by migration. No passphrase,
 clipboard history, recording-active state or Mouse Activity session is persisted by these stores. Core
-crypto takes a transient zeroizing secret; draft password fields clear on navigation/hide. Alarms/date
+crypto takes a transient zeroizing secret; draft password fields and their edit undo history clear on navigation/hide.
+This is not a forensic memory-erasure guarantee. Alarms/date
 notification state saves before notification delivery, with rollback/retry on persistence failure.
 
 ## File, process and network boundaries
@@ -86,6 +88,10 @@ extraction folder; originals remain intact. Selected cleanup/uninstall/power eff
 External programs receive executable-plus-argument arrays, never shell strings. FFmpeg/Tesseract remain
 user-installed providers. Captures/devices and clipboard monitoring require explicit user actions. Native
 controls do not request elevation or bypass protected desktop/security policies.
+Managed provider jobs own Windows kill-on-close Jobs or Unix process groups, stop descendants and reap
+children before joining pipe readers. These are transient provider jobs; applications intentionally opened
+by Launch App Sets have a separate user-requested lifetime. Cancellation stops subsequent admissions;
+an already admitted OS launch cannot be revoked.
 
 Default work is local. The fixed public ECB download is the approved manual opt-in exception (issue #1),
 without amounts/files uploaded. The selected native graph removes embedded-browser hosts; the packaging
@@ -100,8 +106,9 @@ JSON builder validates canonical IDs, categories, icon bindings, platforms and n
 all 49 cards for no-JavaScript browsing. Category/platform/search filters are progressive enhancement.
 Relative assets and fragment targets are checked; generated website/dist stays ignored.
 
-Headless egui tests consume textures_delta without a GPU painter. Existing native tests cover 13 utility and
-14 media form routes, selected lifecycle/settings/task/instance regressions and finite icon bindings. The 22
-system forms are source-routed/compiled; do not claim all 49 were headless-rendered or manually operated.
+Headless egui tests consume textures_delta without a GPU painter. Existing native tests cover default forms
+and accessible names for all 49 routes (13 utility, 14 media, 22 system), selected expanded states and
+lifecycle/settings/task/instance regressions. System catalogue enumeration stays closed in those fixtures
+and no live OS action is triggered. This does not establish manual, hardware, GPU or screen-reader acceptance.
 Consult [the route matrix](../tasks/native-migration.md), [testing guide](TESTING.md), [website guide](../website/README.md)
 and [AGENTS.md](../AGENTS.md). Publication is a separate gate from source builds, tests or website deployment.

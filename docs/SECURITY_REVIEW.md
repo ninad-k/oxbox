@@ -131,3 +131,17 @@ regressions and the privacy/accessibility lane's merged tests. Cross-platform CI
 cancellation/recording finalization, full runtime privacy/DNS coverage, clean-machine installer behavior
 and independent human security/legal attestations remain open until their actual evidence is recorded.
 No manual 49-tool acceptance row is closed by this agent review or its fake/headless fixtures.
+
+## Post-transform original-file safety follow-up
+
+The functional review found that optional encryption/decryption Trash retained only paths: an original
+could be edited after the successful transform, or the saved output could disappear, before its removal
+review. The new transient receipt binds BLAKE3 hashes of the **actual read/write streams**, file IDs, sizes
+and modification stamps. After explicit review, cancellable streaming checks compare both files and recheck
+their stamps before the shared Trash helper is called. Receipts contain no passphrase and are not serialized.
+
+Three generated/fake-effect guards cover changed/replaced originals, changed/missing output, confirmation,
+cancellation and a same-size/time rewrite of an already-read prefix. The existing real age test additionally
+verifies both hashes and valid/refused fake cleanup. All pass in the 221-core-test Windows run. No live Trash
+was invoked. This narrows ordinary stale-backup races; it is not an atomic lock against concurrent filesystem
+mutation and does not close the independent adversarial filesystem/human review gate.

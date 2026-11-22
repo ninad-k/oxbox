@@ -1,0 +1,21 @@
+name: Documentation improvement
+description: Report an unclear guide, missing step or incorrect command
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Guide and section
+      description: "Link the file and identify its branch/commit. Native migration documentation currently lives on codex/native-renderer."
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is unclear or incorrect?
+      description: "Include the command/result or the missing context using redacted or generated examples."
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested correction

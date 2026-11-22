@@ -18,6 +18,7 @@ pub(super) struct CurrencyTools {
     to: String,
     job: Task<RateBook>,
     error: String,
+    notice: String,
 }
 impl Default for CurrencyTools {
     fn default() -> Self {
@@ -30,6 +31,7 @@ impl Default for CurrencyTools {
             to: "USD".into(),
             job: Task::default(),
             error: String::new(),
+            notice: String::new(),
         }
     }
 }
@@ -68,9 +70,32 @@ impl CurrencyTools {
         }
         self.job.poll();
         if let Some(book) = self.job.result.take() {
-            self.stored.book = Some(book);
-            self.error.clear();
+            self.accept_book(host, book);
         }
+    }
+    fn accept_book(&mut self, host: &Host, book: RateBook) {
+        let candidate = Stored {
+            book: Some(book),
+            network_enabled: self.stored.network_enabled,
+        };
+        match host.save("native-currency.json", &candidate) {
+            Ok(()) => {
+                self.stored = candidate;
+                self.error.clear();
+                self.notice = "Reference rates updated.".into();
+            }
+            Err(error) => {
+                self.error = format!(
+                    "Could not save new reference rates; the previous active table is unchanged: {error}"
+                );
+            }
+        }
+    }
+    /// Manual imports/refreshes are ordinary view jobs. Leaving discards a late
+    /// candidate; only an admitted successful result reaches the cache commit.
+    pub(super) fn leave(&mut self) {
+        self.job.abandon();
+        self.notice.clear();
     }
     pub fn shutdown(&mut self) {
         self.job.shutdown();
@@ -105,20 +130,11 @@ impl CurrencyTools {
                         .add_filter("ECB XML", &["xml"])
                         .pick_file()
                 {
-                    let directory = host.data_dir().to_path_buf();
-                    let network_enabled = self.stored.network_enabled;
+                    self.notice.clear();
                     self.job.start(ui.ctx(), move |cancel, _| {
                         cancel.check()?;
                         let book = currency::import(&path, super::time::unix_now() as u64)?;
                         cancel.check()?;
-                        crate::host::save_at(
-                            &directory,
-                            "native-currency.json",
-                            &Stored {
-                                book: Some(book.clone()),
-                                network_enabled,
-                            },
-                        )?;
                         Ok(book)
                     });
                 }
@@ -129,26 +145,17 @@ impl CurrencyTools {
                     )
                     .clicked()
                 {
-                    let directory = host.data_dir().to_path_buf();
-                    let network_enabled = self.stored.network_enabled;
+                    self.notice.clear();
                     self.job.start(ui.ctx(), move |cancel, _| {
-                        cancel.check()?;
-                        let book = currency::download(true)?;
-                        cancel.check()?;
-                        crate::host::save_at(
-                            &directory,
-                            "native-currency.json",
-                            &Stored {
-                                book: Some(book.clone()),
-                                network_enabled,
-                            },
-                        )?;
-                        Ok(book)
+                        currency::download_with_cancel(true, &cancel)
                     });
                 }
             });
         });
         self.job.show(ui);
+        if !self.notice.is_empty() {
+            crate::accessibility::status(ui, &self.notice);
+        }
         if let Some(book) = &self.stored.book {
             let fetched = i64::try_from(book.fetched_at)
                 .ok()
@@ -204,5 +211,113 @@ impl CurrencyTools {
         if !self.error.is_empty() {
             issue(ui, &self.error);
         }
+    }
+}
+
+#[cfg(test)]
+mod functional_tests {
+    use super::*;
+    use std::{
+        collections::BTreeMap,
+        time::{Duration, Instant},
+    };
+
+    fn book(usd: f64) -> RateBook {
+        RateBook {
+            date: "2026-11-20".into(),
+            fetched_at: 1,
+            rates: BTreeMap::from([("EUR".into(), 1.0), ("USD".into(), usd)]),
+        }
+    }
+    fn fixture() -> (tempfile::TempDir, Host, CurrencyTools) {
+        let directory = tempfile::tempdir().unwrap();
+        let host = Host::new(directory.path().to_path_buf()).unwrap();
+        let tools = CurrencyTools {
+            loaded: true,
+            ready: true,
+            stored: Stored {
+                book: Some(book(1.1)),
+                network_enabled: false,
+            },
+            ..Default::default()
+        };
+        host.save("native-currency.json", &tools.stored).unwrap();
+        (directory, host, tools)
+    }
+    #[test]
+    fn successful_cache_acceptance_commits_disk_and_announces_completion() {
+        let (_directory, mut host, mut tools) = fixture();
+        tools.job.result = Some(book(1.2));
+        tools.tick(&mut host);
+        let saved: Stored = host.load("native-currency.json").unwrap().unwrap();
+        assert_eq!(
+            saved.book.unwrap().rates["USD"],
+            1.2,
+            "completed rates never reached the persisted cache"
+        );
+        assert_eq!(tools.stored.book.as_ref().unwrap().rates["USD"], 1.2);
+        let nodes = crate::accessibility::test_tree(|ui| tools.show(ui, &mut host));
+        assert!(
+            nodes
+                .iter()
+                .any(|node| node.role() == egui::accesskit::Role::Status
+                    && node
+                        .label()
+                        .is_some_and(|label| label.contains("Reference rates updated"))),
+            "consuming the result lost its visible/live completion state"
+        );
+        tools.shutdown();
+        host.shutdown();
+    }
+    #[test]
+    fn failed_cache_commit_preserves_previous_in_memory_and_backed_up_book() {
+        let (directory, mut host, mut tools) = fixture();
+        let file = directory.path().join("native-currency.json");
+        let backup = directory.path().join("prior-cache.json");
+        std::fs::rename(&file, &backup).unwrap();
+        std::fs::create_dir(&file).unwrap();
+        tools.job.result = Some(book(1.2));
+        tools.tick(&mut host);
+        assert_eq!(
+            tools.stored.book.as_ref().unwrap().rates["USD"],
+            1.1,
+            "unsaved result replaced the old active table"
+        );
+        let previous: Stored = serde_json::from_slice(&std::fs::read(backup).unwrap()).unwrap();
+        assert_eq!(previous.book.unwrap().rates["USD"], 1.1);
+        assert!(!tools.error.is_empty(), "cache save failure was hidden");
+        tools.shutdown();
+        host.shutdown();
+    }
+    #[test]
+    fn abandoned_fetch_cannot_publish_a_late_cache_or_result() {
+        let (directory, mut host, mut tools) = fixture();
+        let before = std::fs::read(directory.path().join("native-currency.json")).unwrap();
+        let (ready_send, ready_receive) = std::sync::mpsc::channel();
+        let (release_send, release_receive) = std::sync::mpsc::channel();
+        assert!(tools.job.start(&egui::Context::default(), move |_, _| {
+            ready_send.send(()).unwrap();
+            release_receive
+                .recv_timeout(Duration::from_secs(2))
+                .unwrap();
+            Ok(book(1.2))
+        }));
+        ready_receive.recv_timeout(Duration::from_secs(2)).unwrap();
+        tools.job.abandon();
+        release_send.send(()).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while tools.job.running() && Instant::now() < deadline {
+            tools.tick(&mut host);
+            std::thread::yield_now();
+        }
+        assert!(!tools.job.running());
+        assert!(tools.job.result.is_none());
+        assert_eq!(tools.stored.book.as_ref().unwrap().rates["USD"], 1.1);
+        assert_eq!(
+            std::fs::read(directory.path().join("native-currency.json")).unwrap(),
+            before
+        );
+        tools.shutdown();
+        host.shutdown();
     }
 }

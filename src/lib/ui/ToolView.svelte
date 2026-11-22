@@ -5,6 +5,7 @@
   import { favorites } from '#lib/favorites.svelte.ts';
   import Notice from './Notice.svelte';
   import PlannedTool from './PlannedTool.svelte';
+  import { describeToolLoadError } from '#lib/tool-loading.ts';
 
   interface Props {
     tool: ToolDef;
@@ -62,7 +63,11 @@
       {:then mod}
         <mod.default />
       {:catch err}
-        <Notice kind="error">Could not load this tool: {String(err)}</Notice>
+        {@const failure = describeToolLoadError(err)}
+        <Notice kind="error">{failure.message}</Notice>
+        {#if failure.reload}
+          <div><button class="btn" onclick={() => window.location.reload()}>Reload interface</button></div>
+        {/if}
       {/await}
     {/if}
   </div>
